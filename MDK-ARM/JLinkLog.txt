@@ -1,0 +1,102 @@
+T6878 000:231.998   SEGGER J-Link V6.86 Log File
+T6878 000:232.591   DLL Compiled: Sep 24 2020 17:31:31
+T6878 000:232.614   Logging started @ 2026-03-04 02:11
+T6878 000:232.632 - 232.642ms
+T6878 000:232.923 JLINK_SetWarnOutHandler(...)
+T6878 000:232.947 - 0.030ms
+T6878 000:232.962 JLINK_OpenEx(...)
+T6878 000:236.106   Firmware: J-Link V9 compiled Dec  8 2023 20:16:22
+T6878 000:236.982   Decompressing FW timestamp took 669 us
+T6878 000:242.981   Hardware: V9.70
+T6878 000:243.036   S/N: 602712485
+T6878 000:243.057   OEM: SEGGER
+T6878 000:243.075   Feature(s): GDB, RDI, FlashBP, FlashDL, JFlash
+T6878 000:244.501   TELNET listener socket opened on port 19021
+T6878 000:244.706   WEBSRV Starting webserver
+T6878 000:244.994   WEBSRV Webserver running on local port 19080
+T6878 000:245.005 - 12.045ms returns "O.K."
+T6878 000:245.027 JLINK_GetEmuCaps()
+T6878 000:245.033 - 0.008ms returns 0xB9FF7BBF
+T6878 000:245.049 JLINK_TIF_GetAvailable(...)
+T6878 000:245.272 - 0.229ms
+T6878 000:245.285 JLINK_SetErrorOutHandler(...)
+T6878 000:245.289 - 0.006ms
+T6878 000:245.753 JLINK_ExecCommand("ProjectFile = "D:\UGit\OCFM_V2\MDK-ARM\JLinkSettings.ini"", ...). 
+T6878 000:297.915 - 52.173ms returns 0x00
+T6878 000:298.016 JLINK_ExecCommand("Device = STM32F407VGTx", ...). 
+T6878 000:300.129   Device "STM32F407VG" selected.
+T6878 000:300.478 - 2.458ms returns 0x00
+T6878 000:300.504 JLINK_GetHardwareVersion()
+T6878 000:300.509 - 0.007ms returns 97000
+T6878 000:300.528 JLINK_GetDLLVersion()
+T6878 000:300.532 - 0.006ms returns 68600
+T6878 000:300.538 JLINK_GetOEMString(...)
+T6878 000:300.543 JLINK_GetFirmwareString(...)
+T6878 000:300.548 - 0.006ms
+T6878 000:300.556 JLINK_GetDLLVersion()
+T6878 000:300.560 - 0.006ms returns 68600
+T6878 000:300.565 JLINK_GetCompileDateTime()
+T6878 000:300.569 - 0.006ms
+T6878 000:300.576 JLINK_GetFirmwareString(...)
+T6878 000:300.580 - 0.006ms
+T6878 000:300.585 JLINK_GetHardwareVersion()
+T6878 000:300.589 - 0.005ms returns 97000
+T6878 000:300.595 JLINK_GetSN()
+T6878 000:300.599 - 0.006ms returns 602712485
+T6878 000:300.605 JLINK_GetOEMString(...)
+T6878 000:300.612 JLINK_TIF_Select(JLINKARM_TIF_JTAG)
+T6878 000:301.787 - 1.186ms returns 0x00
+T6878 000:301.805 JLINK_HasError()
+T6878 000:301.981 JLINK_SetSpeed(5000)
+T6878 000:302.079 - 0.102ms
+T6878 000:305.851 JLINK_HasError()
+T6878 000:305.914 JLINK_SetResetType(JLINKARM_RESET_TYPE_NORMAL)
+T6878 000:305.923 - 0.011ms returns JLINKARM_RESET_TYPE_NORMAL
+T6878 000:305.931 JLINK_Reset()
+T6878 000:307.723   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:308.442   STM32 (connect): Can not attach to CPU. Trying connect under reset.
+T6878 000:360.695   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:361.019   
+  ***** Error: 
+T6878 000:361.030   STM32: Connecting to CPU via connect under reset failed.
+T6878 000:473.243   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:473.499   STM32 (connect): Can not attach to CPU. Trying connect under reset.
+T6878 000:525.162   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:525.433   
+  ***** Error: 
+T6878 000:525.447   STM32: Connecting to CPU via connect under reset failed.
+T6878 000:576.386 - 270.472ms
+T6878 000:576.420 JLINK_GetIdData(pIdData)
+T6878 000:577.785   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:578.071   STM32 (connect): Can not attach to CPU. Trying connect under reset.
+T6878 000:630.268   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:630.522   
+  ***** Error: 
+T6878 000:630.533   STM32: Connecting to CPU via connect under reset failed.
+T6878 000:743.017   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:743.296   STM32 (connect): Can not attach to CPU. Trying connect under reset.
+T6878 000:795.116   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:795.375   
+  ***** Error: 
+T6878 000:795.387   STM32: Connecting to CPU via connect under reset failed.
+T6878 000:845.554 - 269.163ms
+T6878 000:845.662 JLINK_GetIdData(pIdData)
+T6878 000:846.850   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:847.135   STM32 (connect): Can not attach to CPU. Trying connect under reset.
+T6878 000:898.855   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 000:899.088   
+  ***** Error: 
+T6878 000:899.103   STM32: Connecting to CPU via connect under reset failed.
+T6878 001:013.527   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 001:013.928   STM32 (connect): Can not attach to CPU. Trying connect under reset.
+T6878 001:066.013   TotalIRLen = ?, IRPrint = 0x..000000000000000000000000
+T6878 001:066.272   
+  ***** Error: 
+T6878 001:066.285   STM32: Connecting to CPU via connect under reset failed.
+T6878 001:116.986 - 271.348ms
+T6878 001:122.126 JLINK_GetFirmwareString(...)
+T6878 001:122.140 - 0.015ms
+T6878 042:160.857 JLINK_Close()
+T6878 042:170.743 - 9.928ms
+T6878 042:170.790   
+T6878 042:170.795   Closed
