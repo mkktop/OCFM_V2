@@ -449,6 +449,10 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-
+int fputc(int ch, FILE *file)
+{
+  HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, 1000);
+  return ch;
+}
 /* USER CODE END 1 */
 

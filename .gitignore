@@ -16,3 +16,123 @@
 .cmsis
 .eide
 .vscode
+
+# ===========================================
+# STM32 / Keil MDK Project Template
+# ===========================================
+
+# Keil MDK
+*.uvguix.*
+*.uvbuild
+*.dp
+*.crf
+*.o
+*.d
+*.lst
+*.map
+*.opt
+*.ncb
+*.Browse.Info
+*.htm
+*.dep
+*.NamedSpaces
+*.Project/temporary
+*.Application/Marker
+*.RemoteSystemsTempFiles
+*.pyc
+__pycache__
+
+# Keil MDK Output
+*.hex
+*.bin
+*.axf
+*.elf
+*.flm
+*.hex
+*.lst
+
+# STM32CubeMX
+*.ioc
+.mxproject
+/Core/Src/main.o
+/Core/Src/main.i
+/Core/Src/main.d
+/MDK-ARM/RTE
+/DebugConfig
+/Target 1
+/Middlewares
+
+# Build outputs
+/Listing
+/Objects
+/Exe
+
+# STM32CubeIDE
+/.cproject
+/.project
+/Debug
+/Release
+/.settings
+
+# SW4STM32 / AC6
+/.project
+/.cproject
+/Debug
+/Release
+/makefile
+/makefile.local
+/DebugConfig
+/RemoteSystemsTempFiles
+/.cdtproject
+/.launches
+
+# IAR EWARM
+*.ewd
+*.ewp
+*.eww
+*.ewt
+*.eoi
+*.lst
+*.obj
+*.pbd
+*.pbp
+*.pbi
+/Debug
+/Release
+/Exe
+/List
+/Obj
+
+# GCC ARM
+*.elf
+*.hex
+*.bin
+*.map
+*.d
+*.o
+*.a
+*.exe
+
+# Python (for build scripts)
+*.pyc
+__pycache__/
+*.egg-info/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# OpenOCD
+*.cfg.tcl
+
+# J-Link
+*.JLinkLog.txt
+*.JLinkScript.txt
+
+# ST-LINK
+*.stlinklog.txt
