@@ -21,15 +21,10 @@ extern "C" {
 
 /**
  * @brief Modbus功能码定义
- * @note 标准Modbus RTU功能码
+ * @note 只保留保持寄存器相关功能码
  */
-#define MODBUS_FUNC_READ_COILS          0x01  /**< 读线圈 (Read Coils) */
-#define MODBUS_FUNC_READ_DISCRETE       0x02  /**< 读离散输入 (Read Discrete Inputs) */
 #define MODBUS_FUNC_READ_HOLDING        0x03  /**< 读保持寄存器 (Read Holding Registers) */
-#define MODBUS_FUNC_READ_INPUT          0x04  /**< 读输入寄存器 (Read Input Registers) */
-#define MODBUS_FUNC_WRITE_SINGLE_COIL   0x05  /**< 写单个线圈 (Write Single Coil) */
 #define MODBUS_FUNC_WRITE_SINGLE_REG    0x06  /**< 写单个寄存器 (Write Single Register) */
-#define MODBUS_FUNC_WRITE_MULTIPLE_COIL 0x0F  /**< 写多个线圈 (Write Multiple Coils) */
 #define MODBUS_FUNC_WRITE_MULTIPLE_REG  0x10  /**< 写多个寄存器 (Write Multiple Registers) */
 
 /**
@@ -40,12 +35,6 @@ extern "C" {
 #define MODBUS_EX_ILLEGAL_DATA_ADDR   0x02  /**< 非法数据地址 */
 #define MODBUS_EX_ILLEGAL_DATA_VALUE  0x03  /**< 非法数据值 */
 #define MODBUS_EX_SERVER_FAILURE      0x04  /**< 从机设备故障 */
-#define MODBUS_EX_ACK                 0x05  /**< 确认 (用于长操作) */
-#define MODBUS_EX_SERVER_BUSY         0x06  /**< 从机忙 (拒绝请求) */
-#define MODBUS_EX_NEGATIVE_ACK        0x07  /**< 否定确认 */
-#define MODBUS_EX_MEM_PARITY_PROB     0x08  /**< 内存奇偶校验错误 */
-#define MODBUS_EX_GATEWAY_PATH        0x0A  /**< 网关路径错误 */
-#define MODBUS_EX_GATEWAY_TARGET      0x0B  /**< 网关目标设备无响应 */
 
 /**
  * @brief Modbus数据结构体

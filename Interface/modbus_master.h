@@ -13,24 +13,7 @@ extern "C" {
 
 #include "main.h"
 #include "modbus.h"
-
-/**
- * @brief Modbus主机超时时间 (毫秒)
- * @note 发送请求后等待响应的超时时间
- */
-#define MODBUS_MASTER_TIMEOUT_MS    500
-
-/**
- * @brief 最大支持传感器数量
- * @note 最多同时管理8个485传感器
- */
-#define MODBUS_MAX_SLAVE_COUNT     2
-
-/**
- * @brief 最大重试次数
- * @note 通信失败时的最大重试次数，超过后标记传感器为离线
- */
-#define MODBUS_MAX_RETRY           3
+#include "global.h"
 
 /**
  * @brief Modbus主机状态枚举
