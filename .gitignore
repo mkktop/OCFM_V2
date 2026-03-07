@@ -136,3 +136,4 @@ Thumbs.db
 
 # ST-LINK
 *.stlinklog.txt
+.trae
