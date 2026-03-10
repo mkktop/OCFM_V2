@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "global.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +54,13 @@ const osThreadAttr_t main_task_attributes = {
   .stack_size = 2048 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for test_task */
+osThreadId_t test_taskHandle;
+const osThreadAttr_t test_task_attributes = {
+  .name = "test_task",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -61,6 +68,7 @@ const osThreadAttr_t main_task_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void main_task_func(void *argument);
+void test_task_func(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -94,6 +102,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of main_task */
   main_taskHandle = osThreadNew(main_task_func, NULL, &main_task_attributes);
 
+  /* creation of test_task */
+  test_taskHandle = osThreadNew(test_task_func, NULL, &test_task_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -120,6 +131,24 @@ void main_task_func(void *argument)
     osDelay(1);
   }
   /* USER CODE END main_task_func */
+}
+
+/* USER CODE BEGIN Header_test_task_func */
+/**
+* @brief Function implementing the test_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_test_task_func */
+void test_task_func(void *argument)
+{
+  /* USER CODE BEGIN test_task_func */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END test_task_func */
 }
 
 /* Private application code --------------------------------------------------*/

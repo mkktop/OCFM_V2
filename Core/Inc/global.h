@@ -28,7 +28,7 @@
  */
 #define HOLDING_REG_SIZE        32          /* 保持寄存器数量 */
 #define MODBUS_SLAVE_BUF_SIZE   256         /* 接收缓冲区大小 */
-
+ 
 
 
 
@@ -48,7 +48,7 @@
 
 /**
  * @brief 寄存器地址定义
- * @note 所有数据使用保持寄存器，地址从0开始
+ * @note 所有数据使用保持寄存器，地址从1开始
  *       uint16_t占1个寄存器，float占2个寄存器，double占4个寄存器，int32占2个寄存器
  */
 
