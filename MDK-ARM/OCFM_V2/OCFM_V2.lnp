@@ -143,6 +143,8 @@
 "ocfm_v2\lv_demo_widgets_components.o"
 "ocfm_v2\lv_demo_widgets_profile.o"
 "ocfm_v2\lv_demo_widgets_shop.o"
+"ocfm_v2\fsmc_st7789.o"
+"ocfm_v2\lv_port_disp.o"
 "ocfm_v2\lv_group.o"
 "ocfm_v2\lv_obj.o"
 "ocfm_v2\lv_obj_class.o"

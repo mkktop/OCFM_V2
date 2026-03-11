@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,LV_LVGL_H_INCLUDE_SIMPLE,LV_CONF_INCLUDE_SIMPLE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../FATFS/Target;../FATFS/App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/FatFs/src;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/lvgl;..\Drivers\AT24C02</IncludePath>
+              <IncludePath>../Core/Inc;../FATFS/Target;../FATFS/App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/FatFs/src;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/lvgl;../Drivers/AT24C02</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -1213,6 +1213,48 @@
         </Group>
         <Group>
           <GroupName>Middlewares/lvgl</GroupName>
+          <Files>
+            <File>
+              <FileName>fsmc_st7789.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Middlewares\lvgl\fsmc_st7789.c</FilePath>
+            </File>
+            <File>
+              <FileName>fsmc_st7789.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\lvgl\fsmc_st7789.h</FilePath>
+            </File>
+            <File>
+              <FileName>lv_conf.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\lvgl\lv_conf.h</FilePath>
+            </File>
+            <File>
+              <FileName>lv_port_disp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Middlewares\lvgl\lv_port_disp.c</FilePath>
+            </File>
+            <File>
+              <FileName>lv_port_disp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\lvgl\lv_port_disp.h</FilePath>
+            </File>
+            <File>
+              <FileName>lv_version.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\lvgl\lv_version.h</FilePath>
+            </File>
+            <File>
+              <FileName>lvgl.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\lvgl\lvgl.h</FilePath>
+            </File>
+            <File>
+              <FileName>lvgl_private.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Middlewares\lvgl\lvgl_private.h</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>Middlewares/lvgl/src/core</GroupName>

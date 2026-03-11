@@ -127,21 +127,21 @@ void disp_disable_update(void)
 static void disp_flush(lv_display_t * disp_drv, const lv_area_t * area, uint8_t * px_map)
 {
     if(disp_flush_enabled) {
-        /* 设置显示区域 */
-        fsmc_st7789_set_window(area->x1, area->y1, area->x2, area->y2);
+        // /* 设置显示区域 */
+        // fsmc_st7789_set_window(area->x1, area->y1, area->x2, area->y2);
         
-        /* 写入像素数据 */
-        uint32_t pixel_count = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
-        uint16_t *pixel_ptr = (uint16_t *)px_map;
+        // /* 写入像素数据 */
+        // uint32_t pixel_count = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
+        // uint16_t *pixel_ptr = (uint16_t *)px_map;
         
-        /* 性能优化：直接内存访问 */
-        volatile uint8_t *data_addr = (volatile uint8_t *)LCD_DATA_ADDR;
+        // /* 性能优化：直接内存访问 */
+        // volatile uint8_t *data_addr = (volatile uint8_t *)LCD_DATA_ADDR;
         
-        for(uint32_t i = 0; i < pixel_count; i++) {
-            *data_addr = (*pixel_ptr) >> 8;
-            *data_addr = (*pixel_ptr) & 0xFF;
-            pixel_ptr++;
-        }
+        // for(uint32_t i = 0; i < pixel_count; i++) {
+        //     *data_addr = (*pixel_ptr) >> 8;
+        //     *data_addr = (*pixel_ptr) & 0xFF;
+        //     pixel_ptr++;
+        // }
     }
 
     /*IMPORTANT!!!

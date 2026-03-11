@@ -143,29 +143,9 @@ void main_task_func(void *argument)
 void test_task_func(void *argument)
 {
   /* USER CODE BEGIN test_task_func */
-  if (at24c02_init()) {
-    printf("EEPROM 初始化成功\n");
-  } else {
-    printf("EEPROM 初始化失败\n");
-  }
-  if (at24c02_erase()) {
-    printf("EEPROM 擦除成功\n");
-  } else {
-    printf("EEPROM 擦除失败\n");
-  }
-  osDelay(1000);
-  uint8_t data = 0;
-  if (at24c02_write_byte(0x00, 0x59)) {
-    printf("EEPROM 写入成功\n");
-  } else {
-    printf("EEPROM 写入失败\n");
-  }
-  if (at24c02_read_byte(0x00, &data)) {
-    printf("EEPROM 读取成功\n");
-  } else {
-    printf("EEPROM 读取失败\n");
-  }
-  printf("读取到的数据: 0x%02X\n", data);
+  fsmc_st7789_init();
+  fsmc_st7789_test_pattern();
+
   /* Infinite loop */
   for(;;)
   {
