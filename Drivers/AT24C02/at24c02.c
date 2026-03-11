@@ -1,7 +1,9 @@
 /**
  * @file at24c02.c
- * @brief AT24C02 EEPROMÇı¶¯ÊµÏÖ
- * @details AT24C02ÊÇ2KÎ»µÄ´®ĞĞEEPROM£¬Ö§³ÖI2C½Ó¿Ú
+ * @brief AT24C02 EEPROMé©±åŠ¨å®ç°
+ * @author mkk
+ * @date 2026-03-10
+ * @details AT24C02æ˜¯2Kä½çš„ä¸²è¡ŒEEPROMï¼Œæ”¯æŒI2Cæ¥å£
  */
 
 #include "at24c02.h"
@@ -9,9 +11,9 @@
 #include <string.h>
 
 /**
- * @brief ³õÊ¼»¯AT24C02
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ¼ì²éEEPROMÊÇ·ñÔÚÏß
+ * @brief åˆå§‹åŒ–AT24C02
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note æ£€æµ‹EEPROMæ˜¯å¦å‡†å¤‡å¥½
  */
 uint8_t at24c02_init(void)
 {
@@ -19,10 +21,10 @@ uint8_t at24c02_init(void)
 }
 
 /**
- * @brief ¶ÁÈ¡µ¥¸ö×Ö½Ú
- * @param addr ¶ÁÈ¡µØÖ· (0-255)
- * @param data Êı¾İÊä³öÖ¸Õë
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief è¯»å–å•ä¸ªå­—èŠ‚
+ * @param addr è¯»å–åœ°å€ (0-255)
+ * @param data æ•°æ®æŒ‡é’ˆ
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t at24c02_read_byte(uint8_t addr, uint8_t *data)
 {
@@ -30,16 +32,16 @@ uint8_t at24c02_read_byte(uint8_t addr, uint8_t *data)
     {
         return 0;
     }
-    
+
     return at24c02_read_buffer(addr, 1, data);
 }
 
 /**
- * @brief Ğ´Èëµ¥¸ö×Ö½Ú
- * @param addr Ğ´ÈëµØÖ· (0-255)
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note Ğ´ÈëÊ±¼ä×î³¤10ms
+ * @brief å†™å…¥å•ä¸ªå­—èŠ‚
+ * @param addr å†™å…¥åœ°å€ (0-255)
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note å†™å…¥æ—¶é—´æœ€é•¿10ms
  */
 uint8_t at24c02_write_byte(uint8_t addr, uint8_t data)
 {
@@ -47,56 +49,43 @@ uint8_t at24c02_write_byte(uint8_t addr, uint8_t data)
     {
         return 0;
     }
-    
+
     return at24c02_write_buffer(addr, 1, &data);
 }
 
 /**
- * @brief Á¬Ğø¶ÁÈ¡¶à¸ö×Ö½Ú
- * @param addr ÆğÊ¼µØÖ·
- * @param length ¶ÁÈ¡³¤¶È (1-256)
- * @param data Êı¾İÊä³ö»º³åÇø
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief è¿ç»­è¯»å–å¤šä¸ªå­—èŠ‚
+ * @param addr èµ·å§‹åœ°å€
+ * @param length è¯»å–é•¿åº¦ (1-256)
+ * @param data æ¥æ”¶æ•°æ®ç¼“å†²åŒº
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t at24c02_read_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 {
     HAL_StatusTypeDef status;
-    
-    if (data == NULL || addr + length > AT24C02_SIZE)
+
+    if (data == NULL || length == 0 || addr > AT24C02_SIZE - length)
     {
         return 0;
     }
-    
-    /* ·¢ËÍÉè±¸µØÖ·+Ğ´²Ù×÷ */
-    status = HAL_I2C_Master_Transmit(&hi2c2, 
-                                      AT24C02_ADDR << 1, 
-                                      &addr, 1, 
-                                      AT24C02_TIMEOUT);
-    if (status != HAL_OK)
-    {
-        return 0;
-    }
-    
-    /* ·¢ËÍÉè±¸µØÖ·+¶Á²Ù×÷ */
-    status = HAL_I2C_Master_Receive(&hi2c2, 
-                                     (AT24C02_ADDR << 1) | 0x01, 
-                                     data, length, 
-                                     AT24C02_TIMEOUT);
-    if (status != HAL_OK)
-    {
-        return 0;
-    }
-    
-    return 1;
+
+    status = HAL_I2C_Mem_Read(&hi2c2,
+                               AT24C02_ADDR << 1,
+                               addr,
+                               I2C_MEMADD_SIZE_8BIT,
+                               data,
+                               length,
+                               AT24C02_TIMEOUT);
+    return (status == HAL_OK) ? 1 : 0;
 }
 
 /**
- * @brief Á¬ĞøĞ´Èë¶à¸ö×Ö½Ú
- * @param addr ÆğÊ¼µØÖ·
- * @param length Ğ´Èë³¤¶È
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ×Ô¶¯°´Ò³Ğ´Èë£¬³¤¶È³¬¹ıÒ³Ê£Óà¿Õ¼ä»á×Ô¶¯»»Ò³
+ * @brief è¿ç»­å†™å…¥å¤šä¸ªå­—èŠ‚
+ * @param addr èµ·å§‹åœ°å€
+ * @param length å†™å…¥é•¿åº¦
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note è‡ªåŠ¨å¤„ç†è·¨é¡µå†™å…¥ï¼Œé•¿åº¦è¶…è¿‡é¡µå‰©ä½™ç©ºé—´è‡ªåŠ¨æ¢é¡µ
  */
 uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 {
@@ -105,101 +94,92 @@ uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data)
     uint8_t write_len;
     uint8_t current_addr = addr;
     uint8_t *current_data = data;
-    
-    if (data == NULL || addr + length > AT24C02_SIZE)
+
+    if (data == NULL || length == 0 || addr > AT24C02_SIZE - length)
     {
         return 0;
     }
-    
+
     while (length > 0)
     {
-        /* ¼ÆËãµ±Ç°Ò³Ê£Óà¿Õ¼ä */
+        /* è®¡ç®—å½“å‰é¡µå‰©ä½™ç©ºé—´ */
         page_remain = AT24C02_PAGE_SIZE - (current_addr % AT24C02_PAGE_SIZE);
-        
-        /* ±¾´ÎĞ´Èë³¤¶È²»ÄÜ³¬¹ıÒ³Ê£Óà¿Õ¼ä */
+
+        /* ç¡®ä¿å†™å…¥é•¿åº¦ä¸è¶…è¿‡é¡µå‰©ä½™ç©ºé—´ */
         write_len = (length < page_remain) ? length : page_remain;
-        
-        /* ·¢ËÍÉè±¸µØÖ·+Ğ´²Ù×÷ */
-        uint8_t tx_buffer[33];  /* µØÖ· + ×î¶à32×Ö½ÚÊı¾İ */
-        tx_buffer[0] = current_addr;
-        memcpy(&tx_buffer[1], current_data, write_len);
-        
-        status = HAL_I2C_Master_Transmit(&hi2c2, 
-                                          AT24C02_ADDR << 1, 
-                                          tx_buffer, 
-                                          write_len + 1, 
-                                          AT24C02_TIMEOUT);
+
+        status = HAL_I2C_Mem_Write(&hi2c2,
+                                    AT24C02_ADDR << 1,
+                                    current_addr,
+                                    I2C_MEMADD_SIZE_8BIT,
+                                    current_data,
+                                    write_len,
+                                    AT24C02_TIMEOUT);
         if (status != HAL_OK)
         {
             return 0;
         }
-        
-        /* µÈ´ıÄÚ²¿Ğ´Íê³É (×î´ó10ms) */
-        HAL_Delay(10);
-        
+
+        /* ç­‰å¾…å†…éƒ¨å†™å…¥å®Œæˆ (æœ€é•¿10ms) */
+        osDelay(10);
+
         current_addr += write_len;
         current_data += write_len;
         length -= write_len;
     }
-    
+
     return 1;
 }
 
 /**
- * @brief Ğ´ÈëÒ»Ò³Êı¾İ
- * @param page Ò³ºÅ (0-7)
- * @param length Ğ´Èë³¤¶È (1-32)
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note Ò³Ğ´ÈëµØÖ·±ØĞëÔÚÒ³ÄÚ£¬³¬³ö²¿·Ö»á»ØÈÆ
+ * @brief å†™å…¥ä¸€é¡µæ•°æ®
+ * @param page é¡µå· (0-7)
+ * @param length å†™å…¥é•¿åº¦ (1-32)
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note é¡µå†™å…¥åœ°å€å¿…é¡»åœ¨é¡µå†…ï¼Œä¸èƒ½è·¨é¡µ
  */
 uint8_t at24c02_write_page(uint8_t page, uint8_t length, uint8_t *data)
 {
     HAL_StatusTypeDef status;
-    uint8_t tx_buffer[33];  /* µØÖ· + ×î¶à32×Ö½ÚÊı¾İ */
-    
-    if (data == NULL || page >= AT24C02_PAGE_COUNT || length > AT24C02_PAGE_SIZE)
+
+    if (data == NULL || page >= AT24C02_PAGE_COUNT || length == 0 || length > AT24C02_PAGE_SIZE)
     {
         return 0;
     }
-    
-    /* ¼ÆËãÒ³ÆğÊ¼µØÖ· */
-    tx_buffer[0] = page * AT24C02_PAGE_SIZE;
-    
-    /* ¸´ÖÆÊı¾İ */
-    memcpy(&tx_buffer[1], data, length);
-    
-    /* ·¢ËÍÊı¾İ */
-    status = HAL_I2C_Master_Transmit(&hi2c2, 
-                                      AT24C02_ADDR << 1, 
-                                      tx_buffer, 
-                                      length + 1, 
-                                      AT24C02_TIMEOUT);
+
+    status = HAL_I2C_Mem_Write(&hi2c2,
+                                AT24C02_ADDR << 1,
+                                page * AT24C02_PAGE_SIZE,
+                                I2C_MEMADD_SIZE_8BIT,
+                                data,
+                                length,
+                                AT24C02_TIMEOUT);
     if (status != HAL_OK)
     {
         return 0;
     }
-    
-    /* µÈ´ıÄÚ²¿Ğ´Íê³É */
-    HAL_Delay(10);
-    
+
+    /* ç­‰å¾…å†…éƒ¨å†™å…¥å®Œæˆ */
+    osDelay(10);
+
     return 1;
 }
 
 /**
- * @brief ²Á³ıÕû¸öEEPROM
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ½«ËùÓĞ×Ö½ÚĞ´Èë0xFF
+ * @brief å…¨ç‰‡æ“¦é™¤EEPROM
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note æ‰€æœ‰å­—èŠ‚å†™å…¥0xFF
  */
 uint8_t at24c02_erase(void)
 {
     uint8_t buffer[AT24C02_PAGE_SIZE];
     uint8_t page;
-    
-    /* Ìî³ä0xFF */
+
+    /* å¡«å……0xFF */
     memset(buffer, 0xFF, AT24C02_PAGE_SIZE);
-    
-    /* °´Ò³²Á³ı */
+
+    /* é€é¡µæ“¦é™¤ */
     for (page = 0; page < AT24C02_PAGE_COUNT; page++)
     {
         if (!at24c02_write_page(page, AT24C02_PAGE_SIZE, buffer))
@@ -207,18 +187,18 @@ uint8_t at24c02_erase(void)
             return 0;
         }
     }
-    
+
     return 1;
 }
 
 /**
- * @brief ¼ì²éEEPROMÊÇ·ñÔÚÏß
- * @return 1:ÔÚÏß 0:²»ÔÚÏß
+ * @brief æ£€æµ‹EEPROMæ˜¯å¦å‡†å¤‡å¥½
+ * @return 1:å°±ç»ª 0:æœªå°±ç»ª
  */
 uint8_t at24c02_is_ready(void)
 {
-    return (HAL_I2C_IsDeviceReady(&hi2c2, 
-                                   AT24C02_ADDR << 1, 
-                                   3, 
+    return (HAL_I2C_IsDeviceReady(&hi2c2,
+                                   AT24C02_ADDR << 1,
+                                   3,
                                    AT24C02_TIMEOUT) == HAL_OK) ? 1 : 0;
 }

@@ -673,6 +673,7 @@
 "ocfm_v2\lv_textarea.o"
 "ocfm_v2\lv_tileview.o"
 "ocfm_v2\lv_win.o"
+"ocfm_v2\at24c02.o"
 --library_type=microlib --strict --scatter "OCFM_V2\OCFM_V2.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
