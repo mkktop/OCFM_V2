@@ -94,7 +94,7 @@ void fsmc_st7789_init(void)
     /* 0x36: 内存数据访问控制 */
     /* 设置显示方向和扫描顺序，0x00为正常方向 */
     lcd_write_cmd(0x36);
-    lcd_write_data(0x00);
+    lcd_write_data(0x60);
     
     /* 0xB2:  porch设置 */
     /* 配置显示区域的 porch参数，用于改善显示效果 */
@@ -232,7 +232,7 @@ void fsmc_st7789_test_pattern(void)
         0x0000,  // 黑色
     };
     
-    uint16_t bar_height = 320 / 8;  // 320x240屏幕，分成8个色条
+    uint16_t bar_height = 240 / 8;  // 320x240屏幕，分成8个色条
     
     for(int i = 0; i < 8; i++) {
         fsmc_st7789_fill_rect(0, i * bar_height, 319, (i + 1) * bar_height - 1, colors[i]);

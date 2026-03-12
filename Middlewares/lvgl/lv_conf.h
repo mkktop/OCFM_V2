@@ -27,7 +27,7 @@
  *====================*/
 
 /** Color depth: 1 (I1), 8 (L8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888) */
-#define LV_COLOR_DEPTH 16
+#define LV_COLOR_DEPTH 16//颜色深度为16位
 
 /*=========================
    STDLIB WRAPPER SETTINGS
@@ -40,7 +40,7 @@
  * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
-#define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN
+#define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN//使用LVGL的内置内存分配函数
 
 /** Possible values
  * - LV_STDLIB_BUILTIN:     LVGL's built in implementation
@@ -49,7 +49,7 @@
  * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
-#define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN
+#define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN//使用LVGL的内置字符串处理函数
 
 /** Possible values
  * - LV_STDLIB_BUILTIN:     LVGL's built in implementation
@@ -58,7 +58,7 @@
  * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
-#define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN
+#define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN//使用LVGL的内置字符串格式化函数
 
 #define LV_STDINT_INCLUDE       <stdint.h>
 #define LV_STDDEF_INCLUDE       <stddef.h>
@@ -67,15 +67,15 @@
 #define LV_LIMITS_INCLUDE       <limits.h>
 #define LV_STDARG_INCLUDE       <stdarg.h>
 
-#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN
+#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN//如果使用LVGL的内置内存分配函数
     /** Size of memory available for `lv_malloc()` in bytes (>= 2kB) */
-    #define LV_MEM_SIZE (64 * 1024U)          /**< [bytes] */
+    #define LV_MEM_SIZE (64 * 1024U)         //64KB
 
     /** Size of the memory expand for `lv_malloc()` in bytes */
-    #define LV_MEM_POOL_EXPAND_SIZE 0
+    #define LV_MEM_POOL_EXPAND_SIZE 0//内存池扩展大小为0
 
     /** Set an address for the memory pool instead of allocating it as a normal array. Can be in external SRAM too. */
-    #define LV_MEM_ADR 0     /**< 0: unused*/
+    #define LV_MEM_ADR 0x10000000     //内存池地址为0x10000000
     /* Instead of an address give a memory allocator that will be called to get a memory pool for LVGL. E.g. my_malloc */
     #if LV_MEM_ADR == 0
         #undef LV_MEM_POOL_INCLUDE
@@ -88,11 +88,11 @@
  *====================*/
 
 /** Default display refresh, input device read and animation step period. */
-#define LV_DEF_REFR_PERIOD  33      /**< [ms] */
+#define LV_DEF_REFR_PERIOD  33      //默认刷新周期为33ms
 
 /** Default Dots Per Inch. Used to initialize default sizes such as widgets sized, style paddings.
  * (Not so important, you can adjust it to modify default sizes and spaces.) */
-#define LV_DPI_DEF 130              /**< [px/inch] */
+#define LV_DPI_DEF 130              //默认DPI为130
 
 /*=================
  * OPERATING SYSTEM
@@ -107,7 +107,7 @@
  * - LV_OS_MQX
  * - LV_OS_SDL2
  * - LV_OS_CUSTOM */
-#define LV_USE_OS   LV_OS_NONE
+#define LV_USE_OS   LV_OS_FREERTOS //使用FreeRTOS操作系统
 
 #if LV_USE_OS == LV_OS_CUSTOM
     #define LV_OS_CUSTOM_INCLUDE <stdint.h>
@@ -126,16 +126,16 @@
  *========================*/
 
 /** Align stride of all layers and images to this bytes */
-#define LV_DRAW_BUF_STRIDE_ALIGN                1
+#define LV_DRAW_BUF_STRIDE_ALIGN                1 //绘制缓冲区行对齐为1字节
 
 /** Align start address of draw_buf addresses to this bytes*/
-#define LV_DRAW_BUF_ALIGN                       4
+#define LV_DRAW_BUF_ALIGN                       4 //绘制缓冲区地址对齐为4字节
 
 /** Using matrix for transformations.
  * Requirements:
  * - `LV_USE_MATRIX = 1`.
  * - Rendering engine needs to support 3x3 matrix transformations. */
-#define LV_DRAW_TRANSFORM_USE_MATRIX            0
+#define LV_DRAW_TRANSFORM_USE_MATRIX            0 //不使用矩阵变换
 
 /* If a widget has `style_opa < 255` (not `bg_opa`, `text_opa` etc) or not NORMAL blend mode
  * it is buffered into a "simple" layer before rendering. The widget can be buffered in smaller chunks.
@@ -143,18 +143,18 @@
  * and can't be drawn in chunks. */
 
 /** The target buffer size for simple layer chunks. */
-#define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (24 * 1024)    /**< [bytes]*/
+#define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (24 * 1024)     //简单图层缓冲区大小为24KB
 
 /* Limit the max allocated memory for simple and transformed layers.
  * It should be at least `LV_DRAW_LAYER_SIMPLE_BUF_SIZE` sized but if transformed layers are also used
  * it should be enough to store the largest widget too (width x height x 4 area).
  * Set it to 0 to have no limit. */
-#define LV_DRAW_LAYER_MAX_MEMORY 0  /**< No limit by default [bytes]*/
+#define LV_DRAW_LAYER_MAX_MEMORY 0   //简单图层和变换图层的最大内存为0，即无限制
 
 /** Stack size of drawing thread.
  * NOTE: If FreeType or ThorVG is enabled, it is recommended to set it to 32KB or more.
  */
-#define LV_DRAW_THREAD_STACK_SIZE    (8 * 1024)         /**< [bytes]*/
+#define LV_DRAW_THREAD_STACK_SIZE    (8 * 1024)         //绘制线程栈大小为8KB
 
 /** Thread priority of the drawing task.
  *  Higher values mean higher priority.
@@ -163,10 +163,10 @@
  *  Make sure the priority value aligns with the OS-specific priority levels.
  *  On systems with limited priority levels (e.g., FreeRTOS), a higher value can improve
  *  rendering performance but might cause other tasks to starve. */
-#define LV_DRAW_THREAD_PRIO LV_THREAD_PRIO_HIGH
+#define LV_DRAW_THREAD_PRIO LV_THREAD_PRIO_HIGH //绘制线程优先级为高
 
-#define LV_USE_DRAW_SW 1
-#if LV_USE_DRAW_SW == 1
+#define LV_USE_DRAW_SW 1 //使用软件绘制
+#if LV_USE_DRAW_SW == 1 
     /*
      * Selectively disable color format support in order to reduce code size.
      * NOTE: some features use certain color formats internally, e.g.
@@ -187,25 +187,25 @@
 
     /* The threshold of the luminance to consider a pixel as
      * active in indexed color format */
-    #define LV_DRAW_SW_I1_LUM_THRESHOLD 127
+    #define LV_DRAW_SW_I1_LUM_THRESHOLD 127 //索引颜色格式中考虑像素为活跃的亮度阈值为127
 
     /** Set number of draw units.
      *  - > 1 requires operating system to be enabled in `LV_USE_OS`.
      *  - > 1 means multiple threads will render the screen in parallel. */
-    #define LV_DRAW_SW_DRAW_UNIT_CNT    1
+    #define LV_DRAW_SW_DRAW_UNIT_CNT    1 //软件绘制单元数量为1
 
     /** Use Arm-2D to accelerate software (sw) rendering. */
-    #define LV_USE_DRAW_ARM2D_SYNC      0
+    #define LV_USE_DRAW_ARM2D_SYNC      0 //不使用Arm-2D同步绘制
 
     /** Enable native helium assembly to be compiled. */
-    #define LV_USE_NATIVE_HELIUM_ASM    0
+    #define LV_USE_NATIVE_HELIUM_ASM    0 //不使用本地Helium汇编
 
     /**
      * - 0: Use a simple renderer capable of drawing only simple rectangles with gradient, images, text, and straight lines only.
      * - 1: Use a complex renderer capable of drawing rounded corners, shadow, skew lines, and arcs too. */
-    #define LV_DRAW_SW_COMPLEX          1
+    #define LV_DRAW_SW_COMPLEX          1 //使用复杂渲染器
 
-    #if LV_DRAW_SW_COMPLEX == 1
+    #if LV_DRAW_SW_COMPLEX == 1 
         /** Allow buffering some shadow calculation.
          *  LV_DRAW_SW_SHADOW_CACHE_SIZE is the maximum shadow size to buffer, where shadow size is
          *  `shadow_width + radius`.  Caching has LV_DRAW_SW_SHADOW_CACHE_SIZE^2 RAM cost. */
@@ -218,19 +218,19 @@
         #define LV_DRAW_SW_CIRCLE_CACHE_SIZE 4
     #endif
 
-    #define  LV_USE_DRAW_SW_ASM     LV_DRAW_SW_ASM_NONE
+    #define  LV_USE_DRAW_SW_ASM     LV_DRAW_SW_ASM_NONE //不使用自定义软件绘制ASM
 
     #if LV_USE_DRAW_SW_ASM == LV_DRAW_SW_ASM_CUSTOM
         #define  LV_DRAW_SW_ASM_CUSTOM_INCLUDE ""
     #endif
 
     /** Enable drawing complex gradients in software: linear at an angle, radial or conical */
-    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS    0
+    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS    0 //不使用复杂渲染器的复杂渐变
 
 #endif
 
 /*Use TSi's aka (Think Silicon) NemaGFX */
-#define LV_USE_NEMA_GFX 0
+#define LV_USE_NEMA_GFX 0 //不使用NemaGFX
 
 #if LV_USE_NEMA_GFX
     /** Select which NemaGFX static library headers to use. Possible options:
@@ -457,7 +457,7 @@
  *-----------*/
 
 /** Enable log module */
-#define LV_USE_LOG 0
+#define LV_USE_LOG 1 //启用日志模块
 #if LV_USE_LOG
     /** Set value to one of the following levels of logging detail:
      *  - LV_LOG_LEVEL_TRACE    Log detailed information.
@@ -470,7 +470,7 @@
 
     /** - 1: Print log with 'printf';
      *  - 0: User needs to register a callback with `lv_log_register_print_cb()`. */
-    #define LV_LOG_PRINTF 0
+    #define LV_LOG_PRINTF 1 //启用日志打印功能
 
     /** Set callback to print logs.
      *  E.g `my_print`. The prototype should be `void my_print(lv_log_level_t level, const char * buf)`.
@@ -633,7 +633,7 @@
 #define LV_ATTRIBUTE_EXTERN_DATA
 
 /** Use `float` as `lv_value_precise_t` */
-#define LV_USE_FLOAT            0
+#define LV_USE_FLOAT            1 //启用浮点数作为精确值类型
 
 /** Enable matrix support
  *  - Requires `LV_USE_FLOAT = 1` */
@@ -651,17 +651,17 @@
 /* Montserrat fonts with ASCII range and some symbols using bpp = 4
  * https://fonts.google.com/specimen/Montserrat */
 #define LV_FONT_MONTSERRAT_8  0
-#define LV_FONT_MONTSERRAT_10 0
-#define LV_FONT_MONTSERRAT_12 0
+#define LV_FONT_MONTSERRAT_10 1
+#define LV_FONT_MONTSERRAT_12 1
 #define LV_FONT_MONTSERRAT_14 1
-#define LV_FONT_MONTSERRAT_16 0
-#define LV_FONT_MONTSERRAT_18 0
-#define LV_FONT_MONTSERRAT_20 0
-#define LV_FONT_MONTSERRAT_22 0
-#define LV_FONT_MONTSERRAT_24 0
-#define LV_FONT_MONTSERRAT_26 0
-#define LV_FONT_MONTSERRAT_28 0
-#define LV_FONT_MONTSERRAT_30 0
+#define LV_FONT_MONTSERRAT_16 1
+#define LV_FONT_MONTSERRAT_18 1
+#define LV_FONT_MONTSERRAT_20 1
+#define LV_FONT_MONTSERRAT_22 1
+#define LV_FONT_MONTSERRAT_24 1
+#define LV_FONT_MONTSERRAT_26 1
+#define LV_FONT_MONTSERRAT_28 1
+#define LV_FONT_MONTSERRAT_30 1
 #define LV_FONT_MONTSERRAT_32 0
 #define LV_FONT_MONTSERRAT_34 0
 #define LV_FONT_MONTSERRAT_36 0
@@ -933,9 +933,9 @@
 #endif
 
 /** API for FATFS (needs to be added separately). Uses f_open, f_read, etc. */
-#define LV_USE_FS_FATFS 0
+#define LV_USE_FS_FATFS 1
 #if LV_USE_FS_FATFS
-    #define LV_FS_FATFS_LETTER '\0'     /**< Set an upper-case driver-identifier letter for this driver (e.g. 'A'). */
+    #define LV_FS_FATFS_LETTER 'C'     /**< Set an upper-case driver-identifier letter for this driver (e.g. 'A'). */
     #define LV_FS_FATFS_PATH ""         /**< Set the working directory. File/directory paths will be appended to it. */
     #define LV_FS_FATFS_CACHE_SIZE 0    /**< >0 to cache this number of bytes in lv_fs_read() */
 #endif
@@ -978,52 +978,52 @@
     #define LV_FS_FROGFS_LETTER '\0'
 #endif
 
-/** LODEPNG decoder library */
+// 图片解码库
 #define LV_USE_LODEPNG 0
 
-/** PNG decoder(libpng) library */
+// PNG 解码器库
 #define LV_USE_LIBPNG 0
 
-/** BMP decoder library */
+/** BMP 解码器库 */
 #define LV_USE_BMP 0
 
-/** JPG + split JPG decoder library.
- *  Split JPG is a custom format optimized for embedded systems. */
+/** JPG + split JPG 解码器库.
+ *  Split JPG 是一种自定义格式，优化了嵌入式系统的性能。 */
 #define LV_USE_TJPGD 0
 
-/** libjpeg-turbo decoder library.
- *  - Supports complete JPEG specifications and high-performance JPEG decoding. */
+/** libjpeg-turbo 解码器库.
+ *  - 支持完整的 JPEG 规范和高性能的 JPEG 解码。 */
 #define LV_USE_LIBJPEG_TURBO 0
 
-/** WebP decoder library */
+/** WebP 解码器库 */
 #define LV_USE_LIBWEBP 0
 
-/** GIF decoder library */
+/** GIF 解码器库 */
 #define LV_USE_GIF 0
 #if LV_USE_GIF
-    /** GIF decoder accelerate */
+    /** GIF 解码器加速 */
     #define LV_GIF_CACHE_DECODE_DATA 0
 #endif
 
-/** GStreamer library */
+/** GStreamer 库 */
 #define LV_USE_GSTREAMER 0
 
-/** Decode bin images to RAM */
+/** 解码二进制图像到 RAM */
 #define LV_BIN_DECODER_RAM_LOAD 0
 
-/** RLE decompress library */
+/** RLE 解压缩库 */
 #define LV_USE_RLE 0
 
-/** QR code library */
+/** QR 码库 */
 #define LV_USE_QRCODE 0
 
-/** Barcode code library */
+/** Barcode 条码库 */
 #define LV_USE_BARCODE 0
 
-/** FreeType library */
+/** FreeType 库 */  
 #define LV_USE_FREETYPE 0
 #if LV_USE_FREETYPE
-    /** Let FreeType use LVGL memory and file porting */
+    /** 让 FreeType 使用 LVGL 内存和文件端口 */
     #define LV_FREETYPE_USE_LVGL_PORT 0
 
     /** Cache count of glyphs in FreeType, i.e. number of glyphs that can be cached.
@@ -1031,52 +1031,55 @@
     #define LV_FREETYPE_CACHE_FT_GLYPH_CNT 256
 #endif
 
-/** Built-in TTF decoder */
+/** 内置 TTF 解码器 */
 #define LV_USE_TINY_TTF 0
 #if LV_USE_TINY_TTF
-    /* Enable loading TTF data from files */
+    /* 启用从文件加载 TTF 数据 */
     #define LV_TINY_TTF_FILE_SUPPORT 0
     #define LV_TINY_TTF_CACHE_GLYPH_CNT 128
     #define LV_TINY_TTF_CACHE_KERNING_CNT 256
 #endif
 
-/** Rlottie library */
+/** Rlottie 库 */
 #define LV_USE_RLOTTIE 0
 
-/** Requires `LV_USE_3DTEXTURE = 1` */
+/** 需要 `LV_USE_3DTEXTURE = 1` */
 #define LV_USE_GLTF  0
 
-/** Enable Vector Graphic APIs
- *  Requires `LV_USE_MATRIX = 1`
+/** 启用矢量图形 API
+ *  需要 `LV_USE_MATRIX = 1`
  *  and a rendering engine supporting vector graphics, e.g.
  *  (LV_USE_DRAW_SW and LV_USE_THORVG) or LV_USE_DRAW_VG_LITE or LV_USE_NEMA_VG. */
 #define LV_USE_VECTOR_GRAPHIC  0
 
-/** Enable ThorVG (vector graphics library) from the src/libs folder.
- *  Requires LV_USE_VECTOR_GRAPHIC */
+/** 启用 ThorVG (矢量图形库) 内部版本
+ *  从 src/libs 文件夹加载
+ *  需要 LV_USE_VECTOR_GRAPHIC */
 #define LV_USE_THORVG_INTERNAL 0
 
-/** Enable ThorVG by assuming that its installed and linked to the project
- *  Requires LV_USE_VECTOR_GRAPHIC */
+/** 启用 ThorVG (矢量图形库) 外部版本
+ *  假设其已安装并链接到项目
+ *  需要 LV_USE_VECTOR_GRAPHIC */
 #define LV_USE_THORVG_EXTERNAL 0
 
-/** Enable NanoVG (vector graphics library) */
+/** 启用 NanoVG (矢量图形库) */
 #define LV_USE_NANOVG 0
 
-/** Use lvgl built-in LZ4 lib */
+/** 使用 lvgl 内置 LZ4 库 */
 #define LV_USE_LZ4_INTERNAL  0
 
-/** Use external LZ4 library */
+/** 使用外部 LZ4 库 */
 #define LV_USE_LZ4_EXTERNAL  0
 
-/*SVG library
- *  - Requires `LV_USE_VECTOR_GRAPHIC = 1` */
+/*SVG 库
+ *  - 需要 `LV_USE_VECTOR_GRAPHIC = 1` */   
 #define LV_USE_SVG 0
 #define LV_USE_SVG_ANIMATION 0
 #define LV_USE_SVG_DEBUG 0
 
-/** FFmpeg library for image decoding and playing videos.
- *  Supports all major image formats so do not enable other image decoder with it. */
+/** FFmpeg 库
+ *  - 用于图像解码和播放视频
+ *  - 支持所有主要图像格式，因此不要与其他图像解码器同时启用 */
 #define LV_USE_FFMPEG 0
 #if LV_USE_FFMPEG
     /** Dump input information to stderr */
@@ -1090,38 +1093,38 @@
 /*==================
  * OTHERS
  *==================*/
-/* Documentation for several of the below items can be found here: https://docs.lvgl.io/master/auxiliary-modules/index.html . */
+/* 文档可在以下位置找到：https://docs.lvgl.io/master/auxiliary-modules/index.html . */
 
-/** 1: Enable API to take snapshot for object */
+/** 1: 启用 API 以拍摄对象的快照 */
 #define LV_USE_SNAPSHOT 0
 
-/** 1: Enable system monitor component */
-#define LV_USE_SYSMON   0
+/** 1: 启用系统监控组件 */
+#define LV_USE_SYSMON   1
 #if LV_USE_SYSMON
-    /** Get the idle percentage. E.g. uint32_t my_get_idle(void); */
+    /** 获取空闲百分比。例如：uint32_t my_get_idle(void); */
     #define LV_SYSMON_GET_IDLE lv_os_get_idle_percent
-    /** 1: Enable usage of lv_os_get_proc_idle_percent.*/
+    /** 1: 启用 lv_os_get_proc_idle_percent 的使用。*/
     #define LV_SYSMON_PROC_IDLE_AVAILABLE 0
     #if LV_SYSMON_PROC_IDLE_AVAILABLE
-        /** Get the applications idle percentage.
-         * - Requires `LV_USE_OS == LV_OS_PTHREAD` */
+        /** 获取应用程序的空闲百分比。
+         * - 需要 `LV_USE_OS == LV_OS_PTHREAD` */
         #define LV_SYSMON_GET_PROC_IDLE lv_os_get_proc_idle_percent
     #endif
 
-    /** 1: Show CPU usage and FPS count.
-     *  - Requires `LV_USE_SYSMON = 1` */
-    #define LV_USE_PERF_MONITOR 0
+    /** 1: 显示 CPU 使用率和 FPS 计数。
+     *  - 需要 `LV_USE_SYSMON = 1` */
+    #define LV_USE_PERF_MONITOR 1
     #if LV_USE_PERF_MONITOR
         #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 
-        /** 0: Displays performance data on the screen; 1: Prints performance data using log. */
+        /** 0: 在屏幕上显示性能数据；1: 使用日志打印性能数据。 */
         #define LV_USE_PERF_MONITOR_LOG_MODE 0
     #endif
 
-    /** 1: Show used memory and memory fragmentation.
-     *     - Requires `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`
-     *     - Requires `LV_USE_SYSMON = 1`*/
-    #define LV_USE_MEM_MONITOR 0
+    /** 1: 显示已用内存和内存碎片。
+     *     - 需要 `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`
+     *     - 需要 `LV_USE_SYSMON = 1`*/
+    #define LV_USE_MEM_MONITOR 1
     #if LV_USE_MEM_MONITOR
         #define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
     #endif
@@ -1200,7 +1203,7 @@
 /** 1: Support using images as font in label or span widgets */
 #define LV_USE_IMGFONT 0
 
-/** 1: Enable an observer pattern implementation */
+/** 1: 启用观察者模式实现 */
 #define LV_USE_OBSERVER 1
 
 /** 1: Enable Pinyin input method
@@ -1241,23 +1244,23 @@
 
 #endif
 
-/** Enable emulated input devices, time emulation, and screenshot compares. */
+/** 1: 启用模拟输入设备、时间仿真和截图比较。 */
 #define LV_USE_TEST 0
 #if LV_USE_TEST
 
-/** Enable `lv_test_screenshot_compare`.
- * Requires lodepng and a few MB of extra RAM. */
+/** 1: 启用 `lv_test_screenshot_compare`。
+ * 需要 lodepng 和额外的几 MB 内存。 */
 #define LV_USE_TEST_SCREENSHOT_COMPARE 0
 
 #if LV_USE_TEST_SCREENSHOT_COMPARE
-    /** 1: Automatically create missing reference images*/
+    /** 1: 自动创建缺失的参考图像*/
     #define LV_TEST_SCREENSHOT_CREATE_REFERENCE_IMAGE 1
 #endif /*LV_USE_TEST_SCREENSHOT_COMPARE*/
 
 #endif /*LV_USE_TEST*/
 
-/** 1: Enable text translation support */
-#define LV_USE_TRANSLATION 0
+/** 1: 启用文本翻译支持 */
+#define LV_USE_TRANSLATION 1
 
 /*1: Enable color filter style*/
 #define LV_USE_COLOR_FILTER     0
@@ -1449,7 +1452,7 @@
 *======================*/
 
 /** Enable examples to be built with the library. */
-#define LV_BUILD_EXAMPLES 1
+#define LV_BUILD_EXAMPLES 0
 
 /** Build the demos */
 #define LV_BUILD_DEMOS 1
@@ -1460,13 +1463,13 @@
 
 #if LV_BUILD_DEMOS
     /** Show some widgets. This might be required to increase `LV_MEM_SIZE`. */
-    #define LV_USE_DEMO_WIDGETS 0
+    #define LV_USE_DEMO_WIDGETS 1
 
     /** Demonstrate usage of encoder and keyboard. */
     #define LV_USE_DEMO_KEYPAD_AND_ENCODER 0
 
     /** Benchmark your system */
-    #define LV_USE_DEMO_BENCHMARK 0
+    #define LV_USE_DEMO_BENCHMARK 1
 
     #if LV_USE_DEMO_BENCHMARK
         /** Use fonts where bitmaps are aligned 16 byte and has Nx16 byte stride */

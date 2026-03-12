@@ -1,5 +1,0 @@
---c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../FATFS/Target -I ../FATFS/App -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Middlewares/Third_Party/FatFs/src -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include -I ../Middlewares/lvgl -I ../Drivers/AT24C02
--I.\RTE\_OCFM_V2
--ID:\Users\kuo\AppData\Local\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include
--D__UVISION_VERSION="538" -D_RTE_ -DSTM32F407xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F407xx -DLV_LVGL_H_INCLUDE_SIMPLE -DLV_CONF_INCLUDE_SIMPLE
--o ocfm_v2\lv_demo_widgets.o --omf_browse ocfm_v2\lv_demo_widgets.crf --depend ocfm_v2\lv_demo_widgets.d "../Middlewares/lvgl/demos/widgets/lv_demo_widgets.c"
