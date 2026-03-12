@@ -50,6 +50,9 @@ __pycache__
 *.flm
 *.hex
 *.lst
+/MDK-ARM/OCFM_V2/
+*.sct
+*.lnp
 
 # STM32CubeMX
 *.ioc

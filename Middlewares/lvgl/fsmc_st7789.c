@@ -182,9 +182,9 @@ void fsmc_st7789_init(void)
     lcd_write_data(0x1B);
     lcd_write_data(0x1E);
     
-    /* 0x21: 显示反显开启 */
-    /* 开启显示反显功能，可以减少闪烁 */
-    lcd_write_cmd(0x21);
+    /* 0x20: 显示反显关闭 */
+    /* 关闭显示反显功能，正常显示颜色 */
+    lcd_write_cmd(0x20);
     
     /* 0x29: 显示开启 */
     /* 开启显示，LCD开始显示内容 */

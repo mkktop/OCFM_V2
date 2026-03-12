@@ -26,6 +26,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "global.h"
+#include "lvgl.h"
+#include "lv_port_disp.h"
+#include "demos/lv_demos.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -125,10 +128,18 @@ void MX_FREERTOS_Init(void) {
 void main_task_func(void *argument)
 {
   /* USER CODE BEGIN main_task_func */
+  lv_init();  // 初始化LVGL库
+  lv_tick_set_cb(xTaskGetTickCount);  // 设置LVGL定时器回调函数，使用FreeRTOS的tick计数
+  lv_delay_set_cb(vTaskDelay);  // 设置LVGL延时回调函数，使用FreeRTOS的延时函数
+
+  lv_port_disp_init();  // 初始化显示端口
+  //lv_demo_widgets();  // 初始化演示小部件
+  lv_demo_benchmark();  // 初始化演示基准测试
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    uint32_t tick = lv_timer_handler();
+    osDelay(pdMS_TO_TICKS(tick));
   }
   /* USER CODE END main_task_func */
 }
@@ -143,8 +154,8 @@ void main_task_func(void *argument)
 void test_task_func(void *argument)
 {
   /* USER CODE BEGIN test_task_func */
-  fsmc_st7789_init();
-  fsmc_st7789_test_pattern();
+  // fsmc_st7789_init();
+  // fsmc_st7789_test_pattern();
 
   /* Infinite loop */
   for(;;)
