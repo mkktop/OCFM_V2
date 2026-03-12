@@ -211,30 +211,3 @@ void fsmc_st7789_fill_rect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, u
     }
 }
 
-/* 绘制一个像素 */
-void fsmc_st7789_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
-{
-    fsmc_st7789_set_window(x, y, x, y);
-    lcd_write_data_16bit(color);
-}
-
-/* 测试函数：显示颜色条 */
-void fsmc_st7789_test_pattern(void)
-{
-    uint16_t colors[] = {
-        0xF800,  // 红色
-        0x07E0,  // 绿色
-        0x001F,  // 蓝色
-        0xFFE0,  // 黄色
-        0xF81F,  // 洋红
-        0x07FF,  // 青色
-        0xFFFF,  // 白色
-        0x0000,  // 黑色
-    };
-    
-    uint16_t bar_height = 240 / 8;  // 320x240屏幕，分成8个色条
-    
-    for(int i = 0; i < 8; i++) {
-        fsmc_st7789_fill_rect(0, i * bar_height, 319, (i + 1) * bar_height - 1, colors[i]);
-    }
-}

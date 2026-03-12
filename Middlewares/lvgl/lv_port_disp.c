@@ -15,8 +15,8 @@
 /*********************
  *      DEFINES
  *********************/
-#define MY_DISP_HOR_RES 320 //ÆÁÄ»¿í¶È
-#define MY_DISP_VER_RES 240 //ÆÁÄ»¸ß¶È
+#define MY_DISP_HOR_RES 320 //å±å¹•å®½åº¦
+#define MY_DISP_VER_RES 240 //å±å¹•é«˜åº¦
 
 #ifndef MY_DISP_HOR_RES
     #warning Please define or replace the macro MY_DISP_HOR_RES with the actual screen width, default value 320 is used for now.
@@ -126,20 +126,21 @@ void disp_disable_update(void)
 static void disp_flush(lv_display_t * disp_drv, const lv_area_t * area, uint8_t * px_map)
 {
     if(disp_flush_enabled) {
-        /* ÉèÖÃÏÔÊ¾ÇøÓò */
+        /* è®¾ç½®æ˜¾ç¤ºåŒºåŸŸ */
         fsmc_st7789_set_window(area->x1, area->y1, area->x2, area->y2);
         
-        /* Ð´ÈëÏñËØÊý¾Ý */
+        /* å†™å…¥åƒç´ æ•°æ® */
         uint32_t pixel_count = (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
         uint16_t *pixel_ptr = (uint16_t *)px_map;
         
-        /* ÐÔÄÜÓÅ»¯£ºÖ±½ÓÄÚ´æ·ÃÎÊ */
+        /* æ€§èƒ½ä¼˜åŒ–ï¼šç›´æŽ¥å†…å­˜è®¿é—® */
         volatile uint8_t *data_addr = (volatile uint8_t *)LCD_DATA_ADDR;
-        
-        for(uint32_t i = 0; i < pixel_count; i++) {
-            *data_addr = (*pixel_ptr) >> 8;
-            *data_addr = (*pixel_ptr) & 0xFF;
-            pixel_ptr++;
+        uint16_t *pixel_end = pixel_ptr + pixel_count;
+
+        while (pixel_ptr < pixel_end) {
+            uint16_t pixel = *pixel_ptr++;
+            *data_addr = pixel >> 8;
+            *data_addr = pixel & 0xFF;
         }
     }
 
