@@ -9,9 +9,11 @@
 #include "main.h"
 #include "usart.h"
 #include "gpio.h"
-
 #include "at24c02.h"
 #include "fsmc_st7789.h"
+#include "fatfs.h"
+#include "file_driver.h"
+#include "data_recorder.h"
 /*============================================================================*/
 /*                           系统信息配置                                          */
 /*============================================================================*/

@@ -934,7 +934,7 @@
 #endif
 
 /** API for FATFS (needs to be added separately). Uses f_open, f_read, etc. */
-#define LV_USE_FS_FATFS 1
+#define LV_USE_FS_FATFS 0
 #if LV_USE_FS_FATFS
     #define LV_FS_FATFS_LETTER 'C'     /**< Set an upper-case driver-identifier letter for this driver (e.g. 'A'). */
     #define LV_FS_FATFS_PATH ""         /**< Set the working directory. File/directory paths will be appended to it. */

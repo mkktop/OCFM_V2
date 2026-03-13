@@ -676,6 +676,9 @@
 "ocfm_v2\lv_tileview.o"
 "ocfm_v2\lv_win.o"
 "ocfm_v2\at24c02.o"
+"ocfm_v2\app_log.o"
+"ocfm_v2\file_driver.o"
+"ocfm_v2\data_recorder.o"
 --library_type=microlib --strict --scatter "OCFM_V2\OCFM_V2.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
