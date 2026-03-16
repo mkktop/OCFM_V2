@@ -161,7 +161,8 @@ void test_task_func(void *argument)
   {
     printf("test_task_func running\r\n");
     RTC_Time_Get(&g_RtcTime);
-    printf("Time: %02d:%02d:%02d\r\n", 
+    printf("Time: %04d-%02d-%02d %02d:%02d:%02d\r\n", 
+    g_RtcTime.year, g_RtcTime.month, g_RtcTime.date,
     g_RtcTime.hour, g_RtcTime.minute, g_RtcTime.second);
     osDelay(1000);
   }

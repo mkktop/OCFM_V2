@@ -104,6 +104,23 @@ void RTC_Time_Get(RTC_TimeData* timeData);
 void RTC_Time_Set(const RTC_TimeData* timeData);
 
 /**
+ * @brief 设置RTC时间（直接传入数值）
+ * @note 将年月日时分秒等数值写入RTC硬件
+ * @param[in] year 年份，如2026
+ * @param[in] month 月份，1-12
+ * @param[in] date 日期，1-31
+ * @param[in] hour 小时，0-23
+ * @param[in] minute 分钟，0-59
+ * @param[in] second 秒钟，0-59
+ * @param[in] weekDay 星期，1-7 (Sunday=1, Saturday=7)
+ * @return 无
+ * @warning 设置后会立即生效，RTC继续运行
+ */
+void RTC_Time_SetValues(uint16_t year, uint8_t month, uint8_t date,
+                        uint8_t hour, uint8_t minute, uint8_t second,
+                        uint8_t weekDay);
+
+/**
  * @brief 获取格式化的时间字符串
  * @note 根据指定的格式获取时间字符串
  * @param[out] buffer 字符串输出缓冲区，需要至少32字节空间
