@@ -30,6 +30,7 @@
 #include "lv_port_disp.h"
 #include "demos/lv_demos.h"
 #include "app_log.h"
+#include "rtc_time.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -159,6 +160,9 @@ void test_task_func(void *argument)
   for(;;)
   {
     printf("test_task_func running\r\n");
+    RTC_Time_Get(&g_RtcTime);
+    printf("Time: %02d:%02d:%02d\r\n", 
+    g_RtcTime.hour, g_RtcTime.minute, g_RtcTime.second);
     osDelay(1000);
   }
   /* USER CODE END test_task_func */

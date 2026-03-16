@@ -56,7 +56,13 @@ void MX_RTC_Init(void)
   }
 
   /* USER CODE BEGIN Check_RTC_BKUP */
-
+  // 检查备份寄存器，判断RTC是否已经初始化过
+  // 如果值为0xA5A5，表示RTC已配置过，直接使用备份域保持的时间
+  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) == 0xA5A5)
+  {
+    // RTC已经初始化过，直接返回，保持原有时间和日期
+    return;
+  }
   /* USER CODE END Check_RTC_BKUP */
 
   /** Initialize RTC and set the Time and Date
@@ -80,7 +86,8 @@ void MX_RTC_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-
+  // 标记RTC已初始化，写入备份寄存器
+  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0xA5A5);
   /* USER CODE END RTC_Init 2 */
 
 }
