@@ -1,8 +1,9 @@
 /**
  * @file log_manager.h
- * @brief æ—¥å¿—ç®¡ç†å™¨å¤´æ–‡ä»¶
- * @details æä¾›ç³»ç»Ÿæ—¥å¿—ã€æ“ä½œæ—¥å¿—ã€æµé‡æ•°æ®çš„è®°å½•åŠŸèƒ½
- *          æ”¯æŒæŒ‰æ—¥æœŸè‡ªåŠ¨åˆ†æ–‡ä»¶ã€æ—¥å¿—çº§åˆ«è¿‡æ»¤ã€å¾ªçŽ¯è¦†ç›–
+ * @brief ÈÕÖ¾¹ÜÀíÆ÷Í·ÎÄ¼þ
+ * @details Ìá¹©ÏµÍ³ÈÕÖ¾¡¢ÓÃ»§²Ù×÷ÈÕÖ¾¡¢±¨¾¯ÈÕÖ¾µÄ¼ÇÂ¼ºÍ²éÑ¯¹¦ÄÜ
+ *          Ö§³Ö°´ÈÕÆÚ·ÖÄ¿Â¼´æ´¢¡¢°´Ê±¼ä²éÑ¯¡¢ÈÕÖ¾ÇåÀí
+ * @note ´æ´¢·½Ê½: /LOGS/{SYS|USER|ALARM}/YYYY/MM/DD.log (Ã¿ÌìÒ»¸öÎÄ¼þ)
  */
 
 #ifndef __LOG_MANAGER_H
@@ -14,150 +15,288 @@ extern "C" {
 
 #include "main.h"
 #include "file_driver.h"
-#include <stdarg.h>
 
 /**
- * @brief æ—¥å¿—çº§åˆ«å®šä¹‰
+ * @brief ÈÕÖ¾¹ÜÀíÆ÷°æ±¾ºÅ
+ * @note ¸ñÊ½: 0xMMmm (M=Ö÷°æ±¾, m=´Î°æ±¾)
  */
-typedef enum {
-    LOG_LEVEL_DEBUG = 0,    /**< è°ƒè¯•ä¿¡æ¯ */
-    LOG_LEVEL_INFO  = 1,    /**< ä¸€èˆ¬ä¿¡æ¯ */
-    LOG_LEVEL_WARN  = 2,    /**< è­¦å‘Šä¿¡æ¯ */
-    LOG_LEVEL_ERROR = 3     /**< é”™è¯¯ä¿¡æ¯ */
-} LogLevel;
+#define LOG_MANAGER_VERSION     0x0100
 
 /**
- * @brief æ—¥å¿—ç±»åž‹å®šä¹‰
+ * @brief µ¥ÌõÈÕÖ¾ÄÚÈÝ×î´ó³¤¶È(×Ö½Ú)
+ * @note °üº¬×Ö·û´®½áÎ²·û£¬Êµ¼Ê¿ÉÓÃ128-1=127×Ö½Ú
+ */
+#define LOG_CONTENT_MAX_LEN     128
+
+/**
+ * @brief ÈÕÖ¾´æ´¢¸ùÄ¿Â¼
+ * @note ËùÓÐÈÕÖ¾´æ´¢ÔÚSD¿¨¸ùÄ¿Â¼µÄLOGSÎÄ¼þ¼ÐÏÂ
+ */
+#define LOG_BASE_PATH           "/LOGS"
+
+/**
+ * @brief ÏµÍ³ÈÕÖ¾Ä¿Â¼
+ * @note ´æ´¢ÏµÍ³ÔËÐÐÏà¹ØÈÕÖ¾
+ */
+#define LOG_SYS_PATH            "/LOGS/SYS"
+
+/**
+ * @brief ÓÃ»§²Ù×÷ÈÕÖ¾Ä¿Â¼
+ * @note ´æ´¢ÓÃ»§²Ù×÷¼ÇÂ¼ÈÕÖ¾
+ */
+#define LOG_USER_PATH           "/LOGS/USER"
+
+/**
+ * @brief ±¨¾¯ÈÕÖ¾Ä¿Â¼
+ * @note ´æ´¢±¨¾¯ºÍÒì³£ÊÂ¼þÈÕÖ¾
+ */
+#define LOG_ALARM_PATH          "/LOGS/ALARM"
+
+/**
+ * @brief ÏµÍ³ÈÕÖ¾ÄêÄ¿Â¼Â·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/SYS/YYYY
+ */
+#define LOG_SYS_YEAR_DIR        "/LOGS/SYS/%04u"
+
+/**
+ * @brief ÏµÍ³ÈÕÖ¾ÔÂÄ¿Â¼Â·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/SYS/YYYY/MM
+ */
+#define LOG_SYS_MONTH_DIR       "/LOGS/SYS/%04u/%02u"
+
+/**
+ * @brief ÏµÍ³ÈÕÖ¾ÈÕÎÄ¼þÂ·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/SYS/YYYY/MM/DD.log
+ */
+#define LOG_SYS_DAY_FILE        "/LOGS/SYS/%04u/%02u/%02u.log"
+
+/**
+ * @brief ÓÃ»§ÈÕÖ¾ÄêÄ¿Â¼Â·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/USER/YYYY
+ */
+#define LOG_USER_YEAR_DIR       "/LOGS/USER/%04u"
+
+/**
+ * @brief ÓÃ»§ÈÕÖ¾ÔÂÄ¿Â¼Â·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/USER/YYYY/MM
+ */
+#define LOG_USER_MONTH_DIR      "/LOGS/USER/%04u/%02u"
+
+/**
+ * @brief ÓÃ»§ÈÕÖ¾ÈÕÎÄ¼þÂ·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/USER/YYYY/MM/DD.log
+ */
+#define LOG_USER_DAY_FILE       "/LOGS/USER/%04u/%02u/%02u.log"
+
+/**
+ * @brief ±¨¾¯ÈÕÖ¾ÄêÄ¿Â¼Â·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/ALARM/YYYY
+ */
+#define LOG_ALARM_YEAR_DIR      "/LOGS/ALARM/%04u"
+
+/**
+ * @brief ±¨¾¯ÈÕÖ¾ÔÂÄ¿Â¼Â·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/ALARM/YYYY/MM
+ */
+#define LOG_ALARM_MONTH_DIR     "/LOGS/ALARM/%04u/%02u"
+
+/**
+ * @brief ±¨¾¯ÈÕÖ¾ÈÕÎÄ¼þÂ·¾¶Ä£°å
+ * @note ¸ñÊ½: /LOGS/ALARM/YYYY/MM/DD.log
+ */
+#define LOG_ALARM_DAY_FILE      "/LOGS/ALARM/%04u/%02u/%02u.log"
+
+/**
+ * @brief ÈÕÖ¾×î´ó±£ÁôÌìÊý
+ * @note ÇåÀí¹ýÆÚÈÕÖ¾Ê±£¬×î´óÖ§³Ö±£Áô90Ìì
+ */
+#define LOG_MAX_RETENTION_DAYS  90
+
+/**
+ * @brief ÈÕÖ¾ÀàÐÍÃ¶¾Ù
+ * @details ÓÃÓÚÇø·Ö²»Í¬ÀàÐÍµÄÈÕÖ¾£¬±ãÓÚ·ÖÀà²éÑ¯ºÍ¹ÜÀí
  */
 typedef enum {
-    LOG_TYPE_SYSTEM = 0,    /**< ç³»ç»Ÿæ—¥å¿— */
-    LOG_TYPE_OPER   = 1,    /**< æ“ä½œæ—¥å¿— */
-    LOG_TYPE_FLOW   = 2,    /**< æµé‡æ•°æ® */
-    LOG_TYPE_ALARM  = 3     /**< æŠ¥è­¦æ—¥å¿— */
+    LOG_TYPE_SYSTEM = 0,    /**< ÏµÍ³ÈÕÖ¾: ¼ÇÂ¼ÏµÍ³ÔËÐÐ×´Ì¬¡¢´íÎóÐÅÏ¢µÈ */
+    LOG_TYPE_USER   = 1,    /**< ÓÃ»§ÈÕÖ¾: ¼ÇÂ¼ÓÃ»§²Ù×÷¡¢ÅäÖÃ±ä¸üµÈ */
+    LOG_TYPE_ALARM  = 2     /**< ±¨¾¯ÈÕÖ¾: ¼ÇÂ¼±¨¾¯´¥·¢¡¢Òì³£ÊÂ¼þµÈ */
 } LogType;
 
 /**
- * @brief æ—¥å¿—ç®¡ç†å™¨é…ç½®ç»“æž„ä½“
+ * @brief ÈÕÖ¾¼ÇÂ¼½á¹¹Ìå
+ * @details ÓÃÓÚ´æ´¢µ¥ÌõÈÕÖ¾µÄÍêÕûÐÅÏ¢
  */
 typedef struct {
-    uint8_t enable_console;         /**< æ˜¯å¦è¾“å‡ºåˆ°ä¸²å£æŽ§åˆ¶å° */
-    uint8_t enable_sd;              /**< æ˜¯å¦ä¿å­˜åˆ°SDå¡ */
-    LogLevel min_level;             /**< æœ€ä½Žè®°å½•çº§åˆ« */
-    uint32_t max_file_size;         /**< å•ä¸ªæ–‡ä»¶æœ€å¤§å¤§å°(å­—èŠ‚) */
-    uint32_t max_file_count;        /**< æ¯ç§ç±»åž‹æœ€å¤§æ–‡ä»¶æ•°(å¾ªçŽ¯è¦†ç›–) */
-    char base_path[32];             /**< æ—¥å¿—æ ¹ç›®å½• */
+    uint16_t year;                      /**< Äê·Ý (Èç2026) */
+    uint8_t  month;                     /**< ÔÂ·Ý (1-12) */
+    uint8_t  day;                       /**< ÈÕÆÚ (1-31) */
+    uint8_t  hour;                      /**< Ð¡Ê± (0-23) */
+    uint8_t  minute;                    /**< ·ÖÖÓ (0-59) */
+    uint8_t  second;                    /**< Ãë (0-59) */
+    char     content[LOG_CONTENT_MAX_LEN];  /**< ÈÕÖ¾ÄÚÈÝ×Ö·û´® */
+} LogRecord;
+
+/**
+ * @brief ÈÕÖ¾¹ÜÀíÆ÷ÅäÖÃ½á¹¹Ìå
+ * @details ³õÊ¼»¯Ê±¿É´«Èë×Ô¶¨ÒåÅäÖÃ£¬NULLÔòÊ¹ÓÃÄ¬ÈÏÅäÖÃ
+ */
+typedef struct {
+    uint8_t  enable;            /**< ÈÕÖ¾¼ÇÂ¼Ê¹ÄÜ: 1-ÆôÓÃ 0-½ûÓÃ */
+    uint16_t retention_days;   /**< ÈÕÖ¾±£ÁôÌìÊý (Ä¬ÈÏ30Ìì) */
 } LogManagerConfig;
 
 /**
- * @brief æ—¥å¿—ç®¡ç†å™¨åˆå§‹åŒ–
- * @param config é…ç½®æŒ‡é’ˆï¼Œä¼ NULLä½¿ç”¨é»˜è®¤é…ç½®
- * @return 0:æˆåŠŸ 1:å¤±è´¥
- * @note é»˜è®¤é…ç½®: INFOçº§åˆ«, æœ€å¤§1MB/æ–‡ä»¶, 10ä¸ªæ–‡ä»¶å¾ªçŽ¯
+ * @brief ÈÕÖ¾²éÑ¯¹ýÂËÌõ¼þ½á¹¹Ìå
+ * @details ÓÃÓÚÖ¸¶¨²éÑ¯µÄÊ±¼ä·¶Î§
+ */
+typedef struct {
+    uint16_t start_year;            /**< ÆðÊ¼Äê·Ý */
+    uint8_t  start_month;           /**< ÆðÊ¼ÔÂ·Ý (1-12) */
+    uint8_t  start_day;             /**< ÆðÊ¼ÈÕÆÚ (1-31) */
+    uint8_t  start_hour;            /**< ÆðÊ¼Ð¡Ê± (0-23) */
+    uint8_t  start_min;             /**< ÆðÊ¼·ÖÖÓ (0-59) */
+
+    uint16_t end_year;              /**< ½áÊøÄê·Ý */
+    uint8_t  end_month;             /**< ½áÊøÔÂ·Ý (1-12) */
+    uint8_t  end_day;               /**< ½áÊøÈÕÆÚ (1-31) */
+    uint8_t  end_hour;             /**< ½áÊøÐ¡Ê± (0-23) */
+    uint8_t  end_min;               /**< ½áÊø·ÖÖÓ (0-59) */
+} LogQueryFilter;
+
+/**
+ * @brief ÈÕÖ¾²éÑ¯»Øµ÷º¯ÊýÀàÐÍ
+ * @param record ²éÑ¯µ½µÄµ¥ÌõÈÕÖ¾¼ÇÂ¼
+ * @param user_data ÓÃ»§´«ÈëµÄ×Ô¶¨ÒåÊý¾Ý
+ * @note ±éÀúÈÕÖ¾Ê±£¬Ã¿Æ¥ÅäÒ»Ìõ¼ÇÂ¼µ÷ÓÃÒ»´Î»Øµ÷
+ */
+typedef void (*LogQueryCallback)(const LogRecord* record, void* user_data);
+
+/**
+ * @brief ÈÕÖ¾¹ÜÀíÆ÷³õÊ¼»¯
+ * @param config ÅäÖÃÖ¸Õë£¬´«NULLÊ¹ÓÃÄ¬ÈÏÅäÖÃ
+ * @return FILE_OK:³É¹¦ FILE_ERROR:Ê§°Ü
+ * @note ³õÊ¼»¯ÎÄ¼þÏµÍ³¡¢´´½¨Ä¿Â¼½á¹¹¡¢ÉèÖÃÄ¬ÈÏ²ÎÊý
+ * @attention Ó¦ÔÚÏµÍ³³õÊ¼»¯Ê±µ÷ÓÃÒ»´Î
  */
 uint8_t log_manager_init(const LogManagerConfig* config);
 
 /**
- * @brief è®¾ç½®æœ€ä½Žæ—¥å¿—çº§åˆ«
- * @param level æœ€ä½Žçº§åˆ«ï¼Œä½ŽäºŽæ­¤çº§åˆ«çš„æ—¥å¿—å°†è¢«å¿½ç•¥
+ * @brief Ð´ÈëÈÕÖ¾£¨×Ô¶¯»ñÈ¡µ±Ç°Ê±¼ä£©
+ * @param type ÈÕÖ¾ÀàÐÍ (LOG_TYPE_SYSTEM/USER/ALARM)
+ * @param content ÈÕÖ¾ÄÚÈÝ×Ö·û´®
+ * @return FILE_OK:³É¹¦ FILE_ERROR:Ê§°Ü
+ * @note ×Ô¶¯µ÷ÓÃRTC»ñÈ¡µ±Ç°Ê±¼äºóÐ´Èë
  */
-void log_set_level(LogLevel level);
+uint8_t log_write(LogType type, const char* content);
 
 /**
- * @brief å†™å…¥æ ¼å¼åŒ–æ—¥å¿—
- * @param level æ—¥å¿—çº§åˆ«
- * @param fmt æ ¼å¼å­—ç¬¦ä¸²ï¼Œæ”¯æŒprintfæ ¼å¼
- * @param ... å¯å˜å‚æ•°
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief Ð´ÈëÈÕÖ¾£¨Ö¸¶¨Ê±¼ä£©
+ * @param type ÈÕÖ¾ÀàÐÍ
+ * @param year Äê·Ý
+ * @param month ÔÂ·Ý (1-12)
+ * @param day ÈÕÆÚ (1-31)
+ * @param hour Ð¡Ê± (0-23)
+ * @param minute ·ÖÖÓ (0-59)
+ * @param second Ãë (0-59)
+ * @param content ÈÕÖ¾ÄÚÈÝ×Ö·û´®
+ * @return FILE_OK:³É¹¦ FILE_ERROR:Ê§°Ü
+ * @note ÊÊÓÃÓÚÐèÒª¼ÇÂ¼ÀúÊ·Ê±¼ä»òÍ¬²½Ê±¼ä´ÁµÄ³¡¾°
  */
-uint8_t log_write(LogLevel level, const char* fmt, ...);
+uint8_t log_write_with_time(LogType type, uint16_t year, uint8_t month, uint8_t day,
+                            uint8_t hour, uint8_t minute, uint8_t second,
+                            const char* content);
 
 /**
- * @brief å†™å…¥ç³»ç»Ÿæ—¥å¿—
- * @param event äº‹ä»¶åç§°
- * @param detail è¯¦ç»†æè¿°
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief ²éÑ¯ÈÕÖ¾¼ÇÂ¼
+ * @param type ÈÕÖ¾ÀàÐÍ
+ * @param filter ²éÑ¯Ìõ¼þ£¨´«NULL±íÊ¾²éÑ¯È«²¿£©
+ * @param callback »Øµ÷º¯Êý£¬Ã¿Ìõ¼ÇÂ¼µ÷ÓÃÒ»´Î
+ * @param user_data ÓÃ»§Êý¾Ý£¬´«µÝ¸ø»Øµ÷º¯Êý
+ * @return ·µ»ØÆ¥ÅäµÄ¼ÇÂ¼Êý
+ * @note Ö§³Ö°´Ê±¼ä·¶Î§¹ýÂË²éÑ¯
  */
-uint8_t log_system(const char* event, const char* detail);
+uint32_t log_query(LogType type, const LogQueryFilter* filter,
+                   LogQueryCallback callback, void* user_data);
 
 /**
- * @brief å†™å…¥æ“ä½œæ—¥å¿—
- * @param operator_name æ“ä½œè€…åç§°
- * @param action æ“ä½œåŠ¨ä½œ
- * @param result æ“ä½œç»“æžœ
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief °´ÈÕÆÚ²éÑ¯ÈÕÖ¾
+ * @param type ÈÕÖ¾ÀàÐÍ
+ * @param year Äê·Ý
+ * @param month ÔÂ·Ý (0±íÊ¾È«Äê)
+ * @param day ÈÕÆÚ (0±íÊ¾ÕûÔÂ)
+ * @param callback »Øµ÷º¯Êý
+ * @param user_data ÓÃ»§Êý¾Ý
+ * @return ·µ»ØµÄ¼ÇÂ¼Êý
+ * @note ¼ò»¯½Ó¿Ú£¬ÄÚ²¿¹¹½¨Ê±¼ä·¶Î§¹ýÂËÆ÷
  */
-uint8_t log_operation(const char* operator_name, const char* action, const char* result);
+uint32_t log_query_by_date(LogType type, uint16_t year, uint8_t month, uint8_t day,
+                           LogQueryCallback callback, void* user_data);
 
 /**
- * @brief å†™å…¥æµé‡æ•°æ®æ—¥å¿—
- * @param timestamp æ—¶é—´æˆ³å­—ç¬¦ä¸²(æ ¼å¼: YYYY-MM-DD HH:MM:SS)
- * @param water_level æ°´ä½å€¼(m)
- * @param instant_flow çž¬æ—¶æµé‡(mÂ³/s)
- * @param total_flow ç´¯è®¡æµé‡(mÂ³)
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief ÇåÀíÖ¸¶¨ÀàÐÍµÄ¹ýÆÚÈÕÖ¾
+ * @param type ÈÕÖ¾ÀàÐÍ
+ * @param keep_days ±£ÁôÌìÊý£¨×î½üNÌìµÄÈÕÖ¾±£Áô£©
+ * @return É¾³ýµÄÎÄ¼þÊý
+ * @note É¾³ý¸ÃÀàÐÍËùÓÐ³¬¹ý±£ÁôÆÚµÄÈÕÖ¾ÎÄ¼þ
  */
-uint8_t log_flow_data(const char* timestamp, float water_level,
-                      float instant_flow, double total_flow);
+uint32_t log_cleanup(LogType type, uint16_t keep_days);
 
 /**
- * @brief å†™å…¥æŠ¥è­¦æ—¥å¿—
- * @param alarm_type æŠ¥è­¦ç±»åž‹
- * @param alarm_level æŠ¥è­¦çº§åˆ«(1-4)
- * @param description æŠ¥è­¦æè¿°
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief ÇåÀíËùÓÐÀàÐÍµÄ¹ýÆÚÈÕÖ¾
+ * @param keep_days ±£ÁôÌìÊý
+ * @return É¾³ýµÄÎÄ¼þ×ÜÊý
+ * @note ÒÀ´ÎÇåÀíSYSTEM/USER/ALARMÈýÖÖÈÕÖ¾
  */
-uint8_t log_alarm(const char* alarm_type, uint8_t alarm_level, const char* description);
+uint32_t log_cleanup_all(uint16_t keep_days);
 
 /**
- * @brief èŽ·å–å½“å‰æ—¥å¿—ç›®å½•
- * @param log_type æ—¥å¿—ç±»åž‹
- * @param path è¾“å‡ºè·¯å¾„ç¼“å†²åŒº
- * @param path_size ç¼“å†²åŒºå¤§å°
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief »ñÈ¡Ö¸¶¨ÀàÐÍÈÕÖ¾µÄ¼ÇÂ¼×ÜÊý
+ * @param type ÈÕÖ¾ÀàÐÍ
+ * @return ¼ÇÂ¼×ÜÊý
+ * @note Í³¼Æ×Ô³õÊ¼»¯ÒÔÀ´µÄÐ´Èë¼ÆÊý
  */
-uint8_t log_get_current_path(LogType log_type, char* path, uint32_t path_size);
+uint32_t log_get_count(LogType type);
 
 /**
- * @brief åˆ—å‡ºæŒ‡å®šç±»åž‹çš„æ—¥å¿—æ–‡ä»¶
- * @param log_type æ—¥å¿—ç±»åž‹
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief ÉèÖÃÈÕÖ¾¼ÇÂ¼ÆôÓÃ/½ûÓÃ
+ * @param enable 1:ÆôÓÃ 0:½ûÓÃ
+ * @note ¶¯Ì¬¿ØÖÆÈÕÖ¾¼ÇÂ¼¹¦ÄÜ£¬²»Ó°ÏìÒÑÐ´ÈëÈÕÖ¾
  */
-uint8_t log_list_files(LogType log_type);
+void log_set_enable(uint8_t enable);
 
 /**
- * @brief åˆ é™¤æŒ‡å®šæ—¥æœŸçš„æ—¥å¿—
- * @param log_type æ—¥å¿—ç±»åž‹
- * @param date æ—¥æœŸå­—ç¬¦ä¸²(æ ¼å¼: YYYYMMDD)
- * @return 0:æˆåŠŸ 1:å¤±è´¥
- */
-uint8_t log_delete_by_date(LogType log_type, const char* date);
-
-/**
- * @brief æ¸…ç†è¿‡æœŸæ—¥å¿—æ–‡ä»¶
- * @param keep_days ä¿ç•™å¤©æ•°
- * @return 0:æˆåŠŸ 1:å¤±è´¥
- */
-uint8_t log_cleanup(uint32_t keep_days);
-
-/**
- * @brief å¼ºåˆ¶åˆ·æ–°æ—¥å¿—åˆ°SDå¡
- * @return 0:æˆåŠŸ 1:å¤±è´¥
+ * @brief Ç¿ÖÆË¢ÐÂÈÕÖ¾µ½´æ´¢½éÖÊ
+ * @return FILE_OK:³É¹¦
+ * @note È·±£Êý¾ÝÒÑÐ´ÈëSD¿¨£¨Ð´ÈëÊ±ÒÑÍ¬²½£¬´Ëº¯ÊýÖ±½Ó·µ»Ø£©
  */
 uint8_t log_flush(void);
 
 /**
- * @brief å…³é—­æ—¥å¿—ç®¡ç†å™¨
+ * @brief ¸ñÊ½»¯£¨Çå¿Õ£©Ö¸¶¨ÀàÐÍµÄÈÕÖ¾
+ * @param type ÈÕÖ¾ÀàÐÍ
+ * @return FILE_OK:³É¹¦ FILE_ERROR:Ê§°Ü
+ * @note É¾³ý¸ÃÀàÐÍËùÓÐÈÕÖ¾ÎÄ¼þ²¢ÖØÖÃ¼ÆÊý
+ * @warning ´Ë²Ù×÷²»¿É»Ö¸´£¬Çë½÷É÷Ê¹ÓÃ
  */
-void log_manager_deinit(void);
+uint8_t log_format(LogType type);
 
 /**
- * @brief èŽ·å–é”™è¯¯è®¡æ•°
- * @return é”™è¯¯æ¬¡æ•°
+ * @brief ¸ñÊ½»¯£¨Çå¿Õ£©ËùÓÐÀàÐÍµÄÈÕÖ¾
+ * @return FILE_OK:³É¹¦ FILE_ERROR:Ê§°Ü
+ * @note É¾³ýËùÓÐÈÕÖ¾²¢ÖØÖÃËùÓÐ¼ÆÊý
+ * @warning ´Ë²Ù×÷²»¿É»Ö¸´£¬Çë½÷É÷Ê¹ÓÃ
  */
-uint32_t log_get_error_count(void);
+uint8_t log_format_all(void);
+
+/**
+ * @brief ¹Ø±ÕÈÕÖ¾¹ÜÀíÆ÷
+ * @note Ë¢ÐÂÊý¾Ý²¢Çå³ý³õÊ¼»¯±êÖ¾
+ * @attention ÏµÍ³¹Ø»ú»òÖØÆôÇ°Ó¦µ÷ÓÃ´Ëº¯Êý
+ */
+void log_manager_deinit(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __LOG_MANAGER_H */
+#endif

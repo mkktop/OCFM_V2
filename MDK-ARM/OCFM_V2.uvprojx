@@ -4714,6 +4714,11 @@
               <FileType>1</FileType>
               <FilePath>..\Drivers\File\data_recorder.c</FilePath>
             </File>
+            <File>
+              <FileName>log_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\File\log_manager.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
