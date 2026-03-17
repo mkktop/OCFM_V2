@@ -9,6 +9,7 @@
  */
 
 #include "data_recorder.h"
+#include "rtc_time.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -170,13 +171,11 @@ static uint8_t write_day_record(uint16_t year, uint8_t month, uint8_t day, const
 /**
  * @brief 获取当前时间戳
  * @return Unix时间戳
- * @note 实际项目中应从RTC获取当前时间
+ * @note 从RTC获取当前时间并转换为Unix时间戳
  */
 static uint32_t get_timestamp(void)
 {
-    /* 实际项目中应从RTC获取 Unix 时间戳 */
-    /* 简化实现：返回示例值 */
-    return 1700000000;
+    return RTC_Time_GetTimestamp();
 }
 
 /**
@@ -251,14 +250,16 @@ uint8_t data_record_flow(float water_level, float instant_flow,
                          float temperature, uint16_t flags)
 {
     DataRecord record;
+    RTC_TimeData timeData;
 
-    /* 获取当前时间(实际应从RTC获取) */
-    record.year = 2024;
-    record.month = 3;
-    record.day = 13;
-    record.hour = 12;
-    record.minute = 0;
-    record.second = 0;
+    /* 从RTC获取当前时间 */
+    RTC_Time_Get(&timeData);
+    record.year = timeData.year;
+    record.month = timeData.month;
+    record.day = timeData.date;
+    record.hour = timeData.hour;
+    record.minute = timeData.minute;
+    record.second = timeData.second;
 
     record.water_level = water_level;
     record.instant_flow = instant_flow;
@@ -379,8 +380,14 @@ uint32_t data_query(const DataQueryFilter* filter,
 
     /* 如果没有指定日期范围，查询所有数据 */
     if (!filter || (filter->start_year == 0 && filter->end_year == 0)) {
+        uint16_t start_year = 2024;
+        uint16_t end_year = 2030;
+        /* 获取当前年份作为结束年份 */
+        RTC_TimeData timeData;
+        RTC_Time_Get(&timeData);
+        end_year = timeData.year;
         /* 遍历所有存在的日期文件 */
-        for (year = 2024; year <= 2030; year++) {
+        for (year = start_year; year <= end_year; year++) {
             snprintf(filepath, sizeof(filepath), DATA_YEAR_DIR, year);
             if (!file_exists(filepath)) {
                 if (year == 2024) continue;
@@ -589,8 +596,9 @@ uint32_t data_cleanup(uint16_t keep_days)
     }
 
     /* 计算截止日期 */
-    /* 简化实现：实际应根据当前日期计算 */
-    return data_delete_before(2024, 3, 13 - keep_days);
+    RTC_TimeData timeData;
+    RTC_Time_Get(&timeData);
+    return data_delete_before(timeData.year, timeData.month, timeData.date - keep_days);
 }
 
 /**
@@ -602,9 +610,14 @@ uint32_t data_cleanup(uint16_t keep_days)
  */
 uint32_t data_cleanup_by_date(uint16_t year, uint8_t month, uint8_t day)
 {
-    /* 如果传入0，使用默认值 */
-    if (year == 0) year = 2024;
-    if (month == 0) month = 3;
+    /* 如果传入0，从RTC获取当前时间 */
+    if (year == 0 || month == 0) {
+        RTC_TimeData timeData;
+        RTC_Time_Get(&timeData);
+        if (year == 0) year = timeData.year;
+        if (month == 0) month = timeData.month;
+        if (day == 0) day = timeData.date;
+    }
     if (day == 0) day = 1;
 
     return data_delete_before(year, month, day);
@@ -673,8 +686,12 @@ uint8_t data_format(void)
         return FILE_ERROR;
     }
 
+    /* 获取当前年份 */
+    RTC_TimeData timeData;
+    RTC_Time_Get(&timeData);
+
     /* 删除所有数据文件 */
-    for (y = 2024; y <= 2030; y++) {
+    for (y = 2024; y <= timeData.year; y++) {
         for (m = 1; m <= 12; m++) {
             for (d = 1; d <= 31; d++) {
                 make_day_path(y, m, d, filepath, sizeof(filepath));

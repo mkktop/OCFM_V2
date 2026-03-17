@@ -9,6 +9,7 @@
  */
 
 #include "log_manager.h"
+#include "rtc_time.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -263,12 +264,14 @@ static uint8_t write_log_record(LogType type, uint16_t year, uint8_t month, uint
 static void get_current_time(uint16_t* year, uint8_t* month, uint8_t* day,
                              uint8_t* hour, uint8_t* minute, uint8_t* second)
 {
-    *year = 2024;
-    *month = 3;
-    *day = 16;
-    *hour = 12;
-    *minute = 0;
-    *second = 0;
+    RTC_TimeData timeData;
+    RTC_Time_Get(&timeData);
+    *year = timeData.year;
+    *month = timeData.month;
+    *day = timeData.date;
+    *hour = timeData.hour;
+    *minute = timeData.minute;
+    *second = timeData.second;
 }
 
 /**
@@ -577,7 +580,13 @@ uint32_t log_query(LogType type, const LogQueryFilter* filter,
 
     /* 未指定日期范围则查询所有 */
     if (!filter || (filter->start_year == 0 && filter->end_year == 0)) {
-        for (year = 2024; year <= 2030; year++) {
+        uint16_t start_year = 2024;
+        uint16_t end_year = 2030;
+        /* 获取当前年份作为结束年份 */
+        RTC_TimeData timeData;
+        RTC_Time_Get(&timeData);
+        end_year = timeData.year;
+        for (year = start_year; year <= end_year; year++) {
             make_log_year_path(type, year, filepath, sizeof(filepath));
             if (!file_exists(filepath)) {
                 if (year == 2024) continue;
@@ -663,24 +672,41 @@ static uint32_t cleanup_type(LogType type, uint16_t keep_days)
     char filepath[64];             /**< 路径缓冲区 */
     uint16_t y;                    /**< 年循环变量 */
     uint8_t m, d;                  /**< 月日循环变量 */
-    uint16_t cutoff_year = 2024;   /**< 截止年份 */
-    uint8_t cutoff_month = 3;      /**< 截止月份 */
-    uint8_t cutoff_day = 16;       /**< 截止日期 */
+    uint16_t cutoff_year;          /**< 截止年份 */
+    uint8_t cutoff_month;          /**< 截止月份 */
+    uint8_t cutoff_day;            /**< 截止日期 */
+
+    /* 从RTC获取当前时间 */
+    RTC_TimeData timeData;
+    RTC_Time_Get(&timeData);
+    cutoff_year = timeData.year;
+    cutoff_month = timeData.month;
+    cutoff_day = timeData.date;
 
     /* 限制保留天数范围 */
     if (keep_days > LOG_MAX_RETENTION_DAYS) {
         keep_days = LOG_MAX_RETENTION_DAYS;
     }
 
-    /* 计算截止日期 */
-    if (keep_days < cutoff_day) {
+    /* 计算截止日期（从当前日期往前推keep_days天） */
+    if (cutoff_day > keep_days) {
         cutoff_day = cutoff_day - (uint8_t)keep_days;
     } else {
-        cutoff_day = 1;
+        /* 需要往前推一个月 */
+        if (cutoff_month > 1) {
+            cutoff_month--;
+            /* 简单处理：统一设为28日 */
+            cutoff_day = 28;
+        } else {
+            /* 跨年 */
+            cutoff_year--;
+            cutoff_month = 12;
+            cutoff_day = 28;
+        }
     }
 
     /* 遍历所有年份 */
-    for (y = 2024; y <= 2030; y++) {
+    for (y = 2024; y <= cutoff_year; y++) {
         make_log_year_path(type, y, filepath, sizeof(filepath));
         if (!file_exists(filepath)) {
             if (y == 2024) continue;
@@ -805,8 +831,12 @@ static uint8_t format_type(LogType type)
     uint16_t y;              /**< 年循环变量 */
     uint8_t m, d;            /**< 月日循环变量 */
 
+    /* 获取当前年份 */
+    RTC_TimeData timeData;
+    RTC_Time_Get(&timeData);
+
     /* 遍历所有日期文件并删除 */
-    for (y = 2024; y <= 2030; y++) {
+    for (y = 2024; y <= timeData.year; y++) {
         for (m = 1; m <= 12; m++) {
             for (d = 1; d <= 31; d++) {
                 make_log_day_path(type, y, m, d, filepath, sizeof(filepath));

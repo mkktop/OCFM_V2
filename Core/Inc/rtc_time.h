@@ -3,7 +3,7 @@
  * @brief RTC时间管理模块 - 统一接口
  * @details 为日志系统和屏幕显示提供统一的时间获取和格式化功能
  * @note 本模块封装了STM32 HAL层的RTC操作，提供更简洁的上层API
- * @note 使用前请确保RTC已经初始化(MX_RTC_Init已调用)
+ * @note 使用前请确保RTC已经初始化(本项目MX_RTC_Init已调用)
  */
 
 #ifndef __RTC_TIME_H
@@ -18,10 +18,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-/**
- * @brief 模块版本号
- */
-#define RTC_TIME_VERSION    "1.0.0"
 
 /**
  * @brief 时间字符串缓冲区最小长度

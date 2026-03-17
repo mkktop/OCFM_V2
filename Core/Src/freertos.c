@@ -63,7 +63,7 @@ const osThreadAttr_t main_task_attributes = {
 osThreadId_t test_taskHandle;
 const osThreadAttr_t test_task_attributes = {
   .name = "test_task",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 
