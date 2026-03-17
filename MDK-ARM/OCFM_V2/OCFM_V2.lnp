@@ -1,5 +1,6 @@
 --cpu=Cortex-M4.fp.sp
 "ocfm_v2\startup_stm32f407xx.o"
+"ocfm_v2\rtc_time.o"
 "ocfm_v2\main.o"
 "ocfm_v2\gpio.o"
 "ocfm_v2\freertos.o"
@@ -14,7 +15,6 @@
 "ocfm_v2\stm32f4xx_it.o"
 "ocfm_v2\stm32f4xx_hal_msp.o"
 "ocfm_v2\stm32f4xx_hal_timebase_tim.o"
-"ocfm_v2\rtc_time.o"
 "ocfm_v2\bsp_driver_sd.o"
 "ocfm_v2\sd_diskio.o"
 "ocfm_v2\fatfs_platform.o"

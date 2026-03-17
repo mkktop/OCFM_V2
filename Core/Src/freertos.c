@@ -59,10 +59,10 @@ const osThreadAttr_t main_task_attributes = {
   .stack_size = 2048 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for test_task */
-osThreadId_t test_taskHandle;
-const osThreadAttr_t test_task_attributes = {
-  .name = "test_task",
+/* Definitions for log_task */
+osThreadId_t log_taskHandle;
+const osThreadAttr_t log_task_attributes = {
+  .name = "log_task",
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
@@ -73,7 +73,7 @@ const osThreadAttr_t test_task_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void main_task_func(void *argument);
-void test_task_func(void *argument);
+void log_task_func(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -107,8 +107,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of main_task */
   main_taskHandle = osThreadNew(main_task_func, NULL, &main_task_attributes);
 
-  /* creation of test_task */
-  test_taskHandle = osThreadNew(test_task_func, NULL, &test_task_attributes);
+  /* creation of log_task */
+  log_taskHandle = osThreadNew(log_task_func, NULL, &log_task_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -145,17 +145,17 @@ void main_task_func(void *argument)
   /* USER CODE END main_task_func */
 }
 
-/* USER CODE BEGIN Header_test_task_func */
+/* USER CODE BEGIN Header_log_task_func */
 /**
-* @brief Function implementing the test_task thread.
+* @brief Function implementing the log_task thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_test_task_func */
-void test_task_func(void *argument)
+/* USER CODE END Header_log_task_func */
+void log_task_func(void *argument)
 {
-  /* USER CODE BEGIN test_task_func */
-  app_log_init();
+  /* USER CODE BEGIN log_task_func */
+  app_log_data_init();
   /* Infinite loop */
   for(;;)
   {
@@ -166,7 +166,7 @@ void test_task_func(void *argument)
     g_RtcTime.hour, g_RtcTime.minute, g_RtcTime.second);
     osDelay(1000);
   }
-  /* USER CODE END test_task_func */
+  /* USER CODE END log_task_func */
 }
 
 /* Private application code --------------------------------------------------*/
