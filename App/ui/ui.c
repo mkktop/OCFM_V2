@@ -294,6 +294,30 @@ void ui_switch_screen(lv_obj_t *new_screen, lv_screen_load_anim_t anim_type, uin
     ui_manager->active_screen = new_screen;
 }
 
+/// @brief 切换到指定瓦片页
+/// @param page_index 瓦片页索引 (0, 1, 2)
+void ui_switch_tile(uint8_t page_index) {
+    if(ui_manager == NULL || ui_manager->tileview == NULL) return;
+    
+    lv_obj_t *target_tile = NULL;
+    switch(page_index) {
+        case 0:
+            target_tile = ui_manager->tile1;
+            break;
+        case 1:
+            target_tile = ui_manager->tile2;
+            break;
+        case 2:
+            target_tile = ui_manager->tile3;
+            break;
+        default:
+            return;
+    }
+    
+    lv_tileview_set_tile(ui_manager->tileview, target_tile, LV_ANIM_ON);
+    ui_manager->current_page = page_index;
+}
+
 
 /// @brief 创建UI
 /// @details 初始化UI管理器,创建首页屏幕,将活动屏幕切换到首页屏幕,创建首页瓦片视图,初始化首页瓦片页面,初始化设置屏幕,初始化历史记录屏幕

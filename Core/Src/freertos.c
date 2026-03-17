@@ -127,6 +127,7 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_main_task_func */
+uint32_t mkk = 0;
 void main_task_func(void *argument)
 {
   /* USER CODE BEGIN main_task_func */
@@ -141,7 +142,7 @@ void main_task_func(void *argument)
   {
     uint32_t tick = lv_timer_handler();
     osDelay(pdMS_TO_TICKS(tick));
-    osDelay(10000);
+    ui_switch_tile(mkk);
   }
   /* USER CODE END main_task_func */
 }
@@ -165,7 +166,9 @@ void log_task_func(void *argument)
     printf("Time: %04d-%02d-%02d %02d:%02d:%02d\r\n", 
     g_RtcTime.year, g_RtcTime.month, g_RtcTime.date,
     g_RtcTime.hour, g_RtcTime.minute, g_RtcTime.second);
-    osDelay(1000);
+    osDelay(5000);
+    mkk++;
+    if (mkk > 2) mkk = 0;
   }
   /* USER CODE END log_task_func */
 }
