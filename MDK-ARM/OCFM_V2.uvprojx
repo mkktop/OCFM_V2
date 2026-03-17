@@ -4900,6 +4900,36 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>App/ui</GroupName>
+          <Files>
+            <File>
+              <FileName>ui.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\ui\ui.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\ui\ui.h</FilePath>
+            </File>
+            <File>
+              <FileName>ui_conf.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\ui\ui_conf.h</FilePath>
+            </File>
+            <File>
+              <FileName>ui_set_page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\ui\ui_set_page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_set_page.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\ui\ui_set_page.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
       </Groups>
