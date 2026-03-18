@@ -1,6 +1,70 @@
 #include "ui.h"
 #include "global.h"
+#include "app_model.h"
 ui_manager_t *ui_manager;//ui管理器指针,所有页面均可调用
+
+/**
+ * @brief 字符串标签 Observer 回调函数
+ * @details 当 Subject 的值发生变化时，LVGL 会自动调用此回调函数
+ *          该函数会将 Subject 中的字符串内容更新到 Label 控件上
+ * 
+ * @param observer Observer 对象指针，包含目标控件信息
+ * @param subject 发生变化的 Subject 对象指针
+ * 
+ * @note 这是一个静态（内部）函数，通过 lv_subject_add_observer_obj() 注册
+ * 
+ * @par 工作原理
+ * 1. 从 observer 中获取绑定的 Label 控件
+ * 2. 从 subject 中获取当前的字符串内容
+ * 3. 将字符串内容设置到 Label 控件上
+ * 
+ * @see lv_subject_add_observer_obj()
+ * @see lv_observer_get_target()
+ * @see lv_subject_get_string()
+ */
+static void string_label_observer_cb(lv_observer_t *observer, lv_subject_t *subject)
+{
+    // 从 Observer 中获取绑定的 Label 控件对象
+    lv_obj_t *label = lv_observer_get_target(observer);
+    // 从 Subject 中获取当前的字符串内容
+    const char *text = lv_subject_get_string(subject);
+    // 将字符串内容设置到 Label 控件上
+    lv_label_set_text(label, text);
+}
+
+/**
+ * @brief UI 更新定时器回调函数
+ * @details 每隔一定时间（当前为 1 秒）被 LVGL 定时器调用
+ *          该函数负责更新数据模型中的数据，并同步到 Subject
+ * 
+ * @param timer 定时器对象指针
+ * 
+ * @note 这是一个静态（内部）函数，通过 lv_timer_create() 注册
+ * 
+ * @par 工作原理
+ * 1. 调用 app_model_update() 从 RTC 获取最新时间
+ * 2. 将更新后的时间字符串复制到 time_str Subject
+ * 3. 将更新后的累计时间字符串复制到 record_time_str Subject
+ * 4. Subject 会自动触发绑定的 Observer 回调，更新 UI 控件
+ * 
+ * @warning 该函数中不能执行耗时操作，否则会影响 UI 响应
+ * 
+ * @see lv_timer_create()
+ * @see app_model_update()
+ * @see lv_subject_copy_string()
+ */
+static void ui_update_timer_cb(lv_timer_t *timer)
+{
+    // 从 RTC 获取最新数据并更新到数据模型中
+    app_model_update();
+
+    // 将当前时间字符串复制到 Subject（触发 Observer 回调更新 UI）
+    lv_subject_copy_string(&ui_manager->subjects.time_str, g_app_model.time_str);
+    // 将简短时间字符串复制到 Subject（触发 Observer 回调更新 UI）
+    lv_subject_copy_string(&ui_manager->subjects.time_short_str, g_app_model.time_short_str);
+    // 将累计记录时间字符串复制到 Subject（触发 Observer 回调更新 UI）
+    lv_subject_copy_string(&ui_manager->subjects.record_time_str, g_app_model.record_time_str);
+}
 
 /// @brief 初始化容器样式，创建一个没有内外边距圆角的对象
 /// @param obj 要初始化的容器对象指针
@@ -75,6 +139,7 @@ static void create_details_tile(lv_obj_t *tile)
     lv_label_set_text(time_label, " 14:30");
     lv_obj_set_style_text_color(time_label, lv_color_hex(0x2effde), 0);//设置时间标签文本颜色
     lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);//设置时间标签字体
+    lv_subject_add_observer_obj(&ui_manager->subjects.time_short_str, string_label_observer_cb, time_label, NULL);//绑定时间标签到简短时间 Subject
     //创建一个弹性空间，用于分隔时间标签和闹钟标签
     lv_obj_t *spacer = lv_obj_create(top_bar);//创建弹性空间
     lv_obj_set_flex_grow(spacer, 1);//设置弹性空间flex增长系数为1，用于分隔时间标签和闹钟标签
@@ -249,6 +314,7 @@ static void create_flow_record_tile(lv_obj_t *tile){
     lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
     lv_obj_set_style_text_align(time_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(time_label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_subject_add_observer_obj(&ui_manager->subjects.time_str, string_label_observer_cb, time_label, NULL);
 
     // 中间：累计流量记录总时间
     lv_obj_t *record_time_label = lv_label_create(tile);
@@ -264,6 +330,7 @@ static void create_flow_record_tile(lv_obj_t *tile){
     lv_obj_set_style_text_font(record_time_value, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_align(record_time_value, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(record_time_value, LV_ALIGN_CENTER, 0, 0);
+    lv_subject_add_observer_obj(&ui_manager->subjects.record_time_str, string_label_observer_cb, record_time_value, NULL);
 
     // 底部：累计流量
     lv_obj_t *total_flow_label = lv_label_create(tile);
@@ -323,8 +390,28 @@ void ui_switch_tile(uint8_t page_index) {
 /// @details 初始化UI管理器,创建首页屏幕,将活动屏幕切换到首页屏幕,创建首页瓦片视图,初始化首页瓦片页面,初始化设置屏幕,初始化历史记录屏幕
 void ui_create(void)
 {
+    app_model_init();
+
     //初始化UI管理器
     ui_manager = lv_malloc_zeroed(sizeof(ui_manager_t));
+    
+    lv_subject_init_string(&ui_manager->subjects.time_str, 
+                           ui_manager->subjects.time_buf, 
+                           ui_manager->subjects.time_prev_buf, 
+                           sizeof(ui_manager->subjects.time_buf), 
+                           "");
+    lv_subject_init_string(&ui_manager->subjects.time_short_str, 
+                           ui_manager->subjects.time_short_buf, 
+                           ui_manager->subjects.time_short_prev_buf, 
+                           sizeof(ui_manager->subjects.time_short_buf), 
+                           "");
+    lv_subject_init_string(&ui_manager->subjects.record_time_str, 
+                           ui_manager->subjects.record_time_buf, 
+                           ui_manager->subjects.record_time_prev_buf, 
+                           sizeof(ui_manager->subjects.record_time_buf), 
+                           "");
+    lv_subject_init_float(&ui_manager->subjects.total_flow, 0.0f);
+
     //初始化首页屏幕
     ui_manager->main_screen = init_screen();
     //将活动屏幕切换到首页屏幕
@@ -345,4 +432,6 @@ void ui_create(void)
     ui_manager->settings_screen = init_screen();
     //初始化历史记录屏幕
     ui_manager->history_screen = init_screen();
+    //创建了一个 LVGL 定时器，用于定期更新 UI 数据
+    lv_timer_create(ui_update_timer_cb, 1000, NULL);
 }

@@ -4872,6 +4872,16 @@
               <FileType>5</FileType>
               <FilePath>..\App\app_log.h</FilePath>
             </File>
+            <File>
+              <FileName>app_model.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_model.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_model.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\app_model.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

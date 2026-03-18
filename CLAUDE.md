@@ -41,6 +41,13 @@ OCFM_V2/
 ├── Core/                    # STM32 HAL和系统文件 (STM32CubeMX生成)
 │   ├── Inc/global.h         # 全局配置和寄存器定义
 │   └── Src/                 # 外设初始化 (main.c, freertos.c等)
+├── App/                     # 应用层代码
+│   ├── ui/                  # LVGL UI实现
+│   │   ├── ui.c/h           # 主UI逻辑
+│   │   ├── ui_conf.h        # UI管理器和Subject定义
+│   │   └── ui_set_page.c/h  # 设置页面
+│   ├── app_model.c/h        # 数据模型 (MVVM模式)
+│   └── app_log.c/h          # 日志功能
 ├── Drivers/
 │   ├── STM32F4xx_HAL_Driver/# HAL库
 │   ├── CMSIS/               # CMSIS头文件
@@ -73,11 +80,10 @@ OCFM_V2/
 ### FreeRTOS任务规划
 | 任务 | 优先级 | 周期 | 功能 |
 |------|--------|------|------|
-| TaskMeasure | 5 (高) | 100ms | 水位采集与流量计算 |
-| TaskDisplay | 3 (中) | 20ms | LVGL界面刷新 |
-| TaskComm | 4 (中) | 10ms | Modbus通信处理 |
-| TaskStorage | 2 (低) | 1s | 数据存储管理 |
-| TaskAlarm | 3 (中) | 100ms | 报警检测 |
+| main_task | Normal | 事件驱动 | LVGL界面刷新 (lv_timer_handler) |
+| log_task | Low | 5s | 日志输出、RTC时间更新 |
+
+**注意：** 当前实现使用简化任务模型。完整架构规划见 `.trae/documents/明渠流量计架构设计.md`
 
 ## 代码规范
 
@@ -105,6 +111,7 @@ LVGL 9.x 与 8.x API有较大变化：
 - 显示刷新回调使用 `lv_display_set_flush_cb()` 而非旧版 `lv_disp_drv_set_flush_cb()`
 - 输入设备使用 `lv_indev_create()` 系列API
 - 颜色格式在 `lv_conf.h` 中配置
+- Observer 模式使用 `lv_subject_t` 和 `lv_observer_t` 实现数据绑定
 
 ## Modbus寄存器映射
 
@@ -123,3 +130,25 @@ LVGL 9.x 与 8.x API有较大变化：
 - `Middlewares/lvgl/lv_conf.h` - LVGL配置
 - `.eide/eide.yml` - EIDE构建配置
 - `.trae/documents/明渠流量计架构设计.md` - 详细架构设计文档
+
+## UI 数据更新架构
+
+项目使用 LVGL v9 的观察者模式（Observer Pattern）实现 UI 与数据分离：
+
+```
+Model (AppDataModel) → Subject (lv_subject_t) → View (UI控件)
+```
+
+**数据流向：**
+1. `app_model_update()` 在 LVGL 定时器中调用，从 RTC/传感器获取数据
+2. 数据通过 `lv_subject_set_*()` 更新到 Subject
+3. 已注册的 Observer 自动通知 UI 控件刷新
+
+**添加新数据字段的步骤：**
+1. 在 `App/app_model.h` 的 `AppDataModel` 中添加字段
+2. 在 `App/ui/ui_conf.h` 的 `subjects` 中添加对应的 `lv_subject_t`
+3. 在 `App/ui/ui.c` 的 `ui_create()` 中初始化 Subject
+4. 在 `ui_update_timer_cb()` 中同步数据
+5. 使用 `lv_subject_add_observer_obj()` 绑定到 UI 控件
+
+详见 `UI_DATA_ARCHITECTURE.md`
