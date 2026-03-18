@@ -1,482 +1,180 @@
 /**
- * @file    button_driver.c
- * @brief   °´¼üÇı¶¯ÊµÏÖÎÄ¼ş - Ö§³Ö¶Ì°´¡¢³¤°´
- * @details ÊµÏÖGPIO°´¼üÉ¨Ãè£¬Ìá¹©ÍêÉÆµÄÊÂ¼ş»Øµ÷»úÖÆ
- * 
- * @attention
- * µ¥Æ¬»ú: STM32F407VGTx
- * LVGL°æ±¾: 9.5.0
+ * @file button_driver.c
+ * @brief æŒ‰é”®é©±åŠ¨æºæ–‡ä»¶
+ * @note æ”¯æŒ4ä¸ªæŒ‰é”®ï¼šç¡®è®¤ã€ä¸Šã€ä¸‹ã€ä½ç§»
+ *       æ”¯æŒçŸ­æŒ‰(<2ç§’)å’Œé•¿æŒ‰(>=2ç§’)æ£€æµ‹ï¼Œæ¾æ‰‹æ—¶è§¦å‘
  */
 
 #include "button_driver.h"
 
-/*============================================================================*/
-/*                           Ë½ÓĞ³£Á¿¶¨Òå                                       */
-/*============================================================================*/
+/* é•¿æŒ‰é˜ˆå€¼: 2000æ¯«ç§’ */
+#define LONG_PRESS_THRESHOLD_MS  2000
 
-/**
- * @brief °´¼üGPIOÅäÖÃ±í
- * @note ¸ù¾İÔ­ÀíÍ¼ÅäÖÃ: °´¼ü°´ÏÂÎªµÍµçÆ½
- */
-static const button_gpio_t button_gpio_table[BUTTON_MAX_NUM] = {
-    {GPIOA, GPIO_PIN_15, BTN_LEVEL_LOW},  /* °´¼ü1: PA15 */
-    {GPIOA, GPIO_PIN_12, BTN_LEVEL_LOW},  /* °´¼ü2: PA12 */
-    {GPIOA, GPIO_PIN_8, BTN_LEVEL_LOW},   /* °´¼ü3: PA8 */
-    {GPIOC, GPIO_PIN_6, BTN_LEVEL_LOW}    /* °´¼ü4: PC6 */
+/* æ¶ˆæŠ–æ—¶é—´: 20æ¯«ç§’ */
+#define DEBOUNCE_TIME_MS         20
+
+/* æŒ‰é”®æ•°ç»„ */
+static Button_t g_buttons[BUTTON_ID_MAX];
+
+/* ç”¨æˆ·å›è°ƒå‡½æ•° */
+static ButtonCallback_t g_button_callback = NULL;
+
+/* æŒ‰é”®ç¡¬ä»¶é…ç½® - ä»main.hè·å– */
+static const uint16_t g_button_pins[BUTTON_ID_MAX] = {
+    KEY_1_Pin,  /* ç¡®è®¤é”® */
+    KEY_2_Pin,  /* ä¸Šé”® */
+    KEY_3_Pin,  /* ä¸‹é”® */
+    KEY_4_Pin   /* ä½ç§»é”® */
 };
 
-/*============================================================================*/
-/*                           Ë½ÓĞº¯ÊıÉùÃ÷                                       */
-/*============================================================================*/
+static GPIO_TypeDef *g_button_ports[BUTTON_ID_MAX] = {
+    KEY_1_GPIO_Port,  /* ç¡®è®¤é”® */
+    KEY_2_GPIO_Port,  /* ä¸Šé”® */
+    KEY_3_GPIO_Port,  /* ä¸‹é”® */
+    KEY_4_GPIO_Port   /* ä½ç§»é”® */
+};
 
 /**
- * @brief  ¶ÁÈ¡°´¼üGPIO×´Ì¬
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- * @retval true-°´ÏÂ false-Î´°´ÏÂ
+ * @brief è¯»å–æŒ‰é”®GPIOç”µå¹³
+ * @param button_id: æŒ‰é”®ID
+ * @retval true: æŒ‰ä¸‹(ä½ç”µå¹³), false: æœªæŒ‰ä¸‹(é«˜ç”µå¹³)
+ * @note æŒ‰é”®æŒ‰ä¸‹ä¸ºä½ç”µå¹³(æ ¹æ®ç¡¬ä»¶è®¾è®¡)
  */
-static bool button_read(button_obj_t *btn);
-
-/**
- * @brief  ´¦Àí°´¼ü°´ÏÂÊÂ¼ş
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- */
-static void button_handle_press(button_obj_t *btn);
-
-/**
- * @brief  ´¦Àí°´¼üÊÍ·ÅÊÂ¼ş
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- */
-static void button_handle_release(button_obj_t *btn);
-
-/**
- * @brief  ´¦Àí³¤°´³¬Ê±ÊÂ¼ş
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- */
-static void button_handle_long_press_timeout(button_obj_t *btn);
-
-/*============================================================================*/
-/*                           ¹«¹²º¯ÊıÊµÏÖ                                       */
-/*============================================================================*/
-
-/**
- * @brief  ³õÊ¼»¯°´¼üÇı¶¯
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- */
-void button_driver_init(button_manager_t *manager)
+static bool button_read_gpio(ButtonId_e button_id)
 {
-    if (manager == NULL || manager->initialized) {
-        return;
-    }
+    return (HAL_GPIO_ReadPin(g_button_ports[button_id], g_button_pins[button_id]) == GPIO_PIN_RESET);
+}
 
-    /* ³õÊ¼»¯ÅäÖÃ */
-    manager->config.scan_interval = 10;
-    manager->system_time = 0;
-    manager->initialized = 1;
+/**
+ * @brief åˆå§‹åŒ–æŒ‰é”®é©±åŠ¨
+ * @param callback: æŒ‰é”®äº‹ä»¶å›è°ƒå‡½æ•°
+ * @retval None
+ */
+void button_driver_init(ButtonCallback_t callback)
+{
+    ButtonId_e i;
 
-    /* ³õÊ¼»¯Ã¿¸ö°´¼ü */
-    for (int i = 0; i < BUTTON_MAX_NUM; i++) {
-        button_obj_t *btn = &manager->buttons[i];
-        
-        btn->id = (button_id_t)i;
-        btn->state = BTN_STATE_IDLE;
-        btn->last_event = BTN_EVENT_NONE;
-        btn->press_start_time = 0;
-        btn->enable = 1;
-        
-        /* ³õÊ¼»¯Í³¼Æ */
-        btn->stats.press_count = 0;
-        btn->stats.short_press_count = 0;
-        btn->stats.long_press_count = 0;
-        btn->stats.release_count = 0;
-        
-        /* ³õÊ¼»¯»Øµ÷º¯Êı */
-        btn->on_press = NULL;
-        btn->on_release = NULL;
-        btn->on_short_press = NULL;
-        btn->on_long_press = NULL;
-        btn->next = NULL;
+    /* ä¿å­˜å›è°ƒå‡½æ•° */
+    g_button_callback = callback;
+
+    /* åˆå§‹åŒ–æŒ‰é”®ç»“æ„ä½“ */
+    for (i = BUTTON_ID_OK; i < BUTTON_ID_MAX; i++) {
+        g_buttons[i].port = g_button_ports[i];
+        g_buttons[i].pin = g_button_pins[i];
+        g_buttons[i].state = BUTTON_STATE_IDLE;
+        g_buttons[i].press_time = 0;
+        g_buttons[i].debounce_time = 0;
+        g_buttons[i].long_triggered = false;
     }
 }
 
 /**
- * @brief  °´¼üÉ¨ÃèÈÎÎñ
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @note   ½¨ÒéÔÚ10msÖÜÆÚ¶¨Ê±Æ÷ÖĞµ÷ÓÃ
+ * @brief æŒ‰é”®æ‰«æä»»åŠ¡
+ * @param interval_ms: è°ƒç”¨é—´éš”(æ¯«ç§’)
+ * @retval None
+ * @note éœ€åœ¨å®šæ—¶å™¨ä¸­æ–­æˆ–FreeRTOSä»»åŠ¡ä¸­å‘¨æœŸæ€§è°ƒç”¨ï¼Œå»ºè®®10mså‘¨æœŸ
  */
-void button_driver_scan(button_manager_t *manager)
+void button_driver_scan(uint32_t interval_ms)
 {
-    if (manager == NULL || !manager->initialized) {
-        return;
-    }
+    ButtonId_e i;
+    bool is_pressed;
+    ButtonEvent_e event = BUTTON_EVENT_NONE;
 
-    /* É¨ÃèÃ¿¸ö°´¼ü */
-    for (int i = 0; i < BUTTON_MAX_NUM; i++) {
-        button_obj_t *btn = &manager->buttons[i];
-        
-        if (!btn->enable) {
-            continue;
-        }
+    for (i = BUTTON_ID_OK; i < BUTTON_ID_MAX; i++) {
+        is_pressed = button_read_gpio(i);
 
-        bool pressed = button_read(btn);
-        
-        switch (btn->state) {
-            case BTN_STATE_IDLE:
-                if (pressed) {
-                    button_handle_press(btn);
+        switch (g_buttons[i].state) {
+            case BUTTON_STATE_IDLE:
+                if (is_pressed) {
+                    /* æ£€æµ‹åˆ°æŒ‰ä¸‹ï¼Œè¿›å…¥æ¶ˆæŠ–çŠ¶æ€ */
+                    g_buttons[i].state = BUTTON_STATE_DEBOUNCE;
+                    g_buttons[i].debounce_time = 0;
                 }
                 break;
-                
-            case BTN_STATE_PRESSED:
-                if (!pressed) {
-                    button_handle_release(btn);
+
+            case BUTTON_STATE_DEBOUNCE:
+                if (is_pressed) {
+                    /* æŒç»­æŒ‰ä¸‹ï¼Œç´¯åŠ æ¶ˆæŠ–æ—¶é—´ */
+                    g_buttons[i].debounce_time += interval_ms;
+
+                    /* æ¶ˆæŠ–æ—¶é—´åˆ°ï¼Œç¡®è®¤æŒ‰ä¸‹ */
+                    if (g_buttons[i].debounce_time >= DEBOUNCE_TIME_MS) {
+                        g_buttons[i].state = BUTTON_STATE_PRESSED;
+                        g_buttons[i].press_time = 0;
+                        g_buttons[i].long_triggered = false;
+                    }
                 } else {
-                    button_handle_long_press_timeout(btn);
+                    /* æŠ–åŠ¨æ¢å¤ï¼Œé‡ç½®çŠ¶æ€ */
+                    g_buttons[i].state = BUTTON_STATE_IDLE;
+                    g_buttons[i].debounce_time = 0;
                 }
                 break;
-                
-            case BTN_STATE_LONG_PRESS:
-                if (!pressed) {
-                    button_handle_release(btn);
+
+            case BUTTON_STATE_PRESSED:
+                if (is_pressed) {
+                    /* æŒç»­æŒ‰ä¸‹ï¼Œç´¯åŠ æ—¶é—´ */
+                    g_buttons[i].press_time += interval_ms;
+
+                    /* æ£€æŸ¥æ˜¯å¦è¾¾åˆ°é•¿æŒ‰é˜ˆå€¼ */
+                    if (g_buttons[i].press_time >= LONG_PRESS_THRESHOLD_MS) {
+                        g_buttons[i].long_triggered = true;
+                        g_buttons[i].state = BUTTON_STATE_LONG_PRESSED;
+                    }
+                } else {
+                    /* æ¾æ‰‹ï¼Œåˆ¤æ–­çŸ­æŒ‰ */
+                    if (g_buttons[i].press_time < LONG_PRESS_THRESHOLD_MS) {
+                        /* çŸ­æŒ‰è§¦å‘ */
+                        event = BUTTON_EVENT_SHORT;
+                    }
+                    /* é‡ç½®æŒ‰é”®çŠ¶æ€ */
+                    g_buttons[i].state = BUTTON_STATE_IDLE;
+                    g_buttons[i].press_time = 0;
+                    g_buttons[i].debounce_time = 0;
+
+                    /* è§¦å‘å›è°ƒ */
+                    if (g_button_callback != NULL) {
+                        g_button_callback(i, event);
+                    }
                 }
                 break;
-                
-            case BTN_STATE_RELEASED:
-                btn->state = BTN_STATE_IDLE;
-                btn->last_event = BTN_EVENT_NONE;
+
+            case BUTTON_STATE_LONG_PRESSED:
+                if (!is_pressed) {
+                    /* æ¾æ‰‹ï¼Œåˆ¤æ–­é•¿æŒ‰ */
+                    if (g_buttons[i].long_triggered) {
+                        /* é•¿æŒ‰è§¦å‘ */
+                        event = BUTTON_EVENT_LONG;
+                    }
+                    /* é‡ç½®æŒ‰é”®çŠ¶æ€ */
+                    g_buttons[i].state = BUTTON_STATE_IDLE;
+                    g_buttons[i].press_time = 0;
+                    g_buttons[i].debounce_time = 0;
+                    g_buttons[i].long_triggered = false;
+
+                    /* è§¦å‘å›è°ƒ */
+                    if (g_button_callback != NULL) {
+                        g_button_callback(i, event);
+                    }
+                }
                 break;
-                
+
             default:
-                btn->state = BTN_STATE_IDLE;
+                g_buttons[i].state = BUTTON_STATE_IDLE;
                 break;
         }
     }
 }
 
 /**
- * @brief  ¸üĞÂÏµÍ³Ê±¼ä
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  ms: µ±Ç°ÏµÍ³Ê±¼ä(ºÁÃë)
+ * @brief è·å–æŒ‰é”®å½“å‰æŒ‰ä¸‹çŠ¶æ€
+ * @param button_id: æŒ‰é”®ID
+ * @retval true: æŒ‰ä¸‹, false: æœªæŒ‰ä¸‹
  */
-void button_driver_update_time(button_manager_t *manager, uint32_t ms)
+bool button_get_pressed(ButtonId_e button_id)
 {
-    if (manager != NULL) {
-        manager->system_time = ms;
-    }
-}
-
-/**
- * @brief  »ñÈ¡°´¼üµ±Ç°×´Ì¬
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval °´¼ü×´Ì¬
- */
-button_state_t button_driver_get_state(button_manager_t *manager, button_id_t id)
-{
-    if (manager == NULL || id >= BTN_MAX) {
-        return BTN_STATE_IDLE;
-    }
-    return manager->buttons[id].state;
-}
-
-/**
- * @brief  »ñÈ¡°´¼üÊÂ¼ş
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval ×îºóÒ»´Î°´¼üÊÂ¼ş
- */
-button_event_t button_driver_get_event(button_manager_t *manager, button_id_t id)
-{
-    if (manager == NULL || id >= BTN_MAX) {
-        return BTN_EVENT_NONE;
-    }
-    return manager->buttons[id].last_event;
-}
-
-/**
- * @brief  ¼ì²é°´¼üÊÇ·ñ°´ÏÂ
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval true-°´ÏÂ false-Î´°´ÏÂ
- */
-bool button_driver_is_pressed(button_manager_t *manager, button_id_t id)
-{
-    if (manager == NULL || id >= BTN_MAX) {
+    if (button_id >= BUTTON_ID_MAX) {
         return false;
     }
-    return (manager->buttons[id].state == BTN_STATE_PRESSED) ||
-           (manager->buttons[id].state == BTN_STATE_LONG_PRESS);
-}
 
-/**
- * @brief  ¼ì²é°´¼üÊÇ·ñ³¤°´
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval true-³¤°´ÖĞ false-·Ç³¤°´
- */
-bool button_driver_is_long_pressed(button_manager_t *manager, button_id_t id)
-{
-    if (manager == NULL || id >= BTN_MAX) {
-        return false;
-    }
-    return (manager->buttons[id].state == BTN_STATE_LONG_PRESS);
-}
-
-/**
- * @brief  Ê¹ÄÜ/½ûÓÃ°´¼ü
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  enable: true-Ê¹ÄÜ false-½ûÓÃ
- */
-void button_driver_enable(button_manager_t *manager, button_id_t id, bool enable)
-{
-    if (manager == NULL || id >= BTN_MAX) {
-        return;
-    }
-    manager->buttons[id].enable = enable;
-    
-    if (!enable) {
-        manager->buttons[id].state = BTN_STATE_IDLE;
-        manager->buttons[id].last_event = BTN_EVENT_NONE;
-    }
-}
-
-/**
- * @brief  ×¢²á°´¼ü°´ÏÂ»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_press_cb(button_manager_t *manager, button_id_t id,
-                                     void (*callback)(button_id_t id))
-{
-    if (manager == NULL || id >= BTN_MAX || callback == NULL) {
-        return;
-    }
-    manager->buttons[id].on_press = callback;
-}
-
-/**
- * @brief  ×¢²á°´¼üÊÍ·Å»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_release_cb(button_manager_t *manager, button_id_t id,
-                                       void (*callback)(button_id_t id))
-{
-    if (manager == NULL || id >= BTN_MAX || callback == NULL) {
-        return;
-    }
-    manager->buttons[id].on_release = callback;
-}
-
-/**
- * @brief  ×¢²á¶Ì°´»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_short_press_cb(button_manager_t *manager, button_id_t id,
-                                           void (*callback)(button_id_t id))
-{
-    if (manager == NULL || id >= BTN_MAX || callback == NULL) {
-        return;
-    }
-    manager->buttons[id].on_short_press = callback;
-}
-
-/**
- * @brief  ×¢²á³¤°´»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_long_press_cb(button_manager_t *manager, button_id_t id,
-                                           void (*callback)(button_id_t id))
-{
-    if (manager == NULL || id >= BTN_MAX || callback == NULL) {
-        return;
-    }
-    manager->buttons[id].on_long_press = callback;
-}
-
-/**
- * @brief  »ñÈ¡°´¼üÍ³¼ÆĞÅÏ¢
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval Í³¼ÆĞÅÏ¢½á¹¹ÌåÖ¸Õë
- */
-button_stats_t* button_driver_get_stats(button_manager_t *manager, button_id_t id)
-{
-    if (manager == NULL || id >= BTN_MAX) {
-        return NULL;
-    }
-    return &manager->buttons[id].stats;
-}
-
-/**
- * @brief  ÖØÖÃ°´¼üÍ³¼Æ
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- */
-void button_driver_reset_stats(button_manager_t *manager, button_id_t id)
-{
-    if (manager == NULL || id >= BTN_MAX) {
-        return;
-    }
-    manager->buttons[id].stats.press_count = 0;
-    manager->buttons[id].stats.short_press_count = 0;
-    manager->buttons[id].stats.long_press_count = 0;
-    manager->buttons[id].stats.release_count = 0;
-}
-
-/**
- * @brief  ¶ÁÈ¡°´¼üGPIO×´Ì¬
- * @param  id: °´¼üID
- * @retval true-¸ßµçÆ½ false-µÍµçÆ½
- */
-bool button_driver_read_gpio(button_id_t id)
-{
-    if (id >= BTN_MAX) {
-        return false;
-    }
-    
-    GPIO_PinState pin_state = HAL_GPIO_ReadPin(
-        (GPIO_TypeDef*)button_gpio_table[id].port,
-        button_gpio_table[id].pin
-    );
-    
-    if (button_gpio_table[id].active_level == BTN_LEVEL_LOW) {
-        return (pin_state == GPIO_PIN_RESET);
-    } else {
-        return (pin_state == GPIO_PIN_SET);
-    }
-}
-
-/*============================================================================*/
-/*                           Ë½ÓĞº¯ÊıÊµÏÖ                                       */
-/*============================================================================*/
-
-/**
- * @brief  ¶ÁÈ¡°´¼ü×´Ì¬
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- * @retval true-°´ÏÂ false-Î´°´ÏÂ
- */
-static bool button_read(button_obj_t *btn)
-{
-    return button_driver_read_gpio(btn->id);
-}
-
-/**
- * @brief  ´¦Àí°´¼ü°´ÏÂÊÂ¼ş
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- */
-static void button_handle_press(button_obj_t *btn)
-{
-    btn->state = BTN_STATE_PRESSED;
-    btn->press_start_time = 0;
-    btn->last_event = BTN_EVENT_PRESS;
-    btn->stats.press_count++;
-    
-    if (btn->on_press != NULL) {
-        btn->on_press(btn->id);
-    }
-}
-
-/**
- * @brief  ´¦Àí°´¼üÊÍ·ÅÊÂ¼ş
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- */
-static void button_handle_release(button_obj_t *btn)
-{
-    uint32_t press_time = 0;
-    
-    extern button_manager_t g_button_manager;
-    if (g_button_manager.initialized) {
-        press_time = g_button_manager.system_time - btn->press_start_time;
-    }
-    
-    btn->stats.release_count++;
-    
-    if (press_time < BTN_SHORT_PRESS_TIME) {
-        /* ¶¶¶¯»òÎŞĞ§°´ÏÂ */
-    } else if (press_time < BTN_LONG_PRESS_TIME) {
-        /* ¶Ì°´ */
-        btn->last_event = BTN_EVENT_SHORT_PRESS;
-        btn->stats.short_press_count++;
-        
-        if (btn->on_short_press != NULL) {
-            btn->on_short_press(btn->id);
-        }
-    } else {
-        /* ³¤°´ÊÍ·Å */
-        btn->last_event = BTN_EVENT_RELEASE;
-        
-        if (btn->on_release != NULL) {
-            btn->on_release(btn->id);
-        }
-    }
-    
-    btn->state = BTN_STATE_RELEASED;
-}
-
-/**
- * @brief  ´¦Àí³¤°´³¬Ê±ÊÂ¼ş
- * @param  btn: °´¼ü¶ÔÏóÖ¸Õë
- */
-static void button_handle_long_press_timeout(button_obj_t *btn)
-{
-    uint32_t press_time = 0;
-    
-    extern button_manager_t g_button_manager;
-    if (g_button_manager.initialized) {
-        press_time = g_button_manager.system_time - btn->press_start_time;
-    }
-    
-    if (press_time >= BTN_LONG_PRESS_TIME && btn->state == BTN_STATE_PRESSED) {
-        btn->state = BTN_STATE_LONG_PRESS;
-        btn->last_event = BTN_EVENT_LONG_PRESS;
-        btn->stats.long_press_count++;
-        
-        if (btn->on_long_press != NULL) {
-            btn->on_long_press(btn->id);
-        }
-    }
-}
-
-/*============================================================================*/
-/*                           LVGLÁª¶¯Ïà¹Ø                                       */
-/*============================================================================*/
-
-/**
- * @brief  LVGLÊäÈëÉè±¸³õÊ¼»¯
- * @note   Ô¤Áô½Ó¿Ú£¬¿ÉÓëLVGLÊäÈëÉè±¸Çı¶¯¶Ô½Ó
- */
-void button_lvgl_init(void)
-{
-}
-
-/**
- * @brief  LVGL°´¼üÉ¨Ãè
- * @note   Ô¤Áô½Ó¿Ú
- */
-void button_lvgl_scan(void)
-{
-}
-
-/*============================================================================*/
-/*                           È«¾Ö±äÁ¿¶¨Òå                                       */
-/*============================================================================*/
-
-/**
- * @brief È«¾Ö°´¼ü¹ÜÀíÆ÷ÊµÀı
- */
-button_manager_t g_button_manager;
-
-/**
- * @brief ¼òµ¥ÑÓÊ±º¯Êı
- */
-void button_delay_ms(uint32_t ms)
-{
-    HAL_Delay(ms);
+    return button_read_gpio(button_id);
 }

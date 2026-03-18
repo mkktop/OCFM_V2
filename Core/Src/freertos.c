@@ -31,6 +31,7 @@
 #include "demos/lv_demos.h"
 #include "app_log.h"
 #include "rtc_time.h"
+#include "app_button.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,6 +67,13 @@ const osThreadAttr_t log_task_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for button_scan_tas */
+osThreadId_t button_scan_tasHandle;
+const osThreadAttr_t button_scan_tas_attributes = {
+  .name = "button_scan_tas",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -74,6 +82,7 @@ const osThreadAttr_t log_task_attributes = {
 
 void main_task_func(void *argument);
 void log_task_func(void *argument);
+void button_scan_fun(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -110,6 +119,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of log_task */
   log_taskHandle = osThreadNew(log_task_func, NULL, &log_task_attributes);
 
+  /* creation of button_scan_tas */
+  button_scan_tasHandle = osThreadNew(button_scan_fun, NULL, &button_scan_tas_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -127,22 +139,20 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_main_task_func */
-uint32_t mkk = 0;
 void main_task_func(void *argument)
 {
   /* USER CODE BEGIN main_task_func */
-  lv_init();  // ³õÊ¼»¯LVGL¿â
-  lv_tick_set_cb(xTaskGetTickCount);  // ÉèÖÃLVGL¶¨Ê±Æ÷»Øµ÷º¯Êı£¬Ê¹ÓÃFreeRTOSµÄtick¼ÆÊı
-  lv_delay_set_cb(vTaskDelay);  // ÉèÖÃLVGLÑÓÊ±»Øµ÷º¯Êı£¬Ê¹ÓÃFreeRTOSµÄÑÓÊ±º¯Êı
-  lv_port_disp_init();  // ³õÊ¼»¯ÏÔÊ¾¶Ë¿Ú
-  // lv_demo_benchmark();  // ³õÊ¼»¯ÑİÊ¾»ù×¼²âÊÔ
+  lv_init();  // åˆå§‹åŒ–LVGLåº“
+  lv_tick_set_cb(xTaskGetTickCount);  // è®¾ç½®LVGLå®šæ—¶å™¨å›è°ƒå‡½æ•°ï¼Œä½¿ç”¨FreeRTOSçš„tickè®¡æ•°
+  lv_delay_set_cb(vTaskDelay);  // è®¾ç½®LVGLå»¶æ—¶å›è°ƒå‡½æ•°ï¼Œä½¿ç”¨FreeRTOSçš„å»¶æ—¶å‡½æ•°
+  lv_port_disp_init();  // åˆå§‹åŒ–æ˜¾ç¤ºç«¯å£
+  // lv_demo_benchmark();  // åˆå§‹åŒ–æ¼”ç¤ºåŸºå‡†æµ‹è¯•
   ui_create();
   /* Infinite loop */
   for(;;)
   {
     uint32_t tick = lv_timer_handler();
     osDelay(pdMS_TO_TICKS(tick));
-    ui_switch_tile(mkk);
   }
   /* USER CODE END main_task_func */
 }
@@ -162,15 +172,32 @@ void log_task_func(void *argument)
   for(;;)
   {
     printf("test_task_func running\r\n");
-    RTC_Time_Get(&g_RtcTime);
-    printf("Time: %04d-%02d-%02d %02d:%02d:%02d\r\n", 
-    g_RtcTime.year, g_RtcTime.month, g_RtcTime.date,
-    g_RtcTime.hour, g_RtcTime.minute, g_RtcTime.second);
     osDelay(5000);
-    mkk++;
-    if (mkk > 2) mkk = 0;
   }
   /* USER CODE END log_task_func */
+}
+
+/* USER CODE BEGIN Header_button_scan_fun */
+/**
+* @brief Function implementing the button_scan_tas thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_button_scan_fun */
+void button_scan_fun(void *argument)
+{
+  /* USER CODE BEGIN button_scan_fun */
+
+  /* åˆå§‹åŒ–åº”ç”¨å±‚æŒ‰é”® */
+  app_button_init();
+
+  /* æ— é™å¾ªç¯ */
+  for(;;)
+  {
+    button_driver_scan(10);  // 10msæ‰«æå‘¨æœŸ
+    osDelay(10);             // 10mså»¶æ—¶
+  }
+  /* USER CODE END button_scan_fun */
 }
 
 /* Private application code --------------------------------------------------*/

@@ -1,306 +1,73 @@
 /**
- * @file    button_driver.h
- * @brief   °´¼üÇı¶¯Í·ÎÄ¼ş - Ö§³Ö¶Ì°´¡¢³¤°´¡¢ÖØ¸´°´
- * @details »ùÓÚSTM32F407VGµ¥Æ¬»úµÄ4¸öGPIO°´¼üÊäÈë£¬Ìá¹©ÍêÉÆµÄÊÂ¼ş»Øµ÷»úÖÆ
- * 
- * @attention
- * µ¥Æ¬»ú: STM32F407VGTx
- * LVGL°æ±¾: 9.5.0
+ * @file button_driver.h
+ * @brief æŒ‰é”®é©±åŠ¨å¤´æ–‡ä»¶
+ * @note æ”¯æŒ4ä¸ªæŒ‰é”®ï¼šç¡®è®¤ã€ä¸Šã€ä¸‹ã€ä½ç§»
+ *       æ”¯æŒçŸ­æŒ‰(<2ç§’)å’Œé•¿æŒ‰(>=2ç§’)æ£€æµ‹ï¼Œæ¾æ‰‹æ—¶è§¦å‘
  */
 
 #ifndef __BUTTON_DRIVER_H
 #define __BUTTON_DRIVER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "main.h"
 #include <stdint.h>
 #include <stdbool.h>
 
-/*============================================================================*/
-/*                           °´¼üÓ²¼ş¶¨Òå                                       */
-/*============================================================================*/
+/* æŒ‰é”®IDå®šä¹‰ */
+typedef enum {
+    BUTTON_ID_OK = 0,      /* ç¡®è®¤é”® */
+    BUTTON_ID_UP,          /* ä¸Šé”® */
+    BUTTON_ID_DOWN,        /* ä¸‹é”® */
+    BUTTON_ID_SHIFT,       /* ä½ç§»é”® */
+    BUTTON_ID_MAX
+} ButtonId_e;
+
+/* æŒ‰é”®äº‹ä»¶ç±»å‹ */
+typedef enum {
+    BUTTON_EVENT_SHORT = 0,    /* çŸ­æŒ‰äº‹ä»¶ (<2ç§’) */
+    BUTTON_EVENT_LONG,         /* é•¿æŒ‰äº‹ä»¶ (>=2ç§’) */
+    BUTTON_EVENT_NONE
+} ButtonEvent_e;
+
+/* æŒ‰é”®çŠ¶æ€ */
+typedef enum {
+    BUTTON_STATE_IDLE = 0,         /* ç©ºé—² */
+    BUTTON_STATE_DEBOUNCE,         /* æ¶ˆæŠ–ä¸­ */
+    BUTTON_STATE_PRESSED,          /* ç¨³å®šæŒ‰ä¸‹ */
+    BUTTON_STATE_LONG_PRESSED      /* é•¿æŒ‰è§¦å‘è¿‡ */
+} ButtonState_e;
+
+/* æŒ‰é”®é…ç½®ç»“æ„ä½“ */
+typedef struct {
+    GPIO_TypeDef *port;        /* GPIOç«¯å£ */
+    uint16_t pin;              /* GPIOå¼•è„š */
+    ButtonState_e state;       /* å½“å‰çŠ¶æ€ */
+    uint32_t press_time;       /* æŒ‰ä¸‹æŒç»­æ—¶é—´(æ¯«ç§’) */
+    uint32_t debounce_time;    /* æ¶ˆæŠ–è®¡æ—¶(æ¯«ç§’) */
+    bool long_triggered;        /* é•¿æŒ‰æ˜¯å¦å·²è§¦å‘ */
+} Button_t;
+
+/* æŒ‰é”®äº‹ä»¶å›è°ƒå‡½æ•°ç±»å‹ */
+typedef void (*ButtonCallback_t)(ButtonId_e button_id, ButtonEvent_e event);
 
 /**
- * @brief °´¼üIO¶¨Òå
- * @note  ¸ù¾İÔ­ÀíÍ¼È·¶¨°´¼üÊÇ¸ßµçÆ½ÓĞĞ§»¹ÊÇµÍµçÆ½ÓĞĞ§
- *        Í¨³£°´¼üÎ´°´ÏÂÎª¸ßµçÆ½£¬°´ÏÂÎªµÍµçÆ½(µÍµçÆ½ÓĞĞ§)
+ * @brief åˆå§‹åŒ–æŒ‰é”®é©±åŠ¨
+ * @param callback: æŒ‰é”®äº‹ä»¶å›è°ƒå‡½æ•°
+ * @retval None
  */
-typedef enum
-{
-    BTN_1 = 0,    /* °´¼ü1 - GPIOA Pin15 */
-    BTN_2,        /* °´¼ü2 - GPIOA Pin12 */
-    BTN_3,        /* °´¼ü3 - GPIOA Pin8 */
-    BTN_4,        /* °´¼ü4 - GPIOC Pin6 */
-    BTN_MAX       /* °´¼üÊıÁ¿ */
-} button_id_t;
+void button_driver_init(ButtonCallback_t callback);
 
 /**
- * @brief °´¼üÓĞĞ§µçÆ½
+ * @brief æŒ‰é”®æ‰«æä»»åŠ¡(éœ€åœ¨å®šæ—¶å™¨ä¸­æ–­æˆ–ä»»åŠ¡ä¸­å‘¨æœŸæ€§è°ƒç”¨)
+ * @param interval_ms: è°ƒç”¨é—´éš”(æ¯«ç§’)
+ * @retval None
  */
-typedef enum
-{
-    BTN_LEVEL_LOW = 0,    /* µÍµçÆ½ÓĞĞ§(°´ÏÂÎªµÍ) */
-    BTN_LEVEL_HIGH        /* ¸ßµçÆ½ÓĞĞ§(°´ÏÂÎª¸ß) */
-} button_level_t;
+void button_driver_scan(uint32_t interval_ms);
 
 /**
- * @brief °´¼üÊÂ¼şÀàĞÍ
+ * @brief è·å–æŒ‰é”®å½“å‰æŒ‰ä¸‹çŠ¶æ€
+ * @param button_id: æŒ‰é”®ID
+ * @retval true: æŒ‰ä¸‹, false: æœªæŒ‰ä¸‹
  */
-typedef enum
-{
-    BTN_EVENT_NONE = 0,       /* ÎŞÊÂ¼ş */
-    BTN_EVENT_PRESS,          /* °´ÏÂ */
-    BTN_EVENT_RELEASE,        /* ÊÍ·Å */
-    BTN_EVENT_SHORT_PRESS,    /* ¶Ì°´ */
-    BTN_EVENT_LONG_PRESS      /* ³¤°´ */
-} button_event_t;
-
-/**
- * @brief °´¼ü×´Ì¬
- */
-typedef enum
-{
-    BTN_STATE_IDLE = 0,       /* ¿ÕÏĞ */
-    BTN_STATE_PRESSED,        /* ÒÑ°´ÏÂ */
-    BTN_STATE_LONG_PRESS,     /* ³¤°´ÖĞ */
-    BTN_STATE_RELEASED        /* ÒÑÊÍ·Å */
-} button_state_t;
-
-/*============================================================================*/
-/*                           °´¼üÅäÖÃ²ÎÊı                                       */
-/*============================================================================*/
-
-/**
- * @brief °´¼üÏû¶¶Ê±¼ä (ºÁÃë)
- * @note  Ïû³ı°´¼ü»úĞµ¶¶¶¯£¬Í¨³£5-20ms
- */
-#define BTN_DEBOUNCE_TIME      20
-
-/**
- * @brief ¶Ì°´ÅĞ¶¨Ê±¼ä (ºÁÃë)
- * @note  °´ÏÂÊ±¼äĞ¡ÓÚ´ËÖµÎª¶Ì°´
- */
-#define BTN_SHORT_PRESS_TIME   50
-
-/**
- * @brief ³¤°´ÅĞ¶¨Ê±¼ä (ºÁÃë)
- * @note  °´ÏÂÊ±¼ä³¬¹ı´ËÖµÅĞ¶¨Îª³¤°´
- */
-#define BTN_LONG_PRESS_TIME    1000
-
-/**
- * @brief °´¼üÊıÁ¿
- */
-#define BUTTON_MAX_NUM          4
-
-/*============================================================================*/
-/*                           Êı¾İ½á¹¹¶¨Òå                                       */
-/*============================================================================*/
-
-/**
- * @brief °´¼üIOÅäÖÃ½á¹¹Ìå
- */
-typedef struct
-{
-    GPIO_TypeDef *port;        /* GPIO¶Ë¿Ú */
-    uint16_t pin;              /* GPIOÒı½Å */
-    button_level_t active_level;  /* ÓĞĞ§µçÆ½ */
-} button_gpio_t;
-
-/**
- * @brief °´¼üÍ³¼ÆĞÅÏ¢
- */
-typedef struct
-{
-    uint32_t press_count;      /* °´ÏÂ´ÎÊı */
-    uint32_t short_press_count;/* ¶Ì°´´ÎÊı */
-    uint32_t long_press_count; /* ³¤°´´ÎÊı */
-    uint32_t release_count;    /* ÊÍ·Å´ÎÊı */
-} button_stats_t;
-
-/**
- * @brief °´¼ü¶ÔÏó½á¹¹Ìå
- */
-typedef struct button_obj
-{
-    button_id_t id;                    /* °´¼üID */
-    button_state_t state;               /* µ±Ç°×´Ì¬ */
-    button_event_t last_event;         /* ×îºóÒ»´ÎÊÂ¼ş */
-    uint32_t press_start_time;          /* °´ÏÂ¿ªÊ¼Ê±¼ä */
-    uint32_t last_release_time;         /* ÉÏ´ÎÊÍ·ÅÊ±¼ä */
-    uint32_t repeat_count;              /* ³¤°´ÖØ¸´´ÎÊı */
-    bool enable;                        /* Ê¹ÄÜ±êÖ¾ */
-    button_stats_t stats;               /* Í³¼ÆĞÅÏ¢ */
-    
-    /* »Øµ÷º¯Êı */
-    void (*on_press)(button_id_t id);           /* °´ÏÂ»Øµ÷ */
-    void (*on_release)(button_id_t id);         /* ÊÍ·Å»Øµ÷ */
-    void (*on_short_press)(button_id_t id);     /* ¶Ì°´»Øµ÷ */
-    void (*on_long_press)(button_id_t id);      /* ³¤°´»Øµ÷ */
-    
-    struct button_obj *next;           /* Á´±íÏÂÒ»¸ö½Úµã */
-} button_obj_t;
-
-/**
- * @brief °´¼ü¹ÜÀíÆ÷ÅäÖÃ
- */
-typedef struct
-{
-    uint32_t scan_interval;             /* É¨Ãè¼ä¸ô(ms) */
-} button_manager_config_t;
-
-/**
- * @brief °´¼ü¹ÜÀíÆ÷½á¹¹Ìå
- */
-typedef struct
-{
-    button_obj_t buttons[BUTTON_MAX_NUM];   /* °´¼ü¶ÔÏóÊı×é */
-    button_manager_config_t config;         /* ÅäÖÃĞÅÏ¢ */
-    uint32_t system_time;                   /* ÏµÍ³Ê±¼ä(ºÁÃë) */
-    uint8_t initialized;                    /* ³õÊ¼»¯±êÖ¾ */
-} button_manager_t;
-
-/*============================================================================*/
-/*                           APIº¯ÊıÉùÃ÷                                       */
-/*============================================================================*/
-
-/**
- * @brief  ³õÊ¼»¯°´¼üÇı¶¯
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @note   ³õÊ¼»¯ËùÓĞ°´¼üIOºÍ×´Ì¬
- */
-void button_driver_init(button_manager_t *manager);
-
-/**
- * @brief  °´¼üÉ¨ÃèÈÎÎñ(ĞèÖÜÆÚĞÔµ÷ÓÃ)
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @note   ½¨ÒéÔÚ10msÖÜÆÚ¶¨Ê±Æ÷ÖĞµ÷ÓÃ
- */
-void button_driver_scan(button_manager_t *manager);
-
-/**
- * @brief  ¸üĞÂÏµÍ³Ê±¼ä
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  ms: µ±Ç°ÏµÍ³Ê±¼ä(ºÁÃë)
- * @note   ĞèÍâ²¿Ìá¹©ºÁÃë¼¶Ê±¼ä»ù×¼
- */
-void button_driver_update_time(button_manager_t *manager, uint32_t ms);
-
-/**
- * @brief  »ñÈ¡°´¼üµ±Ç°×´Ì¬
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval °´¼ü×´Ì¬
- */
-button_state_t button_driver_get_state(button_manager_t *manager, button_id_t id);
-
-/**
- * @brief  »ñÈ¡°´¼üÊÂ¼ş
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval ×îºóÒ»´Î°´¼üÊÂ¼ş
- */
-button_event_t button_driver_get_event(button_manager_t *manager, button_id_t id);
-
-/**
- * @brief  ¼ì²é°´¼üÊÇ·ñ°´ÏÂ
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval true-°´ÏÂ false-Î´°´ÏÂ
- */
-bool button_driver_is_pressed(button_manager_t *manager, button_id_t id);
-
-/**
- * @brief  ¼ì²é°´¼üÊÇ·ñ³¤°´
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval true-³¤°´ÖĞ false-·Ç³¤°´
- */
-bool button_driver_is_long_pressed(button_manager_t *manager, button_id_t id);
-
-/**
- * @brief  Ê¹ÄÜ/½ûÓÃ°´¼ü
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  enable: true-Ê¹ÄÜ false-½ûÓÃ
- */
-void button_driver_enable(button_manager_t *manager, button_id_t id, bool enable);
-
-/**
- * @brief  ×¢²á°´¼ü°´ÏÂ»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_press_cb(button_manager_t *manager, button_id_t id, 
-                                     void (*callback)(button_id_t id));
-
-/**
- * @brief  ×¢²á°´¼üÊÍ·Å»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_release_cb(button_manager_t *manager, button_id_t id,
-                                       void (*callback)(button_id_t id));
-
-/**
- * @brief  ×¢²á¶Ì°´»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_short_press_cb(button_manager_t *manager, button_id_t id,
-                                           void (*callback)(button_id_t id));
-
-/**
- * @brief  ×¢²á³¤°´»Øµ÷
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @param  callback: »Øµ÷º¯Êı
- */
-void button_driver_register_long_press_cb(button_manager_t *manager, button_id_t id,
-                                            void (*callback)(button_id_t id));
-
-/**
- * @brief  »ñÈ¡°´¼üÍ³¼ÆĞÅÏ¢
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- * @retval Í³¼ÆĞÅÏ¢½á¹¹ÌåÖ¸Õë
- */
-button_stats_t* button_driver_get_stats(button_manager_t *manager, button_id_t id);
-
-/**
- * @brief  ÖØÖÃ°´¼üÍ³¼Æ
- * @param  manager: °´¼ü¹ÜÀíÆ÷Ö¸Õë
- * @param  id: °´¼üID
- */
-void button_driver_reset_stats(button_manager_t *manager, button_id_t id);
-
-/**
- * @brief  »ñÈ¡°´¼üGPIO×´Ì¬(Ô­Ê¼¶ÁÈ¡)
- * @param  id: °´¼üID
- * @retval true-¸ßµçÆ½ false-µÍµçÆ½
- */
-bool button_driver_read_gpio(button_id_t id);
-
-/**
- * @brief  LVGLÊäÈëÉè±¸³õÊ¼»¯
- * @note   ³õÊ¼»¯LVGLµÄ°´¼üÊäÈëÇı¶¯£¬ÓÃÓÚ´¥Ãş²Ù×÷
- */
-void button_lvgl_init(void);
-
-/**
- * @brief  LVGL°´¼üÉ¨Ãè(ÔÚLVGLÈÎÎñÖĞµ÷ÓÃ)
- * @note   ½«°´¼üÊÂ¼ş×ª»»ÎªLVGLÊäÈë
- */
-void button_lvgl_scan(void);
-
-#ifdef __cplusplus
-}
-#endif
+bool button_get_pressed(ButtonId_e button_id);
 
 #endif /* __BUTTON_DRIVER_H */
