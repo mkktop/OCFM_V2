@@ -219,5 +219,6 @@ typedef enum
     RECTANGULAR_WEIR,         /* ¾ØÐÎÑß */
 } canals_type_t;
 
+extern ui_manager_t *ui_manager;
 
 #endif

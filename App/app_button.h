@@ -15,7 +15,11 @@
  * @retval None
  */
 void app_button_event_handler(ButtonId_e button_id, ButtonEvent_e event);
-
+void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event);
+void app_set_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event);
+void app_history_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event);
+void app_main_screen_up_button_handler(void);
+void app_main_screen_down_button_handler(void);
 /**
  * @brief 初始化应用层按键
  * @retval None

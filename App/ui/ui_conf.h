@@ -3,37 +3,37 @@
 
 #include "lvgl.h"
 
-//ÍßÆ¬ÊÓÍ¼¹ÜÀíÆ÷
+//ç“¦ç‰‡è§†å›¾ç®¡ç†å™¨
 typedef struct{
-    // Ö÷ÆÁÄ»Ïà¹Ø
-    lv_obj_t *main_screen;//Ê×Ò³ÆÁÄ»Ö¸Õë
-    lv_obj_t *tileview; //ÍßÆ¬ÊÓÍ¼
-    lv_obj_t *tile1; //µÚÒ»Ò³ÍßÆ¬
-    lv_obj_t *tile2; //µÚ¶şÒ³ÍßÆ¬
-    lv_obj_t *tile3; //µÚÈıÒ³ÍßÆ¬
-    int current_page; //µ±Ç°ÍßÆ¬Ò³
-    // ÉèÖÃÆÁÄ»Ïà¹Ø
-    lv_obj_t *settings_screen;//ÉèÖÃÆÁÄ»Ö¸Õë
-    //ÀúÊ·¼ÇÂ¼ÆÁÄ»Ö¸Õë
-    lv_obj_t *history_screen;//ÀúÊ·¼ÇÂ¼ÆÁÄ»Ö¸Õë
-    // µ±Ç°¼¤»îµÄÆÁÄ»
-    lv_obj_t *active_screen;//µ±Ç°¼¤»îµÄÆÁÄ»Ö¸Õë
+    // ä¸»å±å¹•ç›¸å…³
+    lv_obj_t *main_screen;//é¦–é¡µå±å¹•æŒ‡é’ˆ
+    lv_obj_t *tileview; //ç“¦ç‰‡è§†å›¾
+    lv_obj_t *tile1; //ç¬¬ä¸€é¡µç“¦ç‰‡
+    lv_obj_t *tile2; //ç¬¬äºŒé¡µç“¦ç‰‡
+    lv_obj_t *tile3; //ç¬¬ä¸‰é¡µç“¦ç‰‡
+    int current_page; //å½“å‰ç“¦ç‰‡é¡µ
+    // è®¾ç½®å±å¹•ç›¸å…³
+    lv_obj_t *settings_screen;//è®¾ç½®å±å¹•æŒ‡é’ˆ
+    //å†å²è®°å½•å±å¹•æŒ‡é’ˆ
+    lv_obj_t *history_screen;//å†å²è®°å½•å±å¹•æŒ‡é’ˆ
+    // å½“å‰æ¿€æ´»çš„å±å¹•
+    lv_obj_t *active_screen;//å½“å‰æ¿€æ´»çš„å±å¹•æŒ‡é’ˆ
     
-    // Subjects ²ã - LVGL Observer Ö÷Ìâ
+    // Subjects å±‚ - LVGL Observer ä¸»é¢˜
     struct {
-        lv_subject_t time_str;          ///< ÍêÕûÊ±¼ä×Ö·û´®£¬¸ñÊ½£ºYYYY/MM/DD HH:MM:SS
-        lv_subject_t time_short_str;    ///< ¼ò¶ÌÊ±¼ä×Ö·û´®£¬¸ñÊ½£ºHH:MM
+        lv_subject_t time_str;          ///< å®Œæ•´æ—¶é—´å­—ç¬¦ä¸²ï¼Œæ ¼å¼ï¼šYYYY/MM/DD HH:MM:SS
+        lv_subject_t time_short_str;    ///< ç®€çŸ­æ—¶é—´å­—ç¬¦ä¸²ï¼Œæ ¼å¼ï¼šHH:MM
         lv_subject_t record_time_str;
         lv_subject_t total_flow;
         char time_buf[32];
         char time_prev_buf[32];
-        char time_short_buf[16];        ///< ¼ò¶ÌÊ±¼ä»º³åÇø
-        char time_short_prev_buf[16];    ///< ¼ò¶ÌÊ±¼äÇ°Ò»¸öÖµ»º³åÇø
+        char time_short_buf[16];        ///< ç®€çŸ­æ—¶é—´ç¼“å†²åŒº
+        char time_short_prev_buf[16];    ///< ç®€çŸ­æ—¶é—´å‰ä¸€ä¸ªå€¼ç¼“å†²åŒº
         char record_time_buf[64];
         char record_time_prev_buf[64];
     } subjects;
 }ui_manager_t;
 
-extern ui_manager_t *ui_manager;//ui¹ÜÀíÆ÷Ö¸Õë,ËùÓĞÒ³Ãæ¾ù¿Éµ÷ÓÃ
+extern ui_manager_t *ui_manager;//uiç®¡ç†å™¨æŒ‡é’ˆ,æ‰€æœ‰é¡µé¢å‡å¯è°ƒç”¨
 
 #endif /* __UI_CONF_H__ */
