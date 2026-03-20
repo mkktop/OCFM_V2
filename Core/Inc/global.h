@@ -1,7 +1,7 @@
 /**
  * @file global.h
  * @author mkk
- * @brief ȫ�������ļ� - ���й������к궨�������
+ * @brief 全局配置文件 - 集中管理所有宏定义和配置
  */
 
 #ifndef __GLOBAL_H
@@ -18,206 +18,264 @@
 #include "rtc_time.h"
 #include "ui/ui.h"
 /*============================================================================*/
-/*                           ϵͳ��Ϣ����                                          */
+/*                           系统信息配置                                          */
 /*============================================================================*/
 
 /**
- * @brief �豸��Ϣ
+ * @brief 设备信息
  */
-#define FIRMWARE_VERSION        0x0100      /* �̼��汾 v1.00 */
+#define FIRMWARE_VERSION        0x0100      /* 固件版本 v1.00 */
 
 
 
 /*============================================================================*/
-/*                      Modbus�ӻ����� (����2 - ���û�����ͨ��)                       */
+/*                      Modbus从机配置 (串口2 - 与用户进行通信)                       */
 /*============================================================================*/
 
 /**
- * @brief Modbus�ӻ�����
+ * @brief Modbus从机配置
  */
-#define HOLDING_REG_SIZE        32          /* ���ּĴ������� */
-#define MODBUS_SLAVE_BUF_SIZE   256         /* ���ջ�������С */
+#define HOLDING_REG_SIZE        32          /* 保持寄存器数量 */
+#define MODBUS_SLAVE_BUF_SIZE   256         /* 接收缓冲区大小 */
  
 
 
 
 
 /*============================================================================*/
-/*                      Modbus�������� (����1 - ������ͨ��)                     */
+/*                      Modbus主机配置 (串口1 - 传感器通信)                     */
 /*============================================================================*/
 
 /**
- * @brief Modbus��������
+ * @brief Modbus主机配置
  */
-#define MODBUS_MASTER_TIMEOUT_MS    500     /* ��ʱʱ�� (����) */
-#define MODBUS_MAX_SLAVE_COUNT      2       /* ��󴫸�������(Ŀǰ����·�״�̽ͷ)�� */
-#define MODBUS_MAX_RETRY            3       /* ������Դ��� */
+#define MODBUS_MASTER_TIMEOUT_MS    500     /* 超时时间 (毫秒) */
+#define MODBUS_MAX_SLAVE_COUNT      2       /* 最大传感器数量(目前接两路雷达探头)） */
+#define MODBUS_MAX_RETRY            3       /* 最大重试次数 */
 
 
 
 /**
- * @brief �Ĵ�����ַ����
- * @note ��������ʹ�ñ��ּĴ�������ַ��1��ʼ
- *       uint16_tռ1���Ĵ�����floatռ2���Ĵ�����doubleռ4���Ĵ�����int32ռ2���Ĵ���
+ * @brief 寄存器地址定义
+ * @note 所有数据使用保持寄存器，地址从1开始
+ *       uint16_t占1个寄存器，float占2个寄存器，double占4个寄存器，int32占2个寄存器
  */
 
 /*----------------------------------------------------------------------------*/
-/* ������������ (�豸���£��û���ȡ)                                            */
+/* 传感器数据区 (设备更新，用户读取)                                            */
 /*----------------------------------------------------------------------------*/
-//�������ݼĴ���
-#define REG_WUWEI               0x0001       /* ��λ�Ĵ��� ռ1���Ĵ��� */
-#define REG_DISTANCE            0x0002       /* ����Ĵ��� ռ1���Ĵ��� */
-#define REG_TEMPERATURE         0x0003       /* �¶ȼĴ��� ռ1���Ĵ��� */
-#define REG_INSTANT_FLOW        0x0004       /* ˲ʱ�����Ĵ��� ռ2���Ĵ��� */
-#define REG_SUM_FLOW            0x0006       /* �ۼ������Ĵ��� ռ4���Ĵ��� */
-#define REG_RELAY1_STATUS       0x000A       /* �̵���1״̬�Ĵ��� ռ1���Ĵ��� */
-#define REG_RELAY2_STATUS       0x000B       /* �̵���2״̬�Ĵ��� ռ1���Ĵ��� */
-#define REG_RELAY3_STATUS       0x000C       /* �̵���3״̬�Ĵ��� ռ1���Ĵ��� */
-#define REG_RELAY4_STATUS       0x000D       /* �̵���4״̬�Ĵ��� ռ1���Ĵ��� */
+//基础数据寄存器
+#define REG_WUWEI               0x0001       /* 物位寄存器 占1个寄存器 */
+#define REG_DISTANCE            0x0002       /* 距离寄存器 占1个寄存器 */
+#define REG_TEMPERATURE         0x0003       /* 温度寄存器 占1个寄存器 */
+#define REG_INSTANT_FLOW        0x0004       /* 瞬时流量寄存器 占2个寄存器 */
+#define REG_SUM_FLOW            0x0006       /* 累计流量寄存器 占4个寄存器 */
+#define REG_RELAY1_STATUS       0x000A       /* 继电器1状态寄存器 占1个寄存器 */
+#define REG_RELAY2_STATUS       0x000B       /* 继电器2状态寄存器 占1个寄存器 */
+#define REG_RELAY3_STATUS       0x000C       /* 继电器3状态寄存器 占1个寄存器 */
+#define REG_RELAY4_STATUS       0x000D       /* 继电器4状态寄存器 占1个寄存器 */
 
-//����ֵ�Ĵ���
-#define REG_AH                  0x000E       /* ���ޱ���ֵ�Ĵ��� ռ2���Ĵ��� */
-#define REG_DH                  0x0010       /* ���޻ز�Ĵ��� ռ2���Ĵ��� */
-#define REG_AL                  0x0012       /* ���ޱ���ֵ�Ĵ��� ռ2���Ĵ��� */
-#define REG_DL                  0x0014       /* ���޻ز�Ĵ��� ռ2���Ĵ��� */
-#define REG_AAH                 0x0015       /* �����ޱ���ֵ�Ĵ��� ռ2���Ĵ��� */
-#define REG_AAL                 0x0017       /* �����ޱ���ֵ�Ĵ��� ռ2���Ĵ��� */
+//报警值寄存器
+#define REG_AH                  0x000E       /* 上限报警值寄存器 占2个寄存器 */
+#define REG_DH                  0x0010       /* 上限回差寄存器 占2个寄存器 */
+#define REG_AL                  0x0012       /* 下限报警值寄存器 占2个寄存器 */
+#define REG_DL                  0x0014       /* 下限回差寄存器 占2个寄存器 */
+#define REG_AAH                 0x0015       /* 上上限报警值寄存器 占2个寄存器 */
+#define REG_AAL                 0x0017       /* 下下限报警值寄存器 占2个寄存器 */
 
-//�������������üĴ���
-#define REG_RANGE_MAX           0x0065       /* ������̼Ĵ��� ռ1���Ĵ��� */
-#define REG_HEIGHT              0x0066       /* �߶ȼĴ��� ռ1���Ĵ��� */
-#define REG_L1                  0x0067       /* L1(window_width)�Ĵ��� ռ1���Ĵ��� */
-#define REG_L2                  0x0068       /* L2(filt_Count)�Ĵ��� ռ1���Ĵ��� */
-#define REG_L3                  0x0069       /* L3(delaytime)�Ĵ��� ռ1���Ĵ��� */
-#define REG_L4                  0x006A       /* L4(blind_area)�Ĵ��� ռ1���Ĵ��� */
-#define REG_L5                  0x006B       /* L5(w_coeff)�Ĵ��� ռ1���Ĵ��� */
-#define REG_L6                  0x006C       /* L6(m_coeff)�Ĵ��� ռ1���Ĵ��� */
-#define REG_ADDRESS             0x006D       /* ��������ַ�Ĵ��� ռ1���Ĵ��� */
-#define REG_BAUDE_RATE          0x006E       /* �����ʼĴ��� ռ1���Ĵ��� */
-#define REG_STOP_BITS           0x006F       /* ֹͣλ�Ĵ��� ռ1���Ĵ��� */
+//传感器参数设置寄存器
+#define REG_RANGE_MAX           0x0065       /* 最大量程寄存器 占1个寄存器 */
+#define REG_HEIGHT              0x0066       /* 高度寄存器 占1个寄存器 */
+#define REG_L1                  0x0067       /* L1(window_width)寄存器 占1个寄存器 */
+#define REG_L2                  0x0068       /* L2(filt_Count)寄存器 占1个寄存器 */
+#define REG_L3                  0x0069       /* L3(delaytime)寄存器 占1个寄存器 */
+#define REG_L4                  0x006A       /* L4(blind_area)寄存器 占1个寄存器 */
+#define REG_L5                  0x006B       /* L5(w_coeff)寄存器 占1个寄存器 */
+#define REG_L6                  0x006C       /* L6(m_coeff)寄存器 占1个寄存器 */
+#define REG_ADDRESS             0x006D       /* 传感器地址寄存器 占1个寄存器 */
+#define REG_BAUDE_RATE          0x006E       /* 波特率寄存器 占1个寄存器 */
+#define REG_STOP_BITS           0x006F       /* 停止位寄存器 占1个寄存器 */
 
-//Modbus�ӻ������Ĵ���
-#define REG_CANALS__TYPE        0x0101       /* �������ͼĴ��� ռ1���Ĵ��� */
-#define REG_CHANNEL_ID          0x0102       /* ˮ�۱�żĴ��� ռ1���Ĵ��� */
-#define REG_INSTANT_UNIT        0x0103       /* ˲ʱ������λ�Ĵ��� ռ1���Ĵ��� */
-#define REG_SUM_POINT           0x0104       /* �ۼ�����С��λ���Ĵ��� ռ1���Ĵ��� */
-#define REG_RANGE_4MA           0x0105       /* 4mA���̼Ĵ��� ռ2���Ĵ��� */
-#define REG_RANGE_20MA          0x0107       /* 20mA���̼Ĵ��� ռ2���Ĵ��� */
+//Modbus从机参数寄存器
+#define REG_CANALS__TYPE        0x0101       /* 渠道类型寄存器 占1个寄存器 */
+#define REG_CHANNEL_ID          0x0102       /* 水槽编号寄存器 占1个寄存器 */
+#define REG_INSTANT_UNIT        0x0103       /* 瞬时流量单位寄存器 占1个寄存器 */
+#define REG_SUM_POINT           0x0104       /* 累计流量小数位数寄存器 占1个寄存器 */
+#define REG_RANGE_4MA           0x0105       /* 4mA量程寄存器 占2个寄存器 */
+#define REG_RANGE_20MA          0x0107       /* 20mA量程寄存器 占2个寄存器 */
 
-//����У׼�Ĵ���
-#define REG_FACTORY_RANGE       0x1001       /* �������̼Ĵ��� ռ1���Ĵ��� */
-#define REG_DEAD_ZONE           0x1002       /* ä���Ĵ��� ռ1���Ĵ��� */
-#define REG_DIS_OFFSET          0x1003       /* ����ƫ�ƼĴ��� ռ1���Ĵ��� */
-#define REG_CALIBRATION_4MA     0x1004       /* 4mAУ׼ֵ�Ĵ��� ռ1���Ĵ��� */
-#define REG_CALIBRATION_20MA    0x1005       /* 20mAУ׼ֵ�Ĵ��� ռ1���Ĵ��� */
-#define REG_FACTORY_SETTING     0x1006       /* �ָ��������üĴ��� ռ1���Ĵ��� */
+//出厂校准寄存器
+#define REG_FACTORY_RANGE       0x1001       /* 出厂量程寄存器 占1个寄存器 */
+#define REG_DEAD_ZONE           0x1002       /* 盲区寄存器 占1个寄存器 */
+#define REG_DIS_OFFSET          0x1003       /* 距离偏移寄存器 占1个寄存器 */
+#define REG_CALIBRATION_4MA     0x1004       /* 4mA校准值寄存器 占1个寄存器 */
+#define REG_CALIBRATION_20MA    0x1005       /* 20mA校准值寄存器 占1个寄存器 */
+#define REG_FACTORY_SETTING     0x1006       /* 恢复出厂设置寄存器 占1个寄存器 */
 
 
 
 /*============================================================================*/
-/*                      Modbus�������������� (����1 - ������ͨ��)                */
+/*                      Modbus主机传感器定义 (串口1 - 传感器通信)                */
 /*============================================================================*/
 
 /**
- * @brief �������ӻ���ַ����
+ * @brief 传感器从机地址定义
  */
-#define SENSOR_ADDR_1           1       /* ������1��ַ */
-#define SENSOR_ADDR_2           2       /* ������2��ַ */
+#define SENSOR_ADDR_1           1       /* 传感器1地址 */
+#define SENSOR_ADDR_2           2       /* 传感器2地址 */
 
 /**
- * @brief �������Ĵ�����ַ����
+ * @brief 传感器寄存器地址定义
  * @note 
  */
-#define SENSOR_REG_DATA         0       /* ���������ݼĴ��� */
+#define SENSOR_REG_DATA         0       /* 传感器数据寄存器 */
 
 /*============================================================================*/
-/*                           ״̬��־����                                       */
+/*                           状态标志定义                                       */
 /*============================================================================*/
 
 /**
- * @brief �����붨��
+ * @brief 错误码定义
  */
-#define ERROR_NONE              0       /* �޴��� */
-#define ERROR_SENSOR_TIMEOUT    1       /* ��������ʱ */
-#define ERROR_SENSOR_CRC        2       /* ������CRC���� */
+#define ERROR_NONE              0       /* 无错误 */
+#define ERROR_SENSOR_TIMEOUT    1       /* 传感器超时 */
+#define ERROR_SENSOR_CRC        2       /* 传感器CRC错误 */
 
 
 /*============================================================================*/
-/*                           ϵͳ�����ṹ��                                          */
+/*                           系统参数结构体                                          */
 /*============================================================================*/
+
+/**
+ * @brief 配置有效标志
+ * @note 用于检测EEPROM中是否已写入有效配置
+ */
+#define CONFIG_MAGIC_NUMBER    0xA5A5A5A5U
+
+/**
+ * @brief 配置在EEPROM中的起始地址
+ */
+#define CONFIG_EEPROM_ADDR     0
+
 typedef struct
 {
-    // ��������
-    uint32_t range_max;         /* ������� */
-    uint32_t height;            /* �߶� */
-    uint32_t calibration_4ma;   /* 4mAУ׼ֵ */
-    uint32_t calibration_20ma;  /* 20mAУ׼ֵ */
-    uint32_t range_4ma;         /* 4mA���� */
-    uint32_t range_20ma;        /* 20mA���� */
-    uint32_t point_num;         /* С�������� */
-    // ��������
-    uint32_t window_width;      /* ���ڿ��� */
-    uint32_t filter_count;      /* �˲����� */
-    uint32_t delay_time;        /* ���������ݲɼ��ӳ�ʱ�� (����) */
-    uint32_t antenna_type;      /* �������� */
-    uint32_t blind_area;        /* ����ä�� */
-    uint32_t w_coeff;           /* ����ϵ�� */
-    uint32_t m_coeff;           /* ����ϵ�� */
-    // Modbus�ӻ�����
-    uint32_t modbusAddr;        /* Modbus�ӻ���ַ */
-    uint32_t modbusBaudRate;    /* Modbus�ӻ������� */
-    uint32_t modbusStopBits;    /* Modbus�ӻ�ֹͣλ */
-    // ��������
-    uint32_t alarm_ah;          /* ���ޱ��� */
-    uint32_t alarm_al;          /* ���ޱ��� */
-    uint32_t alarm_dh;          /* ���ޱ����ز� */
-    uint32_t alarm_dl;          /* ���ޱ����ز� */
-    uint32_t alarm_aah;         /* �����ޱ��� */
-    uint32_t alarm_aal;         /* �����ޱ��� */
-    // ��������
-    uint32_t factory_settings;  /* �ָ��������� */
-    uint32_t dis_offset;        /* ƫ���� */
-    uint32_t canals_type;       /* ˮ������ */
-    uint32_t channel_id;        /* ͨ����� */
-    uint32_t instant_unit;      /* ˲ʱ������λ */
-    uint32_t sum_point;        /* �ۼ�����С������ */
-    uint32_t language;          /* ���� */
+    uint32_t magic_number;      /* 配置有效标志 */
+
+    // 基本参数
+    uint32_t range_max;         /* 最大量程 */
+    uint32_t height;            /* 高度 */
+    uint32_t calibration_4ma;   /* 4mA校准值 */
+    uint32_t calibration_20ma;  /* 20mA校准值 */
+    uint32_t range_4ma;         /* 4mA量程 */
+    uint32_t range_20ma;        /* 20mA量程 */
+    uint32_t point_num;         /* 小数点数量 */
+    // 测量参数
+    uint32_t window_width;      /* 窗口宽度 */
+    uint32_t filter_count;      /* 滤波次数 */
+    uint32_t delay_time;        /* 传感器数据采集延迟时间 (毫秒) */
+    uint32_t antenna_type;      /* 天线类型 */
+    uint32_t blind_area;        /* 测量盲区 */
+    uint32_t w_coeff;           /* 窗口系数 */
+    uint32_t m_coeff;           /* 测量系数 */
+    // Modbus从机参数
+    uint32_t modbusAddr;        /* Modbus从机地址 */
+    uint32_t modbusBaudRate;    /* Modbus从机波特率 */
+    uint32_t modbusStopBits;    /* Modbus从机停止位 */
+    // 报警参数
+    uint32_t alarm_ah;          /* 上限报警 */
+    uint32_t alarm_al;          /* 下限报警 */
+    uint32_t alarm_dh;          /* 上限报警回差 */
+    uint32_t alarm_dl;          /* 下限报警回差 */
+    uint32_t alarm_aah;         /* 上上限报警 */
+    uint32_t alarm_aal;         /* 下下限报警 */
+    // 其他参数
+    uint32_t factory_settings;  /* 恢复出厂设置 */
+    uint32_t dis_offset;        /* 偏移量 */
+    uint32_t canals_type;       /* 水渠类型 */
+    uint32_t channel_id;        /* 通道编号 */
+    uint32_t instant_unit;      /* 瞬时流量单位 */
+    uint32_t sum_point;        /* 累计流量小数点数 */
+    uint32_t language;          /* 语言 */
 } SystemConfig_t;
 
 
 /*============================================================================*/
-/*                           ������λ����                                       */
+/*                           流量单位定义                                       */
 /*============================================================================*/
 
 /**
- * @brief ������λ����ö��
- * @note  �ڲ�����ͳһʹ�� L/s ��Ϊ��׼��λ
+ * @brief 流量单位类型枚举
+ * @note  内部计算统一使用 L/s 作为基准单位
  */
 typedef enum
 {
-    FLOW_UNIT_L_S = 0,     /* ��/�� (��׼��λ) */
-    FLOW_UNIT_L_MIN,       /* ��/���� */
-    FLOW_UNIT_L_H,         /* ��/Сʱ */
-    FLOW_UNIT_M3_H,        /* ������/Сʱ */
-    FLOW_UNIT_M3_S,        /* ������/�� */
-    FLOW_UNIT_M3_MIN,      /* ������/���� */
-    FLOW_UNIT_T_H,         /* ��/Сʱ */
-    FLOW_UNIT_G_H,         /* ���Ƽ���/Сʱ */
+    FLOW_UNIT_L_S = 0,     /* 升/秒 (基准单位) */
+    FLOW_UNIT_L_MIN,       /* 升/分钟 */
+    FLOW_UNIT_L_H,         /* 升/小时 */
+    FLOW_UNIT_M3_H,        /* 立方米/小时 */
+    FLOW_UNIT_M3_S,        /* 立方米/秒 */
+    FLOW_UNIT_M3_MIN,      /* 立方米/分钟 */
+    FLOW_UNIT_T_H,         /* 吨/小时 */
+    FLOW_UNIT_G_H,         /* 美制加仑/小时 */
 } flow_unit_t;
 
 /*============================================================================*/
-/*                           ˮ�����Ͷ���                                       */
+/*                           水渠类型定义                                       */
 /*============================================================================*/
 
 /**
- * @brief ˮ������ö��
+ * @brief 水渠类型枚举
  */
 typedef enum
 {
-    PARSHALL_FLUME = 0,       /* ��Ъ��ˮ�� */
-    TRIANGULAR_WEIR,          /* ������ */
-    RECTANGULAR_WEIR,         /* ������ */
+    PARSHALL_FLUME = 0,       /* 巴歇尔水槽 */
+    TRIANGULAR_WEIR,          /* 三角堰 */
+    RECTANGULAR_WEIR,         /* 矩形堰 */
 } canals_type_t;
+
+/*============================================================================*/
+/*                           系统配置默认值                                      */
+/*============================================================================*/
+
+// 基本参数默认值
+#define DEFAULT_RANGE_MAX        10000       /* 最大量程 10000mm */
+#define DEFAULT_HEIGHT           1000        /* 高度 1000mm */
+#define DEFAULT_CALIBRATION_4MA  400         /* 4mA校准值 */
+#define DEFAULT_CALIBRATION_20MA 20000       /* 20mA校准值 */
+#define DEFAULT_RANGE_4MA        0           /* 4mA量程 */
+#define DEFAULT_RANGE_20MA       10000       /* 20mA量程 */
+#define DEFAULT_POINT_NUM        1           /* 小数点数量 */
+
+// 测量参数默认值
+#define DEFAULT_WINDOW_WIDTH     500         /* 窗口宽度 500mm */
+#define DEFAULT_FILTER_COUNT     3           /* 滤波次数 */
+#define DEFAULT_DELAY_TIME       100         /* 延迟时间 100ms */
+#define DEFAULT_ANTENNA_TYPE     0           /* 天线类型 */
+#define DEFAULT_BLIND_AREA       300         /* 盲区 300mm */
+#define DEFAULT_W_COEFF          10          /* 窗口系数 */
+#define DEFAULT_M_COEFF          1           /* 测量系数 */
+
+// Modbus从机参数默认值
+#define DEFAULT_MODBUS_ADDR      1           /* Modbus地址 */
+#define DEFAULT_MODBUS_BAUD      9600        /* 波特率 9600 */
+#define DEFAULT_MODBUS_STOP      1           /* 停止位 1位 */
+
+// 报警参数默认值
+#define DEFAULT_ALARM_AH         8000        /* 上限报警 */
+#define DEFAULT_ALARM_AL         500         /* 下限报警 */
+#define DEFAULT_ALARM_DH         100         /* 上限回差 */
+#define DEFAULT_ALARM_DL         50          /* 下限回差 */
+#define DEFAULT_ALARM_AAH        9000        /* 上上限报警 */
+#define DEFAULT_ALARM_AAL        200         /* 下下限报警 */
+
+// 其他参数默认值
+#define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */
+#define DEFAULT_DIS_OFFSET       0           /* 偏移量 */
+#define DEFAULT_CANALS_TYPE      0           /* 水渠类型 (巴歇尔槽) */
+#define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
+#define DEFAULT_INSTANT_UNIT     0           /* 瞬时流量单位 (L/s) */
+#define DEFAULT_SUM_POINT        2           /* 累计流量小数点数 */
+#define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
 
 extern ui_manager_t *ui_manager;
 

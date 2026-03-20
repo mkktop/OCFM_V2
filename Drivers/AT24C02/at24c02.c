@@ -1,9 +1,9 @@
 /**
  * @file at24c02.c
- * @brief AT24C02 EEPROMé©±åŠ¨å®ç°
+ * @brief AT24C02 EEPROMÇı¶¯ÊµÏÖ
  * @author mkk
  * @date 2026-03-10
- * @details AT24C02æ˜¯2Kä½çš„ä¸²è¡ŒEEPROMï¼Œæ”¯æŒI2Cæ¥å£
+ * @details AT24C02ÊÇ2KÎ»µÄ´®ĞĞEEPROM£¬Ö§³ÖI2C½Ó¿Ú
  */
 
 #include "at24c02.h"
@@ -11,9 +11,9 @@
 #include <string.h>
 
 /**
- * @brief åˆå§‹åŒ–AT24C02
- * @return 1:æˆåŠŸ 0:å¤±è´¥
- * @note æ£€æµ‹EEPROMæ˜¯å¦å‡†å¤‡å¥½
+ * @brief ³õÊ¼»¯AT24C02
+ * @return 1:³É¹¦ 0:Ê§°Ü
+ * @note ¼ì²âEEPROMÊÇ·ñ×¼±¸ºÃ
  */
 uint8_t at24c02_init(void)
 {
@@ -21,10 +21,10 @@ uint8_t at24c02_init(void)
 }
 
 /**
- * @brief è¯»å–å•ä¸ªå­—èŠ‚
- * @param addr è¯»å–åœ°å€ (0-255)
- * @param data æ•°æ®æŒ‡é’ˆ
- * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @brief ¶ÁÈ¡µ¥¸ö×Ö½Ú
+ * @param addr ¶ÁÈ¡µØÖ· (0-255)
+ * @param data Êı¾İÖ¸Õë
+ * @return 1:³É¹¦ 0:Ê§°Ü
  */
 uint8_t at24c02_read_byte(uint8_t addr, uint8_t *data)
 {
@@ -37,11 +37,11 @@ uint8_t at24c02_read_byte(uint8_t addr, uint8_t *data)
 }
 
 /**
- * @brief å†™å…¥å•ä¸ªå­—èŠ‚
- * @param addr å†™å…¥åœ°å€ (0-255)
- * @param data è¦å†™å…¥çš„æ•°æ®
- * @return 1:æˆåŠŸ 0:å¤±è´¥
- * @note å†™å…¥æ—¶é—´æœ€é•¿10ms
+ * @brief Ğ´Èëµ¥¸ö×Ö½Ú
+ * @param addr Ğ´ÈëµØÖ· (0-255)
+ * @param data ÒªĞ´ÈëµÄÊı¾İ
+ * @return 1:³É¹¦ 0:Ê§°Ü
+ * @note Ğ´ÈëÊ±¼ä×î³¤10ms
  */
 uint8_t at24c02_write_byte(uint8_t addr, uint8_t data)
 {
@@ -54,11 +54,11 @@ uint8_t at24c02_write_byte(uint8_t addr, uint8_t data)
 }
 
 /**
- * @brief è¿ç»­è¯»å–å¤šä¸ªå­—èŠ‚
- * @param addr èµ·å§‹åœ°å€
- * @param length è¯»å–é•¿åº¦ (1-256)
- * @param data æ¥æ”¶æ•°æ®ç¼“å†²åŒº
- * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @brief Á¬Ğø¶ÁÈ¡¶à¸ö×Ö½Ú
+ * @param addr ÆğÊ¼µØÖ·
+ * @param length ¶ÁÈ¡³¤¶È (1-256)
+ * @param data ½ÓÊÕÊı¾İ»º³åÇø
+ * @return 1:³É¹¦ 0:Ê§°Ü
  */
 uint8_t at24c02_read_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 {
@@ -80,12 +80,12 @@ uint8_t at24c02_read_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 }
 
 /**
- * @brief è¿ç»­å†™å…¥å¤šä¸ªå­—èŠ‚
- * @param addr èµ·å§‹åœ°å€
- * @param length å†™å…¥é•¿åº¦
- * @param data è¦å†™å…¥çš„æ•°æ®
- * @return 1:æˆåŠŸ 0:å¤±è´¥
- * @note è‡ªåŠ¨å¤„ç†è·¨é¡µå†™å…¥ï¼Œé•¿åº¦è¶…è¿‡é¡µå‰©ä½™ç©ºé—´è‡ªåŠ¨æ¢é¡µ
+ * @brief Á¬ĞøĞ´Èë¶à¸ö×Ö½Ú
+ * @param addr ÆğÊ¼µØÖ·
+ * @param length Ğ´Èë³¤¶È
+ * @param data ÒªĞ´ÈëµÄÊı¾İ
+ * @return 1:³É¹¦ 0:Ê§°Ü
+ * @note ×Ô¶¯´¦Àí¿çÒ³Ğ´Èë£¬³¤¶È³¬¹ıÒ³Ê£Óà¿Õ¼ä×Ô¶¯»»Ò³
  */
 uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 {
@@ -102,10 +102,10 @@ uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 
     while (length > 0)
     {
-        /* è®¡ç®—å½“å‰é¡µå‰©ä½™ç©ºé—´ */
+        /* ¼ÆËãµ±Ç°Ò³Ê£Óà¿Õ¼ä */
         page_remain = AT24C02_PAGE_SIZE - (current_addr % AT24C02_PAGE_SIZE);
 
-        /* ç¡®ä¿å†™å…¥é•¿åº¦ä¸è¶…è¿‡é¡µå‰©ä½™ç©ºé—´ */
+        /* È·±£Ğ´Èë³¤¶È²»³¬¹ıÒ³Ê£Óà¿Õ¼ä */
         write_len = (length < page_remain) ? length : page_remain;
 
         status = HAL_I2C_Mem_Write(&hi2c2,
@@ -120,7 +120,7 @@ uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data)
             return 0;
         }
 
-        /* ç­‰å¾…å†…éƒ¨å†™å…¥å®Œæˆ (æœ€é•¿10ms) */
+        /* µÈ´ıÄÚ²¿Ğ´ÈëÍê³É (×î³¤10ms) */
         osDelay(10);
 
         current_addr += write_len;
@@ -132,12 +132,12 @@ uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data)
 }
 
 /**
- * @brief å†™å…¥ä¸€é¡µæ•°æ®
- * @param page é¡µå· (0-7)
- * @param length å†™å…¥é•¿åº¦ (1-32)
- * @param data è¦å†™å…¥çš„æ•°æ®
- * @return 1:æˆåŠŸ 0:å¤±è´¥
- * @note é¡µå†™å…¥åœ°å€å¿…é¡»åœ¨é¡µå†…ï¼Œä¸èƒ½è·¨é¡µ
+ * @brief Ğ´ÈëÒ»Ò³Êı¾İ
+ * @param page Ò³ºÅ (0-15)
+ * @param length Ğ´Èë³¤¶È (1-16)
+ * @param data ÒªĞ´ÈëµÄÊı¾İ
+ * @return 1:³É¹¦ 0:Ê§°Ü
+ * @note Ò³Ğ´ÈëµØÖ·±ØĞëÔÚÒ³ÄÚ£¬²»ÄÜ¿çÒ³
  */
 uint8_t at24c02_write_page(uint8_t page, uint8_t length, uint8_t *data)
 {
@@ -160,26 +160,26 @@ uint8_t at24c02_write_page(uint8_t page, uint8_t length, uint8_t *data)
         return 0;
     }
 
-    /* ç­‰å¾…å†…éƒ¨å†™å…¥å®Œæˆ */
+    /* µÈ´ıÄÚ²¿Ğ´ÈëÍê³É */
     osDelay(10);
 
     return 1;
 }
 
 /**
- * @brief å…¨ç‰‡æ“¦é™¤EEPROM
- * @return 1:æˆåŠŸ 0:å¤±è´¥
- * @note æ‰€æœ‰å­—èŠ‚å†™å…¥0xFF
+ * @brief È«Æ¬²Á³ıEEPROM
+ * @return 1:³É¹¦ 0:Ê§°Ü
+ * @note ËùÓĞ×Ö½ÚĞ´Èë0xFF
  */
 uint8_t at24c02_erase(void)
 {
     uint8_t buffer[AT24C02_PAGE_SIZE];
     uint8_t page;
 
-    /* å¡«å……0xFF */
+    /* Ìî³ä0xFF */
     memset(buffer, 0xFF, AT24C02_PAGE_SIZE);
 
-    /* é€é¡µæ“¦é™¤ */
+    /* ÖğÒ³²Á³ı */
     for (page = 0; page < AT24C02_PAGE_COUNT; page++)
     {
         if (!at24c02_write_page(page, AT24C02_PAGE_SIZE, buffer))
@@ -192,8 +192,8 @@ uint8_t at24c02_erase(void)
 }
 
 /**
- * @brief æ£€æµ‹EEPROMæ˜¯å¦å‡†å¤‡å¥½
- * @return 1:å°±ç»ª 0:æœªå°±ç»ª
+ * @brief ¼ì²âEEPROMÊÇ·ñ×¼±¸ºÃ
+ * @return 1:¾ÍĞ÷ 0:Î´¾ÍĞ÷
  */
 uint8_t at24c02_is_ready(void)
 {

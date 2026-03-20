@@ -4892,6 +4892,11 @@
               <FileType>5</FileType>
               <FilePath>..\App\app_button.h</FilePath>
             </File>
+            <File>
+              <FileName>app_config.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_config.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -683,6 +683,7 @@
 "ocfm_v2\app_log.o"
 "ocfm_v2\app_model.o"
 "ocfm_v2\app_button.o"
+"ocfm_v2\app_config.o"
 "ocfm_v2\file_driver.o"
 "ocfm_v2\data_recorder.o"
 "ocfm_v2\log_manager.o"

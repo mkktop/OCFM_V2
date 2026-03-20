@@ -1,7 +1,7 @@
 /**
  * @file at24c02.h
- * @brief AT24C02 EEPROMÇı¶¯Í·ÎÄ¼ş
- * @details AT24C02ÊÇ2KÎ»µÄ´®ĞĞEEPROM£¬Ö§³ÖI2C½Ó¿Ú
+ * @brief AT24C02 EEPROMé©±åŠ¨å¤´æ–‡ä»¶
+ * @details AT24C02æ˜¯2Kä½çš„ä¸²è¡ŒEEPROMï¼Œæ”¯æŒI2Cæ¥å£
  */
 
 #ifndef __AT24C02_H
@@ -15,98 +15,98 @@ extern "C" {
 #include "i2c.h"
 
 /**
- * @brief AT24C02Éè±¸µØÖ·
- * @note A2/A1/A0Òı½Å½ÓµØ£¬µØÖ·Îª1010_000 = 0x50
- *       Êµ¼ÊµØÖ·: 0x50 << 1 = 0xA0 (Ğ´) / 0xA1 (¶Á)
+ * @brief AT24C02è®¾å¤‡åœ°å€
+ * @note A2/A1/A0å¼•è„šæ¥åœ°ï¼Œåœ°å€ä¸º1010_000 = 0x50
+ *       å®é™…åœ°å€: 0x50 << 1 = 0xA0 (å†™) / 0xA1 (è¯»)
  */
 #define AT24C02_ADDR         0x50
 
 /**
- * @brief AT24C02´æ´¢ÈİÁ¿
- * @note 2Kbit = 256×Ö½Ú = 1Ò³ * 256×Ö½Ú »ò 8Ò³ * 32×Ö½Ú
+ * @brief AT24C02å­˜å‚¨å®¹é‡
+ * @note 2Kbit = 256å­—èŠ‚ = 16é¡µ * 16å­—èŠ‚
  */
 #define AT24C02_SIZE         256
 
 /**
- * @brief Ò³´óĞ¡
- * @note AT24C02Ò³´óĞ¡Îª32×Ö½Ú
+ * @brief é¡µå¤§å°
+ * @note AT24C02é¡µå¤§å°ä¸º16å­—èŠ‚
  */
-#define AT24C02_PAGE_SIZE    32
+#define AT24C02_PAGE_SIZE    16
 
 /**
- * @brief Ò³ÊıÁ¿
- * @note AT24C02ÓĞ8Ò³£¬Ã¿Ò³32×Ö½Ú
+ * @brief é¡µæ•°é‡
+ * @note AT24C02æœ‰16é¡µï¼Œæ¯é¡µ16å­—èŠ‚
  */
-#define AT24C02_PAGE_COUNT   8
+#define AT24C02_PAGE_COUNT   16
 
 /**
- * @brief Ğ´Èë³¬Ê±Ê±¼ä
+ * @brief å†™å…¥è¶…æ—¶æ—¶é—´
  */
 #define AT24C02_TIMEOUT      1000
 
 /**
- * @brief ³õÊ¼»¯AT24C02
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ¼ì²éEEPROMÊÇ·ñÔÚÏß
+ * @brief åˆå§‹åŒ–AT24C02
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note æ£€æŸ¥EEPROMæ˜¯å¦åœ¨çº¿
  */
 uint8_t at24c02_init(void);
 
 /**
- * @brief ¶ÁÈ¡µ¥¸ö×Ö½Ú
- * @param addr ¶ÁÈ¡µØÖ· (0-255)
- * @param data Êı¾İÊä³öÖ¸Õë
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief è¯»å–å•ä¸ªå­—èŠ‚
+ * @param addr è¯»å–åœ°å€ (0-255)
+ * @param data æ•°æ®è¾“å‡ºæŒ‡é’ˆ
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t at24c02_read_byte(uint8_t addr, uint8_t *data);
 
 /**
- * @brief Ğ´Èëµ¥¸ö×Ö½Ú
- * @param addr Ğ´ÈëµØÖ· (0-255)
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note Ğ´ÈëÊ±¼ä×î³¤10ms
+ * @brief å†™å…¥å•ä¸ªå­—èŠ‚
+ * @param addr å†™å…¥åœ°å€ (0-255)
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note å†™å…¥æ—¶é—´æœ€é•¿10ms
  */
 uint8_t at24c02_write_byte(uint8_t addr, uint8_t data);
 
 /**
- * @brief Á¬Ğø¶ÁÈ¡¶à¸ö×Ö½Ú
- * @param addr ÆğÊ¼µØÖ·
- * @param length ¶ÁÈ¡³¤¶È (1-256)
- * @param data Êı¾İÊä³ö»º³åÇø
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief è¿ç»­è¯»å–å¤šä¸ªå­—èŠ‚
+ * @param addr èµ·å§‹åœ°å€
+ * @param length è¯»å–é•¿åº¦ (1-256)
+ * @param data æ•°æ®è¾“å‡ºç¼“å†²åŒº
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t at24c02_read_buffer(uint8_t addr, uint8_t length, uint8_t *data);
 
 /**
- * @brief Á¬ĞøĞ´Èë¶à¸ö×Ö½Ú
- * @param addr ÆğÊ¼µØÖ·
- * @param length Ğ´Èë³¤¶È
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ×Ô¶¯°´Ò³Ğ´Èë£¬³¤¶È³¬¹ıÒ³Ê£Óà¿Õ¼ä»á×Ô¶¯»»Ò³
+ * @brief è¿ç»­å†™å…¥å¤šä¸ªå­—èŠ‚
+ * @param addr èµ·å§‹åœ°å€
+ * @param length å†™å…¥é•¿åº¦
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note è‡ªåŠ¨æŒ‰é¡µå†™å…¥ï¼Œé•¿åº¦è¶…è¿‡é¡µå‰©ä½™ç©ºé—´ä¼šè‡ªåŠ¨æ¢é¡µ
  */
 uint8_t at24c02_write_buffer(uint8_t addr, uint8_t length, uint8_t *data);
 
 /**
- * @brief Ğ´ÈëÒ»Ò³Êı¾İ
- * @param page Ò³ºÅ (0-7)
- * @param length Ğ´Èë³¤¶È (1-32)
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note Ò³Ğ´ÈëµØÖ·±ØĞëÔÚÒ³ÄÚ£¬³¬³ö²¿·Ö»á»ØÈÆ
+ * @brief å†™å…¥ä¸€é¡µæ•°æ®
+ * @param page é¡µå· (0-7)
+ * @param length å†™å…¥é•¿åº¦ (1-32)
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note é¡µå†™å…¥åœ°å€å¿…é¡»åœ¨é¡µå†…ï¼Œè¶…å‡ºéƒ¨åˆ†ä¼šå›ç»•
  */
 uint8_t at24c02_write_page(uint8_t page, uint8_t length, uint8_t *data);
 
 /**
- * @brief ²Á³ıÕû¸öEEPROM
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ½«ËùÓĞ×Ö½ÚĞ´Èë0xFF
+ * @brief æ“¦é™¤æ•´ä¸ªEEPROM
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note å°†æ‰€æœ‰å­—èŠ‚å†™å…¥0xFF
  */
 uint8_t at24c02_erase(void);
 
 /**
- * @brief ¼ì²éEEPROMÊÇ·ñÔÚÏß
- * @return 1:ÔÚÏß 0:²»ÔÚÏß
+ * @brief æ£€æŸ¥EEPROMæ˜¯å¦åœ¨çº¿
+ * @return 1:åœ¨çº¿ 0:ä¸åœ¨çº¿
  */
 uint8_t at24c02_is_ready(void);
 
