@@ -47,7 +47,9 @@ OCFM_V2/
 │   │   ├── ui_conf.h        # UI管理器和Subject定义
 │   │   └── ui_set_page.c/h  # 设置页面
 │   ├── app_model.c/h        # 数据模型 (MVVM模式)
-│   └── app_log.c/h          # 日志功能
+│   ├── app_log.c/h          # 日志功能
+│   ├── app_config.c/h       # 系统配置管理 (EEPROM存储)
+│   └── app_button.c/h       # 应用层按键处理
 ├── Drivers/
 │   ├── STM32F4xx_HAL_Driver/# HAL库
 │   ├── CMSIS/               # CMSIS头文件
@@ -208,6 +210,26 @@ app_history_screen_button_handler()
 2. 在 `app_button_event_handler()` 中添加页面判断分支
 3. 在 `App/app_button.h` 中添加函数声明
 4. 在 `ui_conf.h` 的 `ui_manager_t` 中确保有对应的屏幕指针
+
+## 系统配置管理 (app_config)
+
+`App/app_config.c/h` 提供系统参数的持久化存储管理，使用 EEPROM (AT24C02) 存储配置。
+
+**核心功能：**
+- `app_config_init()` - 初始化配置，从EEPROM加载，无效则使用默认值
+- `app_config_save()` - 保存配置到EEPROM
+- `app_config_load()` - 从EEPROM加载配置
+- `app_config_get()` - 获取配置结构体指针
+- `app_config_factory_reset()` - 恢复出厂设置
+
+**配置字段类别：**
+- 基本参数：range_max, height, calibration_4ma/20ma, point_num
+- 测量参数：window_width, filter_count, delay_time, antenna_type, blind_area
+- Modbus参数：modbusAddr, modbusBaudRate, modbusStopBits
+- 报警参数：alarm_ah/al, alarm_dh/dl, alarm_aah/aal
+- 其他：canals_type, channel_id, instant_unit, language
+
+**注意：** 所有配置修改后需调用 `app_config_save()` 才能持久化。
 
 ## UI页面结构
 

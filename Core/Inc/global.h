@@ -198,6 +198,44 @@ typedef struct
     uint32_t language;          /* 语言 */
 } SystemConfig_t;
 
+// 设置表
+typedef struct
+{
+    uint16_t function;//功能码
+    uint8_t RW; //读写标志，0-只读，1- 读写
+    uint32_t max;//最大值
+    uint32_t min;//最小值
+}SET_TABLE;
+
+/**
+ * @brief 寄存器属性设置表
+ * @note 定义每个寄存器的读写权限和数值范围
+ */
+extern const SET_TABLE SET_Table[];
+extern const uint16_t SET_TABLE_SIZE;
+
+/**
+ * @brief 根据功能码查找对应表项
+ * @param function_code: 功能码（寄存器地址）
+ * @retval SET_TABLE结构体，未找到时返回空表项
+ */
+SET_TABLE check_function_code(uint16_t function_code);
+
+/**
+ * @brief 根据寄存器地址设置配置值
+ * @param reg_addr: 寄存器地址
+ * @param value: 设置值
+ * @retval 0: 成功, 1: 寄存器不存在, 2: 只读寄存器, 3: 值超出范围
+ */
+uint8_t app_config_set_by_reg(uint16_t reg_addr, uint32_t value);
+
+/**
+ * @brief 根据寄存器地址获取配置值
+ * @param reg_addr: 寄存器地址
+ * @param value: 返回值指针
+ * @retval 0: 成功, 1: 寄存器不存在
+ */
+uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value);
 
 /*============================================================================*/
 /*                           流量单位定义                                       */

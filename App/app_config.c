@@ -484,3 +484,351 @@ void app_config_set_language(uint32_t value)
     g_config.language = value;
 }
 
+/*============================================================================*/
+/*                           寄存器设置表                                       */
+/*============================================================================*/
+
+/**
+ * @brief 寄存器属性设置表
+ * @note 用于定义每个寄存器的读写权限和数值范围
+ *       function: 寄存器地址 (功能码)
+ *       RW: 读写标志 (0-只读, 1-读写)
+ *       max: 最大值
+ *       min: 最小值
+ */
+const SET_TABLE SET_Table[] = {
+    /* 传感器数据区 (只读) */
+    {REG_WUWEI,            0, 99999, 0},      /* 物位 */
+    {REG_DISTANCE,         0, 99999, 0},      /* 距离 */
+    {REG_TEMPERATURE,      0,  9999, 0},      /* 温度 */
+    {REG_INSTANT_FLOW,     0, 99999, 0},      /* 瞬时流量 */
+    {REG_SUM_FLOW,         0, 99999, 0},      /* 累计流量 */
+    {REG_RELAY1_STATUS,    0,     1, 0},      /* 继电器1状态 */
+    {REG_RELAY2_STATUS,    0,     1, 0},      /* 继电器2状态 */
+    {REG_RELAY3_STATUS,    0,     1, 0},      /* 继电器3状态 */
+    {REG_RELAY4_STATUS,    0,     1, 0},      /* 继电器4状态 */
+
+    /* 报警值寄存器 (读写) */
+    {REG_AH,               1, 99999, 0},      /* 上限报警值 */
+    {REG_DH,               1, 99999, 0},      /* 上限回差 */
+    {REG_AL,               1, 99999, 0},      /* 下限报警值 */
+    {REG_DL,               1, 99999, 0},      /* 下限回差 */
+    {REG_AAH,              1, 99999, 0},      /* 上上限报警值 */
+    {REG_AAL,              1, 99999, 0},      /* 下下限报警值 */
+
+    /* 传感器参数设置寄存器 (读写) */
+    {REG_RANGE_MAX,        1, 99999, 0},      /* 最大量程 */
+    {REG_HEIGHT,           1, 99999, 0},      /* 高度 */
+    {REG_L1,               1,  1000, 0},      /* 窗口宽度 (window_width) */
+    {REG_L2,               1,    50, 0},      /* 滤波次数 (filt_count) */
+    {REG_L3,               1,  1000, 0},      /* 测量延时 (delay_time) */
+    {REG_L4,               1,  1000, 0},      /* 测量盲区 (blind_area) */
+    {REG_L5,               1,    10, 0},      /* 阻尼系数 (w_coeff) */
+    {REG_L6,               1,    10, 0},      /* 数据平滑 (m_coeff) */
+    {REG_ADDRESS,          1,   247, 0},      /* 传感器地址 */
+    {REG_BAUDE_RATE,       1,    16, 0},      /* 波特率 */
+    {REG_STOP_BITS,        1,     7, 0},      /* 停止位 */
+
+    /* Modbus从机参数寄存器 (读写) */
+    {REG_CANALS__TYPE,     1,     2, 0},      /* 渠道类型 */
+    {REG_CHANNEL_ID,       1,   255, 0},      /* 水槽编号 */
+    {REG_INSTANT_UNIT,     1,     7, 0},      /* 瞬时流量单位 */
+    {REG_SUM_POINT,        1,     3, 0},      /* 累计流量小数位数 */
+    {REG_RANGE_4MA,        1, 99999, 0},      /* 4mA量程 */
+    {REG_RANGE_20MA,       1, 99999, 0},      /* 20mA量程 */
+
+    /* 出厂校准寄存器 */
+    {REG_FACTORY_RANGE,    0, 99999, 0},      /* 出厂量程 (只读) */
+    {REG_DEAD_ZONE,        0,  1000, 0},      /* 盲区 (只读) */
+    {REG_DIS_OFFSET,       1, 99999, 0},      /* 距离偏移 */
+    {REG_CALIBRATION_4MA,  1, 99999, 0},      /* 4mA校准值 */
+    {REG_CALIBRATION_20MA, 1, 99999, 0},      /* 20mA校准值 */
+    {REG_FACTORY_SETTING,  1,     1, 0},      /* 恢复出厂设置 */
+};
+
+/* 设置表大小 */
+const uint16_t SET_TABLE_SIZE = sizeof(SET_Table) / sizeof(SET_TABLE);
+
+/**
+ * @brief 根据功能码查找对应表项
+ * @param function_code: 功能码（寄存器地址）
+ * @retval SET_TABLE结构体，未找到时返回空表项
+ */
+SET_TABLE check_function_code(uint16_t function_code)
+{
+    for (uint16_t i = 0; i < SET_TABLE_SIZE; i++) {
+        if (SET_Table[i].function == function_code) {
+            return SET_Table[i];
+        }
+    }
+    /* 未找到对应的功能码，返回空表项 */
+    SET_TABLE empty = {0, 0, 0, 0};
+    return empty;
+}
+
+/**
+ * @brief 根据寄存器地址设置配置值
+ * @param reg_addr: 寄存器地址
+ * @param value: 设置值
+ * @retval 0: 成功, 1: 寄存器不存在, 2: 只读寄存器, 3: 值超出范围
+ */
+uint8_t app_config_set_by_reg(uint16_t reg_addr, uint32_t value)
+{
+    SET_TABLE entry = check_function_code(reg_addr);
+
+    /* 检查寄存器是否存在 */
+    if (entry.function == 0) {
+        return 1;
+    }
+
+    /* 检查是否可写 */
+    if (entry.RW == 0) {
+        return 2;
+    }
+
+    /* 检查范围 */
+    if (value < entry.min || value > entry.max) {
+        return 3;
+    }
+
+    /* 根据寄存器地址设置对应配置 */
+    switch (reg_addr) {
+        /* 报警值寄存器 */
+        case REG_AH:
+            g_config.alarm_ah = value;
+            break;
+        case REG_DH:
+            g_config.alarm_dh = value;
+            break;
+        case REG_AL:
+            g_config.alarm_al = value;
+            break;
+        case REG_DL:
+            g_config.alarm_dl = value;
+            break;
+        case REG_AAH:
+            g_config.alarm_aah = value;
+            break;
+        case REG_AAL:
+            g_config.alarm_aal = value;
+            break;
+
+        /* 传感器参数设置寄存器 */
+        case REG_RANGE_MAX:
+            g_config.range_max = value;
+            break;
+        case REG_HEIGHT:
+            g_config.height = value;
+            break;
+        case REG_L1:
+            g_config.window_width = value;
+            break;
+        case REG_L2:
+            g_config.filter_count = value;
+            break;
+        case REG_L3:
+            g_config.delay_time = value;
+            break;
+        case REG_L4:
+            g_config.blind_area = value;
+            break;
+        case REG_L5:
+            g_config.w_coeff = value;
+            break;
+        case REG_L6:
+            g_config.m_coeff = value;
+            break;
+        case REG_ADDRESS:
+            g_config.modbusAddr = value;
+            break;
+        case REG_BAUDE_RATE:
+            g_config.modbusBaudRate = value;
+            break;
+        case REG_STOP_BITS:
+            g_config.modbusStopBits = value;
+            break;
+
+        /* Modbus从机参数寄存器 */
+        case REG_CANALS__TYPE:
+            g_config.canals_type = value;
+            break;
+        case REG_CHANNEL_ID:
+            g_config.channel_id = value;
+            break;
+        case REG_INSTANT_UNIT:
+            g_config.instant_unit = value;
+            break;
+        case REG_SUM_POINT:
+            g_config.sum_point = value;
+            break;
+        case REG_RANGE_4MA:
+            g_config.range_4ma = value;
+            break;
+        case REG_RANGE_20MA:
+            g_config.range_20ma = value;
+            break;
+
+        /* 出厂校准寄存器 */
+        case REG_DIS_OFFSET:
+            g_config.dis_offset = value;
+            break;
+        case REG_CALIBRATION_4MA:
+            g_config.calibration_4ma = value;
+            break;
+        case REG_CALIBRATION_20MA:
+            g_config.calibration_20ma = value;
+            break;
+        case REG_FACTORY_SETTING:
+            if (value == 1) {
+                app_config_factory_reset();
+            }
+            break;
+
+        default:
+            return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief 根据寄存器地址获取配置值
+ * @param reg_addr: 寄存器地址
+ * @param value: 返回值指针
+ * @retval 0: 成功, 1: 寄存器不存在
+ */
+uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value)
+{
+    SET_TABLE entry = check_function_code(reg_addr);
+
+    /* 检查寄存器是否存在 */
+    if (entry.function == 0) {
+        return 1;
+    }
+
+    /* 根据寄存器地址获取对应配置 */
+    switch (reg_addr) {
+        /* 传感器数据区 */
+        case REG_WUWEI:
+            /* 物位需要从传感器获取，此处返回0 */
+            *value = 0;
+            break;
+        case REG_DISTANCE:
+            /* 距离需要从传感器获取，此处返回0 */
+            *value = 0;
+            break;
+        case REG_TEMPERATURE:
+            /* 温度需要从传感器获取，此处返回0 */
+            *value = 0;
+            break;
+        case REG_INSTANT_FLOW:
+        case REG_SUM_FLOW:
+        case REG_RELAY1_STATUS:
+        case REG_RELAY2_STATUS:
+        case REG_RELAY3_STATUS:
+        case REG_RELAY4_STATUS:
+            /* 这些值需要从其他模块获取 */
+            *value = 0;
+            break;
+
+        /* 报警值寄存器 */
+        case REG_AH:
+            *value = g_config.alarm_ah;
+            break;
+        case REG_DH:
+            *value = g_config.alarm_dh;
+            break;
+        case REG_AL:
+            *value = g_config.alarm_al;
+            break;
+        case REG_DL:
+            *value = g_config.alarm_dl;
+            break;
+        case REG_AAH:
+            *value = g_config.alarm_aah;
+            break;
+        case REG_AAL:
+            *value = g_config.alarm_aal;
+            break;
+
+        /* 传感器参数设置寄存器 */
+        case REG_RANGE_MAX:
+            *value = g_config.range_max;
+            break;
+        case REG_HEIGHT:
+            *value = g_config.height;
+            break;
+        case REG_L1:
+            *value = g_config.window_width;
+            break;
+        case REG_L2:
+            *value = g_config.filter_count;
+            break;
+        case REG_L3:
+            *value = g_config.delay_time;
+            break;
+        case REG_L4:
+            *value = g_config.blind_area;
+            break;
+        case REG_L5:
+            *value = g_config.w_coeff;
+            break;
+        case REG_L6:
+            *value = g_config.m_coeff;
+            break;
+        case REG_ADDRESS:
+            *value = g_config.modbusAddr;
+            break;
+        case REG_BAUDE_RATE:
+            *value = g_config.modbusBaudRate;
+            break;
+        case REG_STOP_BITS:
+            *value = g_config.modbusStopBits;
+            break;
+
+        /* Modbus从机参数寄存器 */
+        case REG_CANALS__TYPE:
+            *value = g_config.canals_type;
+            break;
+        case REG_CHANNEL_ID:
+            *value = g_config.channel_id;
+            break;
+        case REG_INSTANT_UNIT:
+            *value = g_config.instant_unit;
+            break;
+        case REG_SUM_POINT:
+            *value = g_config.sum_point;
+            break;
+        case REG_RANGE_4MA:
+            *value = g_config.range_4ma;
+            break;
+        case REG_RANGE_20MA:
+            *value = g_config.range_20ma;
+            break;
+
+        /* 出厂校准寄存器 */
+        case REG_FACTORY_RANGE:
+        case REG_DEAD_ZONE:
+            /* 出厂参数只读，此处返回0 */
+            *value = 0;
+            break;
+        case REG_DIS_OFFSET:
+            *value = g_config.dis_offset;
+            break;
+        case REG_CALIBRATION_4MA:
+            *value = g_config.calibration_4ma;
+            break;
+        case REG_CALIBRATION_20MA:
+            *value = g_config.calibration_20ma;
+            break;
+        case REG_FACTORY_SETTING:
+            *value = g_config.factory_settings;
+            break;
+
+        default:
+            return 1;
+    }
+
+    return 0;
+}
+
