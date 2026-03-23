@@ -1,80 +1,243 @@
 /**
- * @file modbus_master.c
- * @brief Modbus主机实现 - 用于轮询485传感器
- * @details 通过串口1连接485传感器，主动发送Modbus请求并接收响应
+ * @file    modbus_master.c
+ * @brief   Modbus主机通信模块实现
+ * @details 本文件实现了Modbus RTU主机功能，用于通过RS485总线轮询外部传感器设备。
+ *
+ *          主要特性：
+ *          - 支持多传感器轮询（最多MODBUS_MAX_SLAVE_COUNT个）
+ *          - 非阻塞状态机架构，适合在FreeRTOS任务中调用
+ *          - 使用DMA+空闲中断实现高效数据接收
+ *          - 支持自动重试和离线检测
+ *          - 提供阻塞式和非阻塞式两种读写接口
+ *
+ *          硬件连接：
+ *          - UART1: RS485通信接口
+ *          - UART1_CTRL_Pin: RS485收发方向控制引脚（高电平发送，低电平接收）
+ *
+ *          使用方法：
+ *          1. 调用 modbus_master_init() 初始化主机
+ *          2. 调用 modbus_master_add_sensor() 添加传感器设备
+ *          3. 在主循环或定时任务中调用 modbus_master_poll() 进行轮询
+ *          4. 使用 modbus_master_get_sensor_value() 等函数获取数据
+ *
+ * @author  OCFM_V2 Team
+ * @date    2025
+ * @version 1.0
  */
 
 #include "modbus_master.h"
 #include "modbus.h"
 #include <string.h>
 
+/*============================================================================*/
+/*                           全局变量定义                                       */
+/*============================================================================*/
+
 /**
  * @brief 全局Modbus主机实例
- * @note 用于管理485传感器的通信
+ * @note  用于管理水位传感器等外部Modbus设备的通信
  */
 modbus_master_t sensor_master;
 
-/**
- * @brief 接收数据缓冲区
- * @note 用于暂存串口接收到的Modbus响应数据
- */
-static uint8_t modbus_master_rx_data[256];
+/*============================================================================*/
+/*                           私有变量定义                                       */
+/*============================================================================*/
 
 /**
- * @brief 初始化Modbus主机
- * @param master 主机结构体指针
- * @param huart 串口句柄指针
- * @note 初始化所有成员变量，设置串口和初始状态
+ * @brief DMA接收缓冲区
+ * @note  用于HAL_UARTEx_ReceiveToIdle_DMA函数的接收缓冲区
+ *        大小设置为256字节，可容纳最长的Modbus RTU响应帧
+ */
+static uint8_t dma_rx_buffer[256];
+
+/**
+ * @brief 接收完成标志
+ * @note  当空闲中断触发时置1，表示一帧数据接收完成
+ *        在 modbus_master_check_rx_complete() 中被清除
+ */
+static volatile uint8_t rx_complete_flag = 0;
+
+/**
+ * @brief 接收数据长度
+ * @note  记录最近一次接收到的数据字节数
+ */
+static volatile uint16_t rx_complete_length = 0;
+
+/*============================================================================*/
+/*                           初始化与配置函数                                   */
+/*============================================================================*/
+
+/**
+ * @brief  初始化Modbus主机
+ * @param  master: 主机结构体指针，指向要初始化的modbus_master_t实例
+ * @param  huart:  串口句柄指针，指定用于Modbus通信的UART外设
+ * @note   初始化内容包括：
+ *         - 清零主机结构体
+ *         - 绑定串口句柄
+ *         - 设置初始状态为IDLE
+ *         - 启动DMA+空闲中断接收模式
+ * @retval 无
  */
 void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart)
 {
+    /* 清零整个结构体，确保所有字段初始值为0 */
     memset(master, 0, sizeof(modbus_master_t));
+
+    /* 绑定串口句柄 */
     master->huart = huart;
+
+    /* 设置初始状态为空闲 */
     master->state = MODBUS_MASTER_STATE_IDLE;
+
+    /* 初始化轮询索引和传感器计数 */
     master->current_slave_index = 0;
     master->sensor_count = 0;
+
+    /*
+     * 启动DMA+空闲中断接收模式
+     * 工作原理：
+     * - DMA持续将接收到的数据存入dma_rx_buffer
+     * - 当检测到空闲帧（数据流停止）时，触发空闲中断
+     * - 在中断回调中获取已接收的数据长度
+     */
+    HAL_UARTEx_ReceiveToIdle_DMA(huart, dma_rx_buffer, sizeof(dma_rx_buffer));
 }
 
 /**
- * @brief 添加传感器设备
- * @param master 主机结构体指针
- * @param slave_id 从机ID (1-247)
- * @param start_addr 寄存器起始地址
- * @param quantity 寄存器数量
- * @return 1:成功 0:失败(传感器数量已达上限)
- * @note 最多支持8个传感器同时连接
+ * @brief  添加传感器设备到轮询列表
+ * @param  master:     主机结构体指针
+ * @param  slave_id:   从机ID，范围1-247（Modbus协议规定）
+ * @param  start_addr: 寄存器起始地址，指定要读取的寄存器首地址
+ * @param  quantity:   寄存器数量，指定要读取的寄存器个数
+ * @retval 1: 添加成功
+ * @retval 0: 添加失败（传感器数量已达上限）
+ * @note   每个传感器会在轮询时自动读取指定的寄存器区域
  */
 uint8_t modbus_master_add_sensor(modbus_master_t *master, uint8_t slave_id,
                                   uint16_t start_addr, uint16_t quantity)
 {
-    /* 检查传感器数量是否已达上限 */
+    /* 检查是否已达到最大传感器数量 */
     if (master->sensor_count >= MODBUS_MAX_SLAVE_COUNT)
     {
         return 0;
     }
 
-    /* 获取当前传感器结构体指针 */
+    /* 获取当前传感器槽位的指针 */
     modbus_sensor_t *sensor = &master->sensors[master->sensor_count];
 
     /* 配置传感器参数 */
-    sensor->slave_id = slave_id;           /* 从机ID */
-    sensor->start_addr = start_addr;       /* 寄存器起始地址 */
-    sensor->quantity = quantity;           /* 寄存器数量 */
-    sensor->retry_count = 0;               /* 重试次数清零 */
-    sensor->is_active = 1;                 /* 标记为激活状态 */
-    sensor->last_poll_time = 0;            /* 上次轮询时间 */
+    sensor->slave_id = slave_id;        /* Modbus从机地址 */
+    sensor->start_addr = start_addr;    /* 寄存器起始地址 */
+    sensor->quantity = quantity;        /* 寄存器数量 */
+    sensor->retry_count = 0;            /* 重试计数器清零 */
+    sensor->is_active = 1;              /* 标记为在线状态 */
+    sensor->last_poll_time = 0;         /* 上次轮询时间清零 */
 
-    /* 传感器数量加1 */
+    /* 传感器计数增加 */
     master->sensor_count++;
 
     return 1;
 }
 
+/*============================================================================*/
+/*                           接收处理函数                                       */
+/*============================================================================*/
+
 /**
- * @brief Modbus主机轮询任务
- * @param master 主机结构体指针
- * @note 需要在主循环中周期性调用，实现对所有传感器的轮询
- *       采用状态机方式：空闲→发送→等待响应→接收→处理
+ * @brief  串口空闲中断回调函数
+ * @param  huart: 触发中断的串口句柄
+ * @param  size:  接收到的数据字节数
+ * @note   本函数在以下情况被调用：
+ *         1. HAL_UARTEx_RxEventCallback() 中断回调中
+ *         2. USART1_IRQHandler 中直接调用（如果未使用HAL回调机制）
+ *
+ *         处理流程：
+ *         1. 检查是否为Modbus主机使用的串口
+ *         2. 将DMA缓冲区数据复制到主机接收缓冲区
+ *         3. 设置接收完成标志
+ *         4. 重新启动DMA接收，准备接收下一帧
+ * @retval 无
+ */
+void modbus_master_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size)
+{
+    /* 检查是否为Modbus主机使用的串口 */
+    if (huart == sensor_master.huart)
+    {
+        /* 将DMA缓冲区数据复制到主机接收缓冲区 */
+        memcpy(sensor_master.rx_buffer, dma_rx_buffer, size);
+        sensor_master.rx_length = size;
+
+        /* 记录接收完成信息 */
+        rx_complete_length = size;
+        rx_complete_flag = 1;
+
+        /*
+         * 重新启动DMA接收
+         * 注意：必须在处理完当前数据后重新启动，否则后续数据无法接收
+         */
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, dma_rx_buffer, sizeof(dma_rx_buffer));
+    }
+}
+
+/**
+ * @brief  HAL UART 事件回调函数（空闲中断）
+ * @param  huart: 触发回调的串口句柄
+ * @param  size:  接收到的数据字节数
+ * @note   这是HAL库的标准回调函数，会在以下情况自动调用：
+ *         - 使用HAL_UARTEx_ReceiveToIdle_DMA()启动接收后
+ *         - 检测到空闲帧时
+ *
+ *         如果使用中断方式而非DMA，请在stm32f4xx_it.c的USART1_IRQHandler中
+ *         调用HAL_UARTEx_RxEventCallback()或直接调用modbus_master_rx_idle_callback()
+ * @retval 无
+ */
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
+{
+    modbus_master_rx_idle_callback(huart, size);
+}
+
+/**
+ * @brief  检查是否收到完整的Modbus响应帧
+ * @retval 1: 已收到完整数据帧
+ * @retval 0: 未收到数据或数据不完整
+ * @note   此函数会自动清除接收完成标志，因此每次接收只能检测一次
+ */
+static uint8_t modbus_master_check_rx_complete(void)
+{
+    if (rx_complete_flag)
+    {
+        rx_complete_flag = 0;  /* 清除标志，为下次接收做准备 */
+        return 1;
+    }
+    return 0;
+}
+
+/*============================================================================*/
+/*                           轮询状态机                                         */
+/*============================================================================*/
+
+/**
+ * @brief  Modbus主机轮询任务
+ * @param  master: 主机结构体指针
+ * @note   这是一个非阻塞的状态机，需要在主循环或定时任务中周期性调用。
+ *
+ *         状态机工作流程：
+ *         @code
+ *         IDLE -> WAITING_RESPONSE -> PROCESSING -> IDLE -> ...
+ *         @endcode
+ *
+ *         状态说明：
+ *         - IDLE: 空闲状态，检查当前传感器并构建请求帧
+ *         - WAITING_RESPONSE: 等待响应，检查超时和接收完成
+ *         - PROCESSING: 处理响应数据，更新传感器状态
+ *
+ *         轮询策略：
+ *         - 按顺序轮询所有已添加的传感器
+ *         - 跳过is_active为0的传感器（离线设备）
+ *         - 连续MODBUS_MAX_RETRY次失败后标记设备离线
+ *         - 成功通信后重置重试计数器并更新在线状态
+ *
+ * @retval 无
  */
 void modbus_master_poll(modbus_master_t *master)
 {
@@ -84,111 +247,131 @@ void modbus_master_poll(modbus_master_t *master)
         return;
     }
 
-    /* 根据当前状态执行不同操作 */
     switch (master->state)
     {
-        /* 状态1: 空闲 - 准备发送下一个请求 */
+        /*--------------------------------------------------------------------*/
+        /* 空闲状态：准备并发送Modbus请求                                       */
+        /*--------------------------------------------------------------------*/
         case MODBUS_MASTER_STATE_IDLE:
         {
-            /* 获取当前要轮询的传感器 */
             modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
 
-            /* 如果传感器未激活，跳过并切换到下一个 */
-            if (!sensor->is_active)
+            /*
+             * 轮询间隔控制：
+             * - 在线传感器：每1秒轮询一次
+             * - 离线传感器：每5秒尝试一次
+             */
+            uint32_t poll_interval = sensor->is_active ? 1000 : 5000;
+
+            if (HAL_GetTick() - sensor->last_poll_time < poll_interval)
             {
+                /* 未到轮询时间，跳过 */
                 master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
                 break;
             }
 
-            /* 构建Modbus读保持寄存器请求 (功能码0x03) */
+            /*
+             * 构建读保持寄存器请求（功能码0x03）
+             * 请求帧格式：[从机地址][功能码][起始地址高][起始地址低][数量高][数量低][CRC低][CRC高]
+             * 总长度：8字节
+             */
             uint8_t req_buffer[8];
             modbus_build_request(req_buffer, sensor->slave_id, MODBUS_FUNC_READ_HOLDING,
                                  sensor->start_addr, sensor->quantity);
 
-            /* 保存请求数据到发送缓冲区 */
+            /* 复制请求帧到发送缓冲区 */
             master->tx_length = 8;
             memcpy(master->tx_buffer, req_buffer, 8);
 
-            /* 发送请求帧 */
+            /* 清除接收相关标志，准备接收响应 */
+            rx_complete_flag = 0;
+            master->rx_length = 0;
+
+            /* 发送Modbus请求帧 */
             modbus_master_send_frame(master, master->tx_buffer, master->tx_length);
 
             /* 切换到等待响应状态 */
             master->state = MODBUS_MASTER_STATE_WAITING_RESPONSE;
-            /* 记录超时起始时间 */
+
+            /* 记录请求发送时间，用于超时判断 */
             master->timeout_start = HAL_GetTick();
-            /* 清空接收缓冲区长度 */
-            master->rx_length = 0;
 
             break;
         }
 
-        /* 状态2: 等待响应 - 检测是否超时 */
+        /*--------------------------------------------------------------------*/
+        /* 等待响应状态：检查超时或接收完成                                      */
+        /*--------------------------------------------------------------------*/
         case MODBUS_MASTER_STATE_WAITING_RESPONSE:
         {
-            /* 检查是否超时 (超过500ms无响应) */
+            /* 检查是否超时（MODBUS_MASTER_TIMEOUT_MS毫秒内未收到响应） */
             if ((HAL_GetTick() - master->timeout_start) > MODBUS_MASTER_TIMEOUT_MS)
             {
-                /* 获取当前传感器 */
                 modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
-                /* 重试次数加1 */
+
+                /* 超时，增加重试计数 */
                 sensor->retry_count++;
 
-                /* 如果重试次数超过上限，标记为离线 */
+                /* 更新轮询时间（用于间隔控制） */
+                sensor->last_poll_time = HAL_GetTick();
+
+                /* 检查是否达到最大重试次数 */
                 if (sensor->retry_count >= MODBUS_MAX_RETRY)
                 {
+                    /* 标记传感器为离线状态 */
                     sensor->is_active = 0;
-                    sensor->retry_count = 0;
                 }
 
-                /* 切换到下一个传感器 */
+                /* 切换到下一个传感器，回到空闲状态 */
                 master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
-                /* 回到空闲状态 */
                 master->state = MODBUS_MASTER_STATE_IDLE;
             }
-            else
+            else if (modbus_master_check_rx_complete())
             {
-                /* 尝试接收数据 */
-                if (modbus_master_receive_frame(master) > 0)
-                {
-                    /* 收到数据，切换到处理状态 */
-                    master->state = MODBUS_MASTER_STATE_PROCESSING;
-                }
+                /* 收到响应数据，切换到处理状态 */
+                master->state = MODBUS_MASTER_STATE_PROCESSING;
             }
             break;
         }
 
-        /* 状态3: 处理响应 - 解析数据 */
+        /*--------------------------------------------------------------------*/
+        /* 处理状态：解析响应数据并更新传感器状态                                 */
+        /*--------------------------------------------------------------------*/
         case MODBUS_MASTER_STATE_PROCESSING:
         {
-            /* 处理响应数据 */
+            /* 尝试处理响应数据 */
             if (modbus_master_process_response(master, master->rx_buffer, master->rx_length) == 1)
             {
-                /* 获取当前传感器 */
                 modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
-                
-                /* 解析响应数据，提取寄存器值 */
-                /* Modbus响应格式: [从机ID(1)][功能码(1)][字节数(1)][数据(n)][CRC(2)] */
-                uint8_t byte_count = master->rx_buffer[2];  /* 数据字节数 */
-                
-                /* 将数据复制到传感器结构体中保存 */
+
+                /*
+                 * 响应帧格式：[从机地址][功能码][字节数][数据...][CRC低][CRC高]
+                 * rx_buffer[2] 为数据字节数
+                 */
+                uint8_t byte_count = master->rx_buffer[2];
+
+                /* 检查数据长度是否超出缓冲区 */
                 if (byte_count <= 64)
                 {
+                    /* 复制寄存器数据到传感器缓冲区（跳过地址、功能码、字节数这3个字节） */
                     memcpy(sensor->data, &master->rx_buffer[3], byte_count);
                     sensor->data_length = byte_count;
                 }
-                
-                /* 通信成功，重试次数清零 */
+
+                /* 通信成功，恢复在线状态 */
+                sensor->is_active = 1;
                 sensor->retry_count = 0;
-                /* 记录成功轮询的时间 */
+
+                /* 更新最后成功轮询时间 */
                 sensor->last_poll_time = HAL_GetTick();
             }
             else
             {
-                /* 通信失败 */
+                /* 响应处理失败（CRC错误或异常响应） */
                 modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
                 sensor->retry_count++;
 
-                /* 重试次数超过上限，标记为离线 */
+                /* 检查是否达到最大重试次数 */
                 if (sensor->retry_count >= MODBUS_MAX_RETRY)
                 {
                     sensor->is_active = 0;
@@ -196,300 +379,111 @@ void modbus_master_poll(modbus_master_t *master)
                 }
             }
 
-            /* 切换到下一个传感器 */
+            /* 切换到下一个传感器，回到空闲状态继续轮询 */
             master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
-            /* 回到空闲状态 */
             master->state = MODBUS_MASTER_STATE_IDLE;
             break;
         }
 
-        /* 默认状态：回到空闲 */
+        /*--------------------------------------------------------------------*/
+        /* 默认处理：未知状态恢复到空闲                                          */
+        /*--------------------------------------------------------------------*/
         default:
             master->state = MODBUS_MASTER_STATE_IDLE;
             break;
     }
 }
 
-/**
- * @brief 读取保持寄存器 (功能码0x03)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param start_addr 起始地址
- * @param quantity 寄存器数量
- * @param data 数据接收缓冲区
- * @return 1:成功 0:失败
- * @note 阻塞式等待响应，超时时间500ms
- */
-uint8_t modbus_master_read_holding_registers(modbus_master_t *master, uint8_t slave_id,
-                                               uint16_t start_addr, uint16_t quantity,
-                                               uint8_t *data)
-{
-    /* 构建读保持寄存器请求 */
-    uint8_t req_buffer[8];
-    modbus_build_request(req_buffer, slave_id, MODBUS_FUNC_READ_HOLDING, start_addr, quantity);
-
-    /* 发送请求 */
-    modbus_master_send_frame(master, req_buffer, 8);
-
-    /* 记录超时起始时间 */
-    uint32_t timeout_start = HAL_GetTick();
-    master->rx_length = 0;
-
-    /* 等待响应循环 */
-    while ((HAL_GetTick() - timeout_start) < MODBUS_MASTER_TIMEOUT_MS)
-    {
-        /* 尝试接收数据 */
-        uint16_t rx_len = modbus_master_receive_frame(master);
-        if (rx_len > 0)
-        {
-            /* 处理响应 */
-            if (modbus_master_process_response(master, master->rx_buffer, rx_len) == 1)
-            {
-                /* 复制数据到用户缓冲区 */
-                memcpy(data, &master->rx_buffer[3], quantity * 2);
-                return 1;
-            }
-        }
-    }
-
-    /* 超时无响应 */
-    return 0;
-}
+/*============================================================================*/
+/*                           发送函数                                           */
+/*============================================================================*/
 
 /**
- * @brief 读取输入寄存器 (功能码0x04)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param start_addr 起始地址
- * @param quantity 寄存器数量
- * @param data 数据接收缓冲区
- * @return 1:成功 0:失败
- */
-uint8_t modbus_master_read_input_registers(modbus_master_t *master, uint8_t slave_id,
-                                            uint16_t start_addr, uint16_t quantity,
-                                            uint8_t *data)
-{
-    /* 构建读输入寄存器请求 */
-    uint8_t req_buffer[8];
-    modbus_build_request(req_buffer, slave_id, MODBUS_FUNC_READ_INPUT, start_addr, quantity);
-
-    /* 发送请求 */
-    modbus_master_send_frame(master, req_buffer, 8);
-
-    /* 记录超时起始时间 */
-    uint32_t timeout_start = HAL_GetTick();
-    master->rx_length = 0;
-
-    /* 等待响应循环 */
-    while ((HAL_GetTick() - timeout_start) < MODBUS_MASTER_TIMEOUT_MS)
-    {
-        uint16_t rx_len = modbus_master_receive_frame(master);
-        if (rx_len > 0)
-        {
-            if (modbus_master_process_response(master, master->rx_buffer, rx_len) == 1)
-            {
-                memcpy(data, &master->rx_buffer[3], quantity * 2);
-                return 1;
-            }
-        }
-    }
-
-    return 0;
-}
-
-/**
- * @brief 写单个寄存器 (功能码0x06)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param register_addr 寄存器地址
- * @param value 要写入的值
- * @return 1:成功 0:失败
- */
-uint8_t modbus_master_write_single_register(modbus_master_t *master, uint8_t slave_id,
-                                             uint16_t register_addr, uint16_t value)
-{
-    /* 构建写单个寄存器请求 */
-    uint8_t req_buffer[8];
-    req_buffer[0] = slave_id;
-    req_buffer[1] = MODBUS_FUNC_WRITE_SINGLE_REG;
-    req_buffer[2] = (uint8_t)(register_addr >> 8);      /* 高8位地址 */
-    req_buffer[3] = (uint8_t)(register_addr & 0xFF);    /* 低8位地址 */
-    req_buffer[4] = (uint8_t)(value >> 8);              /* 高8位数据 */
-    req_buffer[5] = (uint8_t)(value & 0xFF);            /* 低8位数据 */
-
-    /* 计算CRC16并添加到请求帧末尾 */
-    uint16_t crc = modbus_crc16(req_buffer, 6);
-    req_buffer[6] = (uint8_t)(crc & 0xFF);              /* CRC低字节 */
-    req_buffer[7] = (uint8_t)(crc >> 8);                /* CRC高字节 */
-
-    /* 发送请求 */
-    modbus_master_send_frame(master, req_buffer, 8);
-
-    /* 等待响应 */
-    uint32_t timeout_start = HAL_GetTick();
-    master->rx_length = 0;
-
-    while ((HAL_GetTick() - timeout_start) < MODBUS_MASTER_TIMEOUT_MS)
-    {
-        uint16_t rx_len = modbus_master_receive_frame(master);
-        if (rx_len > 0)
-        {
-            if (modbus_check_crc(master->rx_buffer, rx_len))
-            {
-                return 1;
-            }
-        }
-    }
-
-    return 0;
-}
-
-/**
- * @brief 写多个寄存器 (功能码0x10)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param start_addr 起始地址
- * @param quantity 寄存器数量
- * @param data 要写入的数据
- * @return 1:成功 0:失败
- */
-uint8_t modbus_master_write_multiple_registers(modbus_master_t *master, uint8_t slave_id,
-                                                 uint16_t start_addr, uint16_t quantity,
-                                                 uint8_t *data)
-{
-    /* 构建写多个寄存器请求 */
-    uint8_t req_buffer[256];
-    req_buffer[0] = slave_id;
-    req_buffer[1] = MODBUS_FUNC_WRITE_MULTIPLE_REG;
-    req_buffer[2] = (uint8_t)(start_addr >> 8);
-    req_buffer[3] = (uint8_t)(start_addr & 0xFF);
-    req_buffer[4] = (uint8_t)(quantity >> 8);
-    req_buffer[5] = (uint8_t)(quantity & 0xFF);
-    req_buffer[6] = (uint8_t)(quantity * 2);            /* 字节数 = 寄存器数 × 2 */
-
-    /* 复制数据到请求帧 */
-    memcpy(&req_buffer[7], data, quantity * 2);
-
-    /* 计算CRC */
-    uint16_t crc = modbus_crc16(req_buffer, 7 + quantity * 2);
-    req_buffer[7 + quantity * 2] = (uint8_t)(crc & 0xFF);
-    req_buffer[8 + quantity * 2] = (uint8_t)(crc >> 8);
-
-    /* 发送请求 */
-    modbus_master_send_frame(master, req_buffer, 9 + quantity * 2);
-
-    /* 等待响应 */
-    uint32_t timeout_start = HAL_GetTick();
-    master->rx_length = 0;
-
-    while ((HAL_GetTick() - timeout_start) < MODBUS_MASTER_TIMEOUT_MS)
-    {
-        uint16_t rx_len = modbus_master_receive_frame(master);
-        if (rx_len > 0)
-        {
-            if (modbus_check_crc(master->rx_buffer, rx_len))
-            {
-                return 1;
-            }
-        }
-    }
-
-    return 0;
-}
-
-/**
- * @brief 发送Modbus数据帧
- * @param master 主机结构体指针
- * @param data 数据缓冲区
- * @param length 数据长度
- * @note 控制RS485芯片的DE引脚，实现收发切换
- *       发送前拉高DE，发送后延时再拉低DE
+ * @brief  发送Modbus数据帧
+ * @param  master: 主机结构体指针
+ * @param  data:   要发送的数据缓冲区
+ * @param  length: 数据长度（字节）
+ * @note   本函数实现了RS485半双工通信的方向控制：
+ *         1. 发送前：将DE引脚置高，使能发送模式
+ *         2. 发送时：使用DMA进行数据传输，减少CPU占用
+ *         3. 发送后：等待发送完成，将DE引脚置低，切换回接收模式
+ *
+ *         时序要求：
+ *         - 发送前延时1ms，确保RS485芯片切换到发送模式
+ *         - 发送后延时1ms，确保最后一个字节完全发送
+ * @retval 无
  */
 void modbus_master_send_frame(modbus_master_t *master, uint8_t *data, uint16_t length)
 {
-    /* 拉高控制引脚，设置为发送模式 */
+    /*
+     * 步骤1：切换RS485到发送模式
+     * DE引脚高电平 = 发送模式
+     * DE引脚低电平 = 接收模式
+     */
     HAL_GPIO_WritePin(UART1_CTRL_GPIO_Port, UART1_CTRL_Pin, GPIO_PIN_SET);
-    HAL_Delay(1);
+    HAL_Delay(1);  /* 等待RS485芯片切换完成 */
 
-    /* 通过串口发送数据 */
-    HAL_UART_Transmit(master->huart, data, length, 100);
+    /*
+     * 步骤2：使用DMA发送数据
+     * DMA发送是非阻塞的，函数会立即返回
+     */
+    HAL_UART_Transmit_DMA(master->huart, data, length);
 
-    /* 发送完成后延时，确保数据发送完毕 */
-    HAL_Delay(1);
+    /*
+     * 步骤3：等待发送完成
+     * 轮询检查UART状态，直到发送完成
+     * 注意：这里使用忙等待，适合Modbus这种对时序要求严格的场景
+     */
+    while (HAL_UART_GetState(master->huart) == HAL_UART_STATE_BUSY_TX)
+    {
+        /* 可以在此添加超时保护，防止死循环 */
+    }
 
-    /* 拉低控制引脚，设置为接收模式 */
+    HAL_Delay(1);  /* 确保最后一个字节完全发送 */
+
+    /*
+     * 步骤4：切换RS485到接收模式
+     * 发送完成后立即切换，准备接收从机响应
+     */
     HAL_GPIO_WritePin(UART1_CTRL_GPIO_Port, UART1_CTRL_Pin, GPIO_PIN_RESET);
 }
 
-/**
- * @brief 接收Modbus数据帧
- * @param master 主机结构体指针
- * @return 接收到的数据长度，0表示无数据
- * @note 采用超时方式接收，根据第三个字节确定完整帧长度
- */
-uint8_t modbus_master_receive_frame(modbus_master_t *master)
-{
-    uint8_t ch;
-    uint32_t timeout_start = HAL_GetTick();
-    uint16_t rx_count = 0;
-
-    /* 50ms超时循环接收 */
-    while ((HAL_GetTick() - timeout_start) < 50)
-    {
-        /* 非阻塞方式接收单字节 */
-        if (HAL_UART_Receive(master->huart, &ch, 1, 10) == HAL_OK)
-        {
-            /* 存入接收缓冲区 */
-            modbus_master_rx_data[rx_count++] = ch;
-
-            /* 已收到至少5字节，可以计算完整帧长度 */
-            if (rx_count >= 5)
-            {
-                /* 完整帧长度 = 第三个字节(字节数) + 5(地址+功能码+字节数+CRC) */
-                if (rx_count >= modbus_master_rx_data[2] + 5)
-                {
-                    memcpy(master->rx_buffer, modbus_master_rx_data, rx_count);
-                    master->rx_length = rx_count;
-                    return rx_count;
-                }
-            }
-        }
-    }
-
-    /* 处理不完整帧（超时前已有数据） */
-    if (rx_count > 0)
-    {
-        memcpy(master->rx_buffer, modbus_master_rx_data, rx_count);
-        master->rx_length = rx_count;
-        return rx_count;
-    }
-
-    return 0;
-}
+/*============================================================================*/
+/*                           响应处理函数                                       */
+/*============================================================================*/
 
 /**
- * @brief 处理Modbus响应数据
- * @param master 主机结构体指针
- * @param data 响应数据缓冲区
- * @param length 数据长度
- * @return 1:成功 0:失败
- * @note 验证CRC校验和功能码是否正常
+ * @brief  处理Modbus响应数据
+ * @param  master: 主机结构体指针
+ * @param  data:   响应数据缓冲区
+ * @param  length: 数据长度
+ * @retval 1: 响应有效（CRC正确，无异常）
+ * @retval 0: 响应无效（长度错误、CRC错误或异常响应）
+ * @note   验证内容包括：
+ *         1. 最小长度检查（至少5字节：地址+功能码+数据+CRC）
+ *         2. CRC校验
+ *         3. 异常响应检查（功能码最高位为1表示异常）
  */
 uint8_t modbus_master_process_response(modbus_master_t *master, uint8_t *data, uint16_t length)
 {
-    /* 帧长度检查，最小需要5字节 */
+    /* 检查最小长度：地址(1) + 功能码(1) + 数据(n) + CRC(2) >= 5 */
     if (length < 5)
     {
         return 0;
     }
 
-    /* CRC校验 */
+    /* 验证CRC校验码 */
     if (!modbus_check_crc(data, length))
     {
         return 0;
     }
 
-    /* 检查是否为异常响应 (功能码最高位为1) */
+    /*
+     * 检查是否为异常响应
+     * Modbus协议规定：异常响应的功能码 = 请求功能码 + 0x80
+     * 即功能码最高位为1表示异常
+     * 异常响应格式：[地址][异常功能码][异常码][CRC]
+     */
     if (data[1] & 0x80)
     {
         return 0;
@@ -498,40 +492,52 @@ uint8_t modbus_master_process_response(modbus_master_t *master, uint8_t *data, u
     return 1;
 }
 
+/*============================================================================*/
+/*                           数据获取函数                                       */
+/*============================================================================*/
+
 /**
- * @brief 获取传感器值
- * @param sensor_index 传感器索引
- * @param value 值输出指针
- * @return 1:成功 0:失败
- * @note 获取传感器的第一个寄存器值
+ * @brief  获取传感器值（第一个寄存器的值）
+ * @param  sensor_index: 传感器索引（0开始）
+ * @param  value:        值输出指针，用于返回16位寄存器值
+ * @retval 1: 获取成功
+ * @retval 0: 获取失败（索引无效、传感器离线或数据不足）
+ * @note   此函数获取传感器第一个寄存器的值，适用于单值传感器（如水位传感器）
  */
 uint8_t modbus_master_get_sensor_value(uint8_t sensor_index, uint16_t *value)
 {
+    /* 参数有效性检查 */
     if (value == NULL)
     {
         return 0;
     }
-    
+
+    /* 索引范围检查 */
     if (sensor_index >= sensor_master.sensor_count)
     {
         return 0;
     }
-    
+
     modbus_sensor_t *sensor = &sensor_master.sensors[sensor_index];
-    
+
+    /* 检查传感器在线状态和数据长度 */
     if (!sensor->is_active || sensor->data_length < 2)
     {
         return 0;
     }
-    
+
+    /* 获取第一个寄存器的值 */
     *value = modbus_master_get_register_value(sensor_index, 0);
     return 1;
 }
 
 /**
- * @brief 获取传感器数据
- * @param sensor_index 传感器索引
- * @return 传感器数据缓冲区指针
+ * @brief  获取传感器原始数据缓冲区
+ * @param  sensor_index: 传感器索引（0开始）
+ * @retval 非NULL: 传感器数据缓冲区指针
+ * @retval NULL: 索引无效
+ * @note   返回的缓冲区包含所有读取到的寄存器数据
+ *         数据格式：大端序，每2字节为一个16位寄存器值
  */
 uint8_t* modbus_master_get_sensor_data(uint8_t sensor_index)
 {
@@ -543,9 +549,10 @@ uint8_t* modbus_master_get_sensor_data(uint8_t sensor_index)
 }
 
 /**
- * @brief 获取传感器数据长度
- * @param sensor_index 传感器索引
- * @return 数据长度
+ * @brief  获取传感器数据长度
+ * @param  sensor_index: 传感器索引（0开始）
+ * @retval 数据长度（字节数）
+ * @note   返回值除以2即为寄存器数量
  */
 uint16_t modbus_master_get_sensor_data_length(uint8_t sensor_index)
 {
@@ -557,9 +564,11 @@ uint16_t modbus_master_get_sensor_data_length(uint8_t sensor_index)
 }
 
 /**
- * @brief 检查传感器是否在线
- * @param sensor_index 传感器索引
- * @return 1:在线 0:离线
+ * @brief  检查传感器是否在线
+ * @param  sensor_index: 传感器索引（0开始）
+ * @retval 1: 在线（最近通信成功）
+ * @retval 0: 离线（连续多次通信失败）
+ * @note   传感器在连续MODBUS_MAX_RETRY次通信失败后被标记为离线
  */
 uint8_t modbus_master_is_sensor_online(uint8_t sensor_index)
 {
@@ -571,30 +580,40 @@ uint8_t modbus_master_is_sensor_online(uint8_t sensor_index)
 }
 
 /**
- * @brief 获取寄存器值
- * @param sensor_index 传感器索引
- * @param register_index 寄存器索引 (从0开始)
- * @return 寄存器值 (16位)
- * @note 自动将两个字节组合成16位值 (大端格式)
+ * @brief  获取指定寄存器的值
+ * @param  sensor_index:   传感器索引（0开始）
+ * @param  register_index: 寄存器索引（0开始，相对于传感器配置的起始地址）
+ * @retval 寄存器值（16位无符号整数）
+ * @retval 0: 索引无效或数据不足
+ * @note   例如：传感器配置读取地址0x0000开始的3个寄存器
+ *         - register_index=0 返回地址0x0000的值
+ *         - register_index=1 返回地址0x0001的值
+ *         - register_index=2 返回地址0x0002的值
+ *
+ *         数据存储格式为大端序（高字节在前）
  */
 uint16_t modbus_master_get_register_value(uint8_t sensor_index, uint8_t register_index)
 {
+    /* 索引范围检查 */
     if (sensor_index >= sensor_master.sensor_count)
     {
         return 0;
     }
-    
+
     modbus_sensor_t *sensor = &sensor_master.sensors[sensor_index];
-    
-    /* 检查索引是否超出数据范围 */
+
+    /* 检查数据长度是否足够 */
     if ((register_index * 2 + 1) >= sensor->data_length)
     {
         return 0;
     }
-    
-    /* 组合高低字节 (大端格式: 高字节在前) */
-    uint16_t value = (sensor->data[register_index * 2] << 8) | 
-                     sensor->data[register_index * 2 + 1];
-    
+
+    /*
+     * 从数据缓冲区提取16位寄存器值
+     * 数据格式：大端序（高字节在前，低字节在后）
+     */
+    uint16_t value = (sensor->data[register_index * 2] << 8) |      /* 高字节 */
+                     sensor->data[register_index * 2 + 1];          /* 低字节 */
+
     return value;
 }

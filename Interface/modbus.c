@@ -68,28 +68,27 @@ static const uint8_t aucCRCLo[] = {
  * @param buffer 数据缓冲区
  * @param length 数据长度
  * @return CRC16校验码 (16位)
- * @note 使用查表法，效率高
+ * @note 使用位运算法，标准可靠
  *       Modbus RTU标准: 多项式0xA001, 初始值0xFFFF
  */
 uint16_t modbus_crc16(uint8_t *buffer, uint16_t length)
 {
-    /* 初始化CRC值为0xFFFF */
-    uint8_t  u8CRCHi = 0xFF;
-    uint8_t  u8CRCLo = 0xFF;
-    uint16_t u16Index;
+    uint16_t crc = 0xFFFF;
+    uint8_t i;
 
-    /* 遍历每个字节进行CRC计算 */
     while (length--)
     {
-        /* 计算查表索引 */
-        u16Index = u8CRCLo ^ *buffer++;
-        /* 查表更新CRC值 */
-        u8CRCLo = u8CRCHi ^ aucCRCHi[u16Index];
-        u8CRCHi = aucCRCLo[u16Index];
+        crc ^= *buffer++;
+        for (i = 0; i < 8; i++)
+        {
+            if (crc & 0x0001)
+                crc = (crc >> 1) ^ 0xA001;
+            else
+                crc >>= 1;
+        }
     }
 
-    /* 返回CRC值 (高字节在前) */
-    return (uint16_t)((uint16_t)u8CRCHi << 8 | u8CRCLo);
+    return crc;
 }
 
 /**

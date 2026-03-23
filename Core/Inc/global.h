@@ -37,6 +37,7 @@
  */
 #define HOLDING_REG_SIZE        32          /* 保持寄存器数量 */
 #define MODBUS_SLAVE_BUF_SIZE   256         /* 接收缓冲区大小 */
+#define MODBUS_SLAVE_ID         1           /* 本机从机地址 (UART2用户通信) */
  
 
 

@@ -1,7 +1,7 @@
 /**
  * @file modbus_master.h
  * @brief Modbus主机头文件 - 用于轮询485传感器
- * @details 通过串口1连接485传感器，主动发送Modbus请求并接收响应
+ * @details 通过串口1连接485传感器，使用空闲中断+DMA接收数据
  */
 
 #ifndef __MODBUS_MASTER_H
@@ -16,8 +16,17 @@ extern "C" {
 #include "global.h"
 
 /**
+ * @brief Modbus主机超时时间 (ms)
+ */
+#define MODBUS_MASTER_TIMEOUT_MS    500
+
+/**
+ * @brief 最大重试次数
+ */
+#define MODBUS_MAX_RETRY            3
+
+/**
  * @brief Modbus主机状态枚举
- * @note 用于轮询任务的状态机
  */
 typedef enum
 {
@@ -31,7 +40,6 @@ typedef enum
 
 /**
  * @brief 传感器设备结构体
- * @note 用于存储单个传感器的配置信息
  */
 typedef struct
 {
@@ -47,7 +55,6 @@ typedef struct
 
 /**
  * @brief Modbus主机结构体
- * @note 管理所有传感器设备和通信状态
  */
 typedef struct
 {
@@ -64,10 +71,18 @@ typedef struct
 } modbus_master_t;
 
 /**
+ * @brief 全局Modbus主机实例
+ */
+extern modbus_master_t sensor_master;
+
+/*============================================================================*/
+/*                           初始化与配置                                       */
+/*============================================================================*/
+
+/**
  * @brief 初始化Modbus主机
  * @param master 主机结构体指针
  * @param huart 串口句柄指针
- * @note 初始化所有成员变量，设置串口和初始状态
  */
 void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart);
 
@@ -77,86 +92,33 @@ void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart);
  * @param slave_id 从机ID (1-247)
  * @param start_addr 寄存器起始地址
  * @param quantity 寄存器数量
- * @return 1:成功 0:失败(传感器数量已达上限)
- * @note 最多支持2个传感器同时连接
+ * @return 1:成功 0:失败
  */
-uint8_t modbus_master_add_sensor(modbus_master_t *master, uint8_t slave_id, 
+uint8_t modbus_master_add_sensor(modbus_master_t *master, uint8_t slave_id,
                                   uint16_t start_addr, uint16_t quantity);
+
+/*============================================================================*/
+/*                           轮询任务                                          */
+/*============================================================================*/
 
 /**
  * @brief Modbus主机轮询任务
  * @param master 主机结构体指针
- * @note 需要在主循环中周期性调用，实现对所有传感器的轮询
- *       采用状态机方式：空闲→发送→等待响应→接收→处理
+ * @note 非阻塞方式，需在主循环中周期性调用
  */
 void modbus_master_poll(modbus_master_t *master);
 
-/**
- * @brief 读取保持寄存器 (功能码0x03)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param start_addr 起始地址
- * @param quantity 寄存器数量
- * @param data 数据接收缓冲区
- * @return 1:成功 0:失败
- * @note 阻塞式等待响应，超时时间500ms
- */
-uint8_t modbus_master_read_holding_registers(modbus_master_t *master, uint8_t slave_id,
-                                               uint16_t start_addr, uint16_t quantity,
-                                               uint8_t *data);
-
-/**
- * @brief 读取输入寄存器 (功能码0x04)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param start_addr 起始地址
- * @param quantity 寄存器数量
- * @param data 数据接收缓冲区
- * @return 1:成功 0:失败
- */
-uint8_t modbus_master_read_input_registers(modbus_master_t *master, uint8_t slave_id,
-                                            uint16_t start_addr, uint16_t quantity,
-                                            uint8_t *data);
-
-/**
- * @brief 写单个寄存器 (功能码0x06)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param register_addr 寄存器地址
- * @param value 要写入的值
- * @return 1:成功 0:失败
- */
-uint8_t modbus_master_write_single_register(modbus_master_t *master, uint8_t slave_id,
-                                             uint16_t register_addr, uint16_t value);
-
-/**
- * @brief 写多个寄存器 (功能码0x10)
- * @param master 主机结构体指针
- * @param slave_id 从机ID
- * @param start_addr 起始地址
- * @param quantity 寄存器数量
- * @param data 要写入的数据
- * @return 1:成功 0:失败
- */
-uint8_t modbus_master_write_multiple_registers(modbus_master_t *master, uint8_t slave_id,
-                                                 uint16_t start_addr, uint16_t quantity,
-                                                 uint8_t *data);
+/*============================================================================*/
+/*                           收发函数                                          */
+/*============================================================================*/
 
 /**
  * @brief 发送Modbus数据帧
  * @param master 主机结构体指针
  * @param data 数据缓冲区
  * @param length 数据长度
- * @note 控制RS485芯片的DE引脚，实现收发切换
  */
 void modbus_master_send_frame(modbus_master_t *master, uint8_t *data, uint16_t length);
-
-/**
- * @brief 接收Modbus数据帧
- * @param master 主机结构体指针
- * @return 接收到的数据长度，0表示无数据
- */
-uint8_t modbus_master_receive_frame(modbus_master_t *master);
 
 /**
  * @brief 处理Modbus响应数据
@@ -164,9 +126,12 @@ uint8_t modbus_master_receive_frame(modbus_master_t *master);
  * @param data 响应数据缓冲区
  * @param length 数据长度
  * @return 1:成功 0:失败
- * @note 验证CRC校验和功能码是否正常
  */
 uint8_t modbus_master_process_response(modbus_master_t *master, uint8_t *data, uint16_t length);
+
+/*============================================================================*/
+/*                           数据获取函数                                       */
+/*============================================================================*/
 
 /**
  * @brief 获取传感器值
@@ -209,4 +174,4 @@ uint16_t modbus_master_get_register_value(uint8_t sensor_index, uint8_t register
 }
 #endif
 
-#endif
+#endif /* __MODBUS_MASTER_H */

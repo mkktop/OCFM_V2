@@ -1,72 +1,114 @@
 /**
- * @file app_sensor.c
- * @brief 传感器应用层实现 - 封装Modbus主机操作
+ * @file    app_sensor.c
+ * @brief   传感器应用层实现 - 封装Modbus主机操作
  * @details 通过UART1(RS485)与水位传感器通信，读取距离数据
+ *
+ *          使用方法：
+ *          1. 在系统初始化时调用 app_sensor_init()
+ *          2. 创建FreeRTOS任务，每10ms调用一次 app_sensor_poll()
+ *          3. 使用 app_sensor_get_distance() 获取距离值
+ *          4. 使用 app_sensor_is_online() 检查传感器在线状态
  */
 
 #include "app_sensor.h"
 #include "modbus_master.h"
 #include "global.h"
-#include "main.h"
+#include "usart.h"
 #include <string.h>
 
-/* 传感器数据实例 */
-static SensorData_t g_sensor_data;
+/*============================================================================*/
+/*                           私有宏定义                                        */
+/*============================================================================*/
 
 /* 传感器配置 */
 #define SENSOR_SLAVE_ID     SENSOR_ADDR_1     /* 从机地址 */
-#define SENSOR_START_ADDR   SENSOR_REG_DATA   /* 起始地址 */
+#define SENSOR_START_ADDR   0x0005            /* 距离寄存器地址 */
 #define SENSOR_QUANTITY     1                 /* 只读取1个寄存器(距离) */
 
+/* 数据更新间隔 (ms) */
+#define SENSOR_UPDATE_INTERVAL_MS    1000
+
+/*============================================================================*/
+/*                           私有变量                                          */
+/*============================================================================*/
+
 /**
- * @brief 初始化传感器模块
+ * @brief 传感器数据实例
+ */
+static SensorData_t g_sensor_data;
+
+/*============================================================================*/
+/*                           公共函数实现                                      */
+/*============================================================================*/
+
+/**
+ * @brief  初始化传感器模块
+ * @note   初始化Modbus主机并添加传感器设备
  */
 void app_sensor_init(void)
 {
     /* 清零传感器数据 */
     memset(&g_sensor_data, 0, sizeof(SensorData_t));
 
-    /* 初始化Modbus主机 (使用UART1) */
+    /* 初始化Modbus主机 */
     modbus_master_init(&sensor_master, &huart1);
 
-    /* 添加传感器设备 */
-    modbus_master_add_sensor(&sensor_master, SENSOR_SLAVE_ID,
-                              SENSOR_START_ADDR, SENSOR_QUANTITY);
+    /* 添加传感器设备到轮询列表 */
+    modbus_master_add_sensor(&sensor_master,
+                              SENSOR_SLAVE_ID,
+                              SENSOR_START_ADDR,
+                              SENSOR_QUANTITY);
 }
 
 /**
- * @brief 传感器轮询任务
- * @note 需要在循环中周期性调用，建议10ms
+ * @brief  传感器轮询任务
+ * @note   需要在FreeRTOS任务中周期性调用，建议10ms
+ *
+ *         工作流程：
+ *         1. 调用Modbus状态机处理通信
+ *         2. 每1秒更新一次本地数据缓存
  */
 void app_sensor_poll(void)
 {
-    /* 调用Modbus主机轮询 */
+    static uint32_t last_update_time = 0;
+
+    /* 调用Modbus主机轮询状态机 */
     modbus_master_poll(&sensor_master);
 
-    /* 更新传感器数据缓存 */
-    g_sensor_data.is_online = modbus_master_is_sensor_online(0);
+    /* 每1秒更新一次数据缓存 */
+    if (HAL_GetTick() - last_update_time >= SENSOR_UPDATE_INTERVAL_MS)
+    {
+        last_update_time = HAL_GetTick();
 
-    if (g_sensor_data.is_online) {
-        g_sensor_data.distance = modbus_master_get_register_value(0, 0);
-        g_sensor_data.last_update_time = HAL_GetTick();
+        /* 更新传感器在线状态 */
+        g_sensor_data.is_online = modbus_master_is_sensor_online(0);
+
+        if (g_sensor_data.is_online)
+        {
+            /* 读取距离值（第一个寄存器） */
+            g_sensor_data.distance = modbus_master_get_register_value(0, 0);
+            g_sensor_data.last_update_time = HAL_GetTick();
+        }
     }
 }
 
 /**
- * @brief 获取距离值
- * @retval 距离值 (mm)，离线返回0
+ * @brief  获取距离值
+ * @retval 距离值 (mm)，传感器离线时返回0
  */
 uint16_t app_sensor_get_distance(void)
 {
-    if (g_sensor_data.is_online) {
+    if (g_sensor_data.is_online)
+    {
         return g_sensor_data.distance;
     }
     return 0;
 }
 
 /**
- * @brief 检查传感器是否在线
- * @retval 1:在线 0:离线
+ * @brief  检查传感器是否在线
+ * @retval 1: 在线
+ * @retval 0: 离线
  */
 uint8_t app_sensor_is_online(void)
 {
@@ -74,35 +116,11 @@ uint8_t app_sensor_is_online(void)
 }
 
 /**
- * @brief 设置传感器参数
- * @param reg_addr: 寄存器地址
- * @param value: 设置值
- * @retval 0:成功 1:失败
+ * @brief  获取传感器数据结构指针
+ * @retval 传感器数据指针
+ * @note   用于UI绑定显示
  */
-uint8_t app_sensor_set_param(uint16_t reg_addr, uint16_t value)
+SensorData_t* app_sensor_get_data(void)
 {
-    if (modbus_master_write_single_register(&sensor_master, SENSOR_SLAVE_ID, reg_addr, value)) {
-        return 0;
-    }
-    return 1;
-}
-
-/**
- * @brief 读取传感器参数
- * @param reg_addr: 寄存器地址
- * @param value: 返回值指针
- * @retval 0:成功 1:失败
- */
-uint8_t app_sensor_get_param(uint16_t reg_addr, uint16_t *value)
-{
-    if (value == NULL) {
-        return 1;
-    }
-
-    uint8_t data[4];
-    if (modbus_master_read_holding_registers(&sensor_master, SENSOR_SLAVE_ID, reg_addr, 1, data)) {
-        *value = (data[0] << 8) | data[1];
-        return 0;
-    }
-    return 1;
+    return &g_sensor_data;
 }

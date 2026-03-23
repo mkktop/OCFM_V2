@@ -32,6 +32,7 @@
 #include "app_log.h"
 #include "rtc_time.h"
 #include "app_button.h"
+#include "app_sensor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,6 +75,13 @@ const osThreadAttr_t button_scan_tas_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for modbus_master_t */
+osThreadId_t modbus_master_tHandle;
+const osThreadAttr_t modbus_master_t_attributes = {
+  .name = "modbus_master_t",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -83,6 +91,7 @@ const osThreadAttr_t button_scan_tas_attributes = {
 void main_task_func(void *argument);
 void log_task_func(void *argument);
 void button_scan_fun(void *argument);
+void modbus_master_task_func(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -121,6 +130,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of button_scan_tas */
   button_scan_tasHandle = osThreadNew(button_scan_fun, NULL, &button_scan_tas_attributes);
+
+  /* creation of modbus_master_t */
+  modbus_master_tHandle = osThreadNew(modbus_master_task_func, NULL, &modbus_master_t_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -198,6 +210,25 @@ void button_scan_fun(void *argument)
     osDelay(10);             // 10ms延时
   }
   /* USER CODE END button_scan_fun */
+}
+
+/* USER CODE BEGIN Header_modbus_master_task_func */
+/**
+* @brief Function implementing the modbus_master_t thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_modbus_master_task_func */
+void modbus_master_task_func(void *argument)
+{
+  /* USER CODE BEGIN modbus_master_task_func */
+  /* Infinite loop */
+  for(;;)
+  {
+    app_sensor_poll();
+    osDelay(10);  /* 10ms周期 */
+  }
+  /* USER CODE END modbus_master_task_func */
 }
 
 /* Private application code --------------------------------------------------*/

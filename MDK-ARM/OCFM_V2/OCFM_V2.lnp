@@ -684,12 +684,16 @@
 "ocfm_v2\app_model.o"
 "ocfm_v2\app_button.o"
 "ocfm_v2\app_config.o"
+"ocfm_v2\app_sensor.o"
 "ocfm_v2\file_driver.o"
 "ocfm_v2\data_recorder.o"
 "ocfm_v2\log_manager.o"
 "ocfm_v2\ui.o"
 "ocfm_v2\ui_set_page.o"
 "ocfm_v2\button_driver.o"
+"ocfm_v2\modbus.o"
+"ocfm_v2\modbus_master.o"
+"ocfm_v2\modbus_slave.o"
 --library_type=microlib --strict --scatter "OCFM_V2\OCFM_V2.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

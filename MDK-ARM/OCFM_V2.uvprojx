@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,LV_LVGL_H_INCLUDE_SIMPLE,LV_CONF_INCLUDE_SIMPLE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../FATFS/Target;../FATFS/App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/FatFs/src;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/lvgl;../Drivers/AT24C02;../Drivers/File;../App;..\Drivers\Button</IncludePath>
+              <IncludePath>../Core/Inc;../FATFS/Target;../FATFS/App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/FatFs/src;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/lvgl;../Drivers/AT24C02;../Drivers/File;../App;../Drivers/Button;..\Interface</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -4897,6 +4897,16 @@
               <FileType>1</FileType>
               <FilePath>..\App\app_config.c</FilePath>
             </File>
+            <File>
+              <FileName>app_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_sensor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\app_sensor.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -4966,6 +4976,41 @@
               <FileName>button_driver.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Drivers\Button\button_driver.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Interface</GroupName>
+          <Files>
+            <File>
+              <FileName>modbus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Interface\modbus.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Interface\modbus.h</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_master.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Interface\modbus_master.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_master.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Interface\modbus_master.h</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_slave.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Interface\modbus_slave.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_slave.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Interface\modbus_slave.h</FilePath>
             </File>
           </Files>
         </Group>
