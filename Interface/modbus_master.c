@@ -1,7 +1,7 @@
 /**
  * @file modbus_master.c
- * @brief ModbusÖ÷»úÊµÏÖ - ÓÃÓÚÂÖÑ¯485´«¸ĞÆ÷
- * @details Í¨¹ı´®¿Ú1Á¬½Ó485´«¸ĞÆ÷£¬Ö÷¶¯·¢ËÍModbusÇëÇó²¢½ÓÊÕÏìÓ¦
+ * @brief Modbusä¸»æœºå®ç° - ç”¨äºè½®è¯¢485ä¼ æ„Ÿå™¨
+ * @details é€šè¿‡ä¸²å£1è¿æ¥485ä¼ æ„Ÿå™¨ï¼Œä¸»åŠ¨å‘é€Modbusè¯·æ±‚å¹¶æ¥æ”¶å“åº”
  */
 
 #include "modbus_master.h"
@@ -9,22 +9,22 @@
 #include <string.h>
 
 /**
- * @brief È«¾ÖModbusÖ÷»úÊµÀı
- * @note ÓÃÓÚ¹ÜÀí485´«¸ĞÆ÷µÄÍ¨ĞÅ
+ * @brief å…¨å±€Modbusä¸»æœºå®ä¾‹
+ * @note ç”¨äºç®¡ç†485ä¼ æ„Ÿå™¨çš„é€šä¿¡
  */
 modbus_master_t sensor_master;
 
 /**
- * @brief ½ÓÊÕÊı¾İ»º³åÇø
- * @note ÓÃÓÚÔİ´æ´®¿Ú½ÓÊÕµ½µÄModbusÏìÓ¦Êı¾İ
+ * @brief æ¥æ”¶æ•°æ®ç¼“å†²åŒº
+ * @note ç”¨äºæš‚å­˜ä¸²å£æ¥æ”¶åˆ°çš„Modbuså“åº”æ•°æ®
  */
 static uint8_t modbus_master_rx_data[256];
 
 /**
- * @brief ³õÊ¼»¯ModbusÖ÷»ú
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param huart ´®¿Ú¾ä±úÖ¸Õë
- * @note ³õÊ¼»¯ËùÓĞ³ÉÔ±±äÁ¿£¬ÉèÖÃ´®¿ÚºÍ³õÊ¼×´Ì¬
+ * @brief åˆå§‹åŒ–Modbusä¸»æœº
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param huart ä¸²å£å¥æŸ„æŒ‡é’ˆ
+ * @note åˆå§‹åŒ–æ‰€æœ‰æˆå‘˜å˜é‡ï¼Œè®¾ç½®ä¸²å£å’Œåˆå§‹çŠ¶æ€
  */
 void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart)
 {
@@ -36,159 +36,159 @@ void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart)
 }
 
 /**
- * @brief Ìí¼Ó´«¸ĞÆ÷Éè±¸
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param slave_id ´Ó»úID (1-247)
- * @param start_addr ¼Ä´æÆ÷ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @return 1:³É¹¦ 0:Ê§°Ü(´«¸ĞÆ÷ÊıÁ¿ÒÑ´ïÉÏÏŞ)
- * @note ×î¶àÖ§³Ö8¸ö´«¸ĞÆ÷Í¬Ê±Á¬½Ó
+ * @brief æ·»åŠ ä¼ æ„Ÿå™¨è®¾å¤‡
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param slave_id ä»æœºID (1-247)
+ * @param start_addr å¯„å­˜å™¨èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @return 1:æˆåŠŸ 0:å¤±è´¥(ä¼ æ„Ÿå™¨æ•°é‡å·²è¾¾ä¸Šé™)
+ * @note æœ€å¤šæ”¯æŒ8ä¸ªä¼ æ„Ÿå™¨åŒæ—¶è¿æ¥
  */
 uint8_t modbus_master_add_sensor(modbus_master_t *master, uint8_t slave_id,
                                   uint16_t start_addr, uint16_t quantity)
 {
-    /* ¼ì²é´«¸ĞÆ÷ÊıÁ¿ÊÇ·ñÒÑ´ïÉÏÏŞ */
+    /* æ£€æŸ¥ä¼ æ„Ÿå™¨æ•°é‡æ˜¯å¦å·²è¾¾ä¸Šé™ */
     if (master->sensor_count >= MODBUS_MAX_SLAVE_COUNT)
     {
         return 0;
     }
 
-    /* »ñÈ¡µ±Ç°´«¸ĞÆ÷½á¹¹ÌåÖ¸Õë */
+    /* è·å–å½“å‰ä¼ æ„Ÿå™¨ç»“æ„ä½“æŒ‡é’ˆ */
     modbus_sensor_t *sensor = &master->sensors[master->sensor_count];
 
-    /* ÅäÖÃ´«¸ĞÆ÷²ÎÊı */
-    sensor->slave_id = slave_id;           /* ´Ó»úID */
-    sensor->start_addr = start_addr;       /* ¼Ä´æÆ÷ÆğÊ¼µØÖ· */
-    sensor->quantity = quantity;           /* ¼Ä´æÆ÷ÊıÁ¿ */
-    sensor->retry_count = 0;               /* ÖØÊÔ´ÎÊıÇåÁã */
-    sensor->is_active = 1;                 /* ±ê¼ÇÎª¼¤»î×´Ì¬ */
-    sensor->last_poll_time = 0;            /* ÉÏ´ÎÂÖÑ¯Ê±¼ä */
+    /* é…ç½®ä¼ æ„Ÿå™¨å‚æ•° */
+    sensor->slave_id = slave_id;           /* ä»æœºID */
+    sensor->start_addr = start_addr;       /* å¯„å­˜å™¨èµ·å§‹åœ°å€ */
+    sensor->quantity = quantity;           /* å¯„å­˜å™¨æ•°é‡ */
+    sensor->retry_count = 0;               /* é‡è¯•æ¬¡æ•°æ¸…é›¶ */
+    sensor->is_active = 1;                 /* æ ‡è®°ä¸ºæ¿€æ´»çŠ¶æ€ */
+    sensor->last_poll_time = 0;            /* ä¸Šæ¬¡è½®è¯¢æ—¶é—´ */
 
-    /* ´«¸ĞÆ÷ÊıÁ¿¼Ó1 */
+    /* ä¼ æ„Ÿå™¨æ•°é‡åŠ 1 */
     master->sensor_count++;
 
     return 1;
 }
 
 /**
- * @brief ModbusÖ÷»úÂÖÑ¯ÈÎÎñ
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @note ĞèÒªÔÚÖ÷Ñ­»·ÖĞÖÜÆÚĞÔµ÷ÓÃ£¬ÊµÏÖ¶ÔËùÓĞ´«¸ĞÆ÷µÄÂÖÑ¯
- *       ²ÉÓÃ×´Ì¬»ú·½Ê½£º¿ÕÏĞ¡ú·¢ËÍ¡úµÈ´ıÏìÓ¦¡ú½ÓÊÕ¡ú´¦Àí
+ * @brief Modbusä¸»æœºè½®è¯¢ä»»åŠ¡
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @note éœ€è¦åœ¨ä¸»å¾ªç¯ä¸­å‘¨æœŸæ€§è°ƒç”¨ï¼Œå®ç°å¯¹æ‰€æœ‰ä¼ æ„Ÿå™¨çš„è½®è¯¢
+ *       é‡‡ç”¨çŠ¶æ€æœºæ–¹å¼ï¼šç©ºé—²â†’å‘é€â†’ç­‰å¾…å“åº”â†’æ¥æ”¶â†’å¤„ç†
  */
 void modbus_master_poll(modbus_master_t *master)
 {
-    /* Èç¹ûÃ»ÓĞÅäÖÃ´«¸ĞÆ÷£¬Ö±½Ó·µ»Ø */
+    /* å¦‚æœæ²¡æœ‰é…ç½®ä¼ æ„Ÿå™¨ï¼Œç›´æ¥è¿”å› */
     if (master->sensor_count == 0)
     {
         return;
     }
 
-    /* ¸ù¾İµ±Ç°×´Ì¬Ö´ĞĞ²»Í¬²Ù×÷ */
+    /* æ ¹æ®å½“å‰çŠ¶æ€æ‰§è¡Œä¸åŒæ“ä½œ */
     switch (master->state)
     {
-        /* ×´Ì¬1: ¿ÕÏĞ - ×¼±¸·¢ËÍÏÂÒ»¸öÇëÇó */
+        /* çŠ¶æ€1: ç©ºé—² - å‡†å¤‡å‘é€ä¸‹ä¸€ä¸ªè¯·æ±‚ */
         case MODBUS_MASTER_STATE_IDLE:
         {
-            /* »ñÈ¡µ±Ç°ÒªÂÖÑ¯µÄ´«¸ĞÆ÷ */
+            /* è·å–å½“å‰è¦è½®è¯¢çš„ä¼ æ„Ÿå™¨ */
             modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
 
-            /* Èç¹û´«¸ĞÆ÷Î´¼¤»î£¬Ìø¹ı²¢ÇĞ»»µ½ÏÂÒ»¸ö */
+            /* å¦‚æœä¼ æ„Ÿå™¨æœªæ¿€æ´»ï¼Œè·³è¿‡å¹¶åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ª */
             if (!sensor->is_active)
             {
                 master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
                 break;
             }
 
-            /* ¹¹½¨Modbus¶Á±£³Ö¼Ä´æÆ÷ÇëÇó (¹¦ÄÜÂë0x03) */
+            /* æ„å»ºModbusè¯»ä¿æŒå¯„å­˜å™¨è¯·æ±‚ (åŠŸèƒ½ç 0x03) */
             uint8_t req_buffer[8];
             modbus_build_request(req_buffer, sensor->slave_id, MODBUS_FUNC_READ_HOLDING,
                                  sensor->start_addr, sensor->quantity);
 
-            /* ±£´æÇëÇóÊı¾İµ½·¢ËÍ»º³åÇø */
+            /* ä¿å­˜è¯·æ±‚æ•°æ®åˆ°å‘é€ç¼“å†²åŒº */
             master->tx_length = 8;
             memcpy(master->tx_buffer, req_buffer, 8);
 
-            /* ·¢ËÍÇëÇóÖ¡ */
+            /* å‘é€è¯·æ±‚å¸§ */
             modbus_master_send_frame(master, master->tx_buffer, master->tx_length);
 
-            /* ÇĞ»»µ½µÈ´ıÏìÓ¦×´Ì¬ */
+            /* åˆ‡æ¢åˆ°ç­‰å¾…å“åº”çŠ¶æ€ */
             master->state = MODBUS_MASTER_STATE_WAITING_RESPONSE;
-            /* ¼ÇÂ¼³¬Ê±ÆğÊ¼Ê±¼ä */
+            /* è®°å½•è¶…æ—¶èµ·å§‹æ—¶é—´ */
             master->timeout_start = HAL_GetTick();
-            /* Çå¿Õ½ÓÊÕ»º³åÇø³¤¶È */
+            /* æ¸…ç©ºæ¥æ”¶ç¼“å†²åŒºé•¿åº¦ */
             master->rx_length = 0;
 
             break;
         }
 
-        /* ×´Ì¬2: µÈ´ıÏìÓ¦ - ¼ì²âÊÇ·ñ³¬Ê± */
+        /* çŠ¶æ€2: ç­‰å¾…å“åº” - æ£€æµ‹æ˜¯å¦è¶…æ—¶ */
         case MODBUS_MASTER_STATE_WAITING_RESPONSE:
         {
-            /* ¼ì²éÊÇ·ñ³¬Ê± (³¬¹ı500msÎŞÏìÓ¦) */
+            /* æ£€æŸ¥æ˜¯å¦è¶…æ—¶ (è¶…è¿‡500msæ— å“åº”) */
             if ((HAL_GetTick() - master->timeout_start) > MODBUS_MASTER_TIMEOUT_MS)
             {
-                /* »ñÈ¡µ±Ç°´«¸ĞÆ÷ */
+                /* è·å–å½“å‰ä¼ æ„Ÿå™¨ */
                 modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
-                /* ÖØÊÔ´ÎÊı¼Ó1 */
+                /* é‡è¯•æ¬¡æ•°åŠ 1 */
                 sensor->retry_count++;
 
-                /* Èç¹ûÖØÊÔ´ÎÊı³¬¹ıÉÏÏŞ£¬±ê¼ÇÎªÀëÏß */
+                /* å¦‚æœé‡è¯•æ¬¡æ•°è¶…è¿‡ä¸Šé™ï¼Œæ ‡è®°ä¸ºç¦»çº¿ */
                 if (sensor->retry_count >= MODBUS_MAX_RETRY)
                 {
                     sensor->is_active = 0;
                     sensor->retry_count = 0;
                 }
 
-                /* ÇĞ»»µ½ÏÂÒ»¸ö´«¸ĞÆ÷ */
+                /* åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªä¼ æ„Ÿå™¨ */
                 master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
-                /* »Øµ½¿ÕÏĞ×´Ì¬ */
+                /* å›åˆ°ç©ºé—²çŠ¶æ€ */
                 master->state = MODBUS_MASTER_STATE_IDLE;
             }
             else
             {
-                /* ³¢ÊÔ½ÓÊÕÊı¾İ */
+                /* å°è¯•æ¥æ”¶æ•°æ® */
                 if (modbus_master_receive_frame(master) > 0)
                 {
-                    /* ÊÕµ½Êı¾İ£¬ÇĞ»»µ½´¦Àí×´Ì¬ */
+                    /* æ”¶åˆ°æ•°æ®ï¼Œåˆ‡æ¢åˆ°å¤„ç†çŠ¶æ€ */
                     master->state = MODBUS_MASTER_STATE_PROCESSING;
                 }
             }
             break;
         }
 
-        /* ×´Ì¬3: ´¦ÀíÏìÓ¦ - ½âÎöÊı¾İ */
+        /* çŠ¶æ€3: å¤„ç†å“åº” - è§£ææ•°æ® */
         case MODBUS_MASTER_STATE_PROCESSING:
         {
-            /* ´¦ÀíÏìÓ¦Êı¾İ */
+            /* å¤„ç†å“åº”æ•°æ® */
             if (modbus_master_process_response(master, master->rx_buffer, master->rx_length) == 1)
             {
-                /* »ñÈ¡µ±Ç°´«¸ĞÆ÷ */
+                /* è·å–å½“å‰ä¼ æ„Ÿå™¨ */
                 modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
                 
-                /* ½âÎöÏìÓ¦Êı¾İ£¬ÌáÈ¡¼Ä´æÆ÷Öµ */
-                /* ModbusÏìÓ¦¸ñÊ½: [´Ó»úID(1)][¹¦ÄÜÂë(1)][×Ö½ÚÊı(1)][Êı¾İ(n)][CRC(2)] */
-                uint8_t byte_count = master->rx_buffer[2];  /* Êı¾İ×Ö½ÚÊı */
+                /* è§£æå“åº”æ•°æ®ï¼Œæå–å¯„å­˜å™¨å€¼ */
+                /* Modbuså“åº”æ ¼å¼: [ä»æœºID(1)][åŠŸèƒ½ç (1)][å­—èŠ‚æ•°(1)][æ•°æ®(n)][CRC(2)] */
+                uint8_t byte_count = master->rx_buffer[2];  /* æ•°æ®å­—èŠ‚æ•° */
                 
-                /* ½«Êı¾İ¸´ÖÆµ½´«¸ĞÆ÷½á¹¹ÌåÖĞ±£´æ */
+                /* å°†æ•°æ®å¤åˆ¶åˆ°ä¼ æ„Ÿå™¨ç»“æ„ä½“ä¸­ä¿å­˜ */
                 if (byte_count <= 64)
                 {
                     memcpy(sensor->data, &master->rx_buffer[3], byte_count);
                     sensor->data_length = byte_count;
                 }
                 
-                /* Í¨ĞÅ³É¹¦£¬ÖØÊÔ´ÎÊıÇåÁã */
+                /* é€šä¿¡æˆåŠŸï¼Œé‡è¯•æ¬¡æ•°æ¸…é›¶ */
                 sensor->retry_count = 0;
-                /* ¼ÇÂ¼³É¹¦ÂÖÑ¯µÄÊ±¼ä */
+                /* è®°å½•æˆåŠŸè½®è¯¢çš„æ—¶é—´ */
                 sensor->last_poll_time = HAL_GetTick();
             }
             else
             {
-                /* Í¨ĞÅÊ§°Ü */
+                /* é€šä¿¡å¤±è´¥ */
                 modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
                 sensor->retry_count++;
 
-                /* ÖØÊÔ´ÎÊı³¬¹ıÉÏÏŞ£¬±ê¼ÇÎªÀëÏß */
+                /* é‡è¯•æ¬¡æ•°è¶…è¿‡ä¸Šé™ï¼Œæ ‡è®°ä¸ºç¦»çº¿ */
                 if (sensor->retry_count >= MODBUS_MAX_RETRY)
                 {
                     sensor->is_active = 0;
@@ -196,14 +196,14 @@ void modbus_master_poll(modbus_master_t *master)
                 }
             }
 
-            /* ÇĞ»»µ½ÏÂÒ»¸ö´«¸ĞÆ÷ */
+            /* åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªä¼ æ„Ÿå™¨ */
             master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
-            /* »Øµ½¿ÕÏĞ×´Ì¬ */
+            /* å›åˆ°ç©ºé—²çŠ¶æ€ */
             master->state = MODBUS_MASTER_STATE_IDLE;
             break;
         }
 
-        /* Ä¬ÈÏ×´Ì¬£º»Øµ½¿ÕÏĞ */
+        /* é»˜è®¤çŠ¶æ€ï¼šå›åˆ°ç©ºé—² */
         default:
             master->state = MODBUS_MASTER_STATE_IDLE;
             break;
@@ -211,76 +211,76 @@ void modbus_master_poll(modbus_master_t *master)
 }
 
 /**
- * @brief ¶ÁÈ¡±£³Ö¼Ä´æÆ÷ (¹¦ÄÜÂë0x03)
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param slave_id ´Ó»úID
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @param data Êı¾İ½ÓÊÕ»º³åÇø
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ×èÈûÊ½µÈ´ıÏìÓ¦£¬³¬Ê±Ê±¼ä500ms
+ * @brief è¯»å–ä¿æŒå¯„å­˜å™¨ (åŠŸèƒ½ç 0x03)
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param slave_id ä»æœºID
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @param data æ•°æ®æ¥æ”¶ç¼“å†²åŒº
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note é˜»å¡å¼ç­‰å¾…å“åº”ï¼Œè¶…æ—¶æ—¶é—´500ms
  */
 uint8_t modbus_master_read_holding_registers(modbus_master_t *master, uint8_t slave_id,
                                                uint16_t start_addr, uint16_t quantity,
                                                uint8_t *data)
 {
-    /* ¹¹½¨¶Á±£³Ö¼Ä´æÆ÷ÇëÇó */
+    /* æ„å»ºè¯»ä¿æŒå¯„å­˜å™¨è¯·æ±‚ */
     uint8_t req_buffer[8];
     modbus_build_request(req_buffer, slave_id, MODBUS_FUNC_READ_HOLDING, start_addr, quantity);
 
-    /* ·¢ËÍÇëÇó */
+    /* å‘é€è¯·æ±‚ */
     modbus_master_send_frame(master, req_buffer, 8);
 
-    /* ¼ÇÂ¼³¬Ê±ÆğÊ¼Ê±¼ä */
+    /* è®°å½•è¶…æ—¶èµ·å§‹æ—¶é—´ */
     uint32_t timeout_start = HAL_GetTick();
     master->rx_length = 0;
 
-    /* µÈ´ıÏìÓ¦Ñ­»· */
+    /* ç­‰å¾…å“åº”å¾ªç¯ */
     while ((HAL_GetTick() - timeout_start) < MODBUS_MASTER_TIMEOUT_MS)
     {
-        /* ³¢ÊÔ½ÓÊÕÊı¾İ */
+        /* å°è¯•æ¥æ”¶æ•°æ® */
         uint16_t rx_len = modbus_master_receive_frame(master);
         if (rx_len > 0)
         {
-            /* ´¦ÀíÏìÓ¦ */
+            /* å¤„ç†å“åº” */
             if (modbus_master_process_response(master, master->rx_buffer, rx_len) == 1)
             {
-                /* ¸´ÖÆÊı¾İµ½ÓÃ»§»º³åÇø */
+                /* å¤åˆ¶æ•°æ®åˆ°ç”¨æˆ·ç¼“å†²åŒº */
                 memcpy(data, &master->rx_buffer[3], quantity * 2);
                 return 1;
             }
         }
     }
 
-    /* ³¬Ê±ÎŞÏìÓ¦ */
+    /* è¶…æ—¶æ— å“åº” */
     return 0;
 }
 
 /**
- * @brief ¶ÁÈ¡ÊäÈë¼Ä´æÆ÷ (¹¦ÄÜÂë0x04)
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param slave_id ´Ó»úID
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @param data Êı¾İ½ÓÊÕ»º³åÇø
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief è¯»å–è¾“å…¥å¯„å­˜å™¨ (åŠŸèƒ½ç 0x04)
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param slave_id ä»æœºID
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @param data æ•°æ®æ¥æ”¶ç¼“å†²åŒº
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t modbus_master_read_input_registers(modbus_master_t *master, uint8_t slave_id,
                                             uint16_t start_addr, uint16_t quantity,
                                             uint8_t *data)
 {
-    /* ¹¹½¨¶ÁÊäÈë¼Ä´æÆ÷ÇëÇó */
+    /* æ„å»ºè¯»è¾“å…¥å¯„å­˜å™¨è¯·æ±‚ */
     uint8_t req_buffer[8];
     modbus_build_request(req_buffer, slave_id, MODBUS_FUNC_READ_INPUT, start_addr, quantity);
 
-    /* ·¢ËÍÇëÇó */
+    /* å‘é€è¯·æ±‚ */
     modbus_master_send_frame(master, req_buffer, 8);
 
-    /* ¼ÇÂ¼³¬Ê±ÆğÊ¼Ê±¼ä */
+    /* è®°å½•è¶…æ—¶èµ·å§‹æ—¶é—´ */
     uint32_t timeout_start = HAL_GetTick();
     master->rx_length = 0;
 
-    /* µÈ´ıÏìÓ¦Ñ­»· */
+    /* ç­‰å¾…å“åº”å¾ªç¯ */
     while ((HAL_GetTick() - timeout_start) < MODBUS_MASTER_TIMEOUT_MS)
     {
         uint16_t rx_len = modbus_master_receive_frame(master);
@@ -298,34 +298,34 @@ uint8_t modbus_master_read_input_registers(modbus_master_t *master, uint8_t slav
 }
 
 /**
- * @brief Ğ´µ¥¸ö¼Ä´æÆ÷ (¹¦ÄÜÂë0x06)
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param slave_id ´Ó»úID
- * @param register_addr ¼Ä´æÆ÷µØÖ·
- * @param value ÒªĞ´ÈëµÄÖµ
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief å†™å•ä¸ªå¯„å­˜å™¨ (åŠŸèƒ½ç 0x06)
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param slave_id ä»æœºID
+ * @param register_addr å¯„å­˜å™¨åœ°å€
+ * @param value è¦å†™å…¥çš„å€¼
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t modbus_master_write_single_register(modbus_master_t *master, uint8_t slave_id,
                                              uint16_t register_addr, uint16_t value)
 {
-    /* ¹¹½¨Ğ´µ¥¸ö¼Ä´æÆ÷ÇëÇó */
+    /* æ„å»ºå†™å•ä¸ªå¯„å­˜å™¨è¯·æ±‚ */
     uint8_t req_buffer[8];
     req_buffer[0] = slave_id;
     req_buffer[1] = MODBUS_FUNC_WRITE_SINGLE_REG;
-    req_buffer[2] = (uint8_t)(register_addr >> 8);      /* ¸ß8Î»µØÖ· */
-    req_buffer[3] = (uint8_t)(register_addr & 0xFF);    /* µÍ8Î»µØÖ· */
-    req_buffer[4] = (uint8_t)(value >> 8);              /* ¸ß8Î»Êı¾İ */
-    req_buffer[5] = (uint8_t)(value & 0xFF);            /* µÍ8Î»Êı¾İ */
+    req_buffer[2] = (uint8_t)(register_addr >> 8);      /* é«˜8ä½åœ°å€ */
+    req_buffer[3] = (uint8_t)(register_addr & 0xFF);    /* ä½8ä½åœ°å€ */
+    req_buffer[4] = (uint8_t)(value >> 8);              /* é«˜8ä½æ•°æ® */
+    req_buffer[5] = (uint8_t)(value & 0xFF);            /* ä½8ä½æ•°æ® */
 
-    /* ¼ÆËãCRC16²¢Ìí¼Óµ½ÇëÇóÖ¡Ä©Î² */
+    /* è®¡ç®—CRC16å¹¶æ·»åŠ åˆ°è¯·æ±‚å¸§æœ«å°¾ */
     uint16_t crc = modbus_crc16(req_buffer, 6);
-    req_buffer[6] = (uint8_t)(crc & 0xFF);              /* CRCµÍ×Ö½Ú */
-    req_buffer[7] = (uint8_t)(crc >> 8);                /* CRC¸ß×Ö½Ú */
+    req_buffer[6] = (uint8_t)(crc & 0xFF);              /* CRCä½å­—èŠ‚ */
+    req_buffer[7] = (uint8_t)(crc >> 8);                /* CRCé«˜å­—èŠ‚ */
 
-    /* ·¢ËÍÇëÇó */
+    /* å‘é€è¯·æ±‚ */
     modbus_master_send_frame(master, req_buffer, 8);
 
-    /* µÈ´ıÏìÓ¦ */
+    /* ç­‰å¾…å“åº” */
     uint32_t timeout_start = HAL_GetTick();
     master->rx_length = 0;
 
@@ -345,19 +345,19 @@ uint8_t modbus_master_write_single_register(modbus_master_t *master, uint8_t sla
 }
 
 /**
- * @brief Ğ´¶à¸ö¼Ä´æÆ÷ (¹¦ÄÜÂë0x10)
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param slave_id ´Ó»úID
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @param data ÒªĞ´ÈëµÄÊı¾İ
- * @return 1:³É¹¦ 0:Ê§°Ü
+ * @brief å†™å¤šä¸ªå¯„å­˜å™¨ (åŠŸèƒ½ç 0x10)
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param slave_id ä»æœºID
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @param data è¦å†™å…¥çš„æ•°æ®
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
  */
 uint8_t modbus_master_write_multiple_registers(modbus_master_t *master, uint8_t slave_id,
                                                  uint16_t start_addr, uint16_t quantity,
                                                  uint8_t *data)
 {
-    /* ¹¹½¨Ğ´¶à¸ö¼Ä´æÆ÷ÇëÇó */
+    /* æ„å»ºå†™å¤šä¸ªå¯„å­˜å™¨è¯·æ±‚ */
     uint8_t req_buffer[256];
     req_buffer[0] = slave_id;
     req_buffer[1] = MODBUS_FUNC_WRITE_MULTIPLE_REG;
@@ -365,20 +365,20 @@ uint8_t modbus_master_write_multiple_registers(modbus_master_t *master, uint8_t 
     req_buffer[3] = (uint8_t)(start_addr & 0xFF);
     req_buffer[4] = (uint8_t)(quantity >> 8);
     req_buffer[5] = (uint8_t)(quantity & 0xFF);
-    req_buffer[6] = (uint8_t)(quantity * 2);            /* ×Ö½ÚÊı = ¼Ä´æÆ÷Êı ¡Á 2 */
+    req_buffer[6] = (uint8_t)(quantity * 2);            /* å­—èŠ‚æ•° = å¯„å­˜å™¨æ•° Ã— 2 */
 
-    /* ¸´ÖÆÊı¾İµ½ÇëÇóÖ¡ */
+    /* å¤åˆ¶æ•°æ®åˆ°è¯·æ±‚å¸§ */
     memcpy(&req_buffer[7], data, quantity * 2);
 
-    /* ¼ÆËãCRC */
+    /* è®¡ç®—CRC */
     uint16_t crc = modbus_crc16(req_buffer, 7 + quantity * 2);
     req_buffer[7 + quantity * 2] = (uint8_t)(crc & 0xFF);
     req_buffer[8 + quantity * 2] = (uint8_t)(crc >> 8);
 
-    /* ·¢ËÍÇëÇó */
+    /* å‘é€è¯·æ±‚ */
     modbus_master_send_frame(master, req_buffer, 9 + quantity * 2);
 
-    /* µÈ´ıÏìÓ¦ */
+    /* ç­‰å¾…å“åº” */
     uint32_t timeout_start = HAL_GetTick();
     master->rx_length = 0;
 
@@ -398,34 +398,34 @@ uint8_t modbus_master_write_multiple_registers(modbus_master_t *master, uint8_t 
 }
 
 /**
- * @brief ·¢ËÍModbusÊı¾İÖ¡
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param data Êı¾İ»º³åÇø
- * @param length Êı¾İ³¤¶È
- * @note ¿ØÖÆRS485Ğ¾Æ¬µÄDEÒı½Å£¬ÊµÏÖÊÕ·¢ÇĞ»»
- *       ·¢ËÍÇ°À­¸ßDE£¬·¢ËÍºóÑÓÊ±ÔÙÀ­µÍDE
+ * @brief å‘é€Modbusæ•°æ®å¸§
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param data æ•°æ®ç¼“å†²åŒº
+ * @param length æ•°æ®é•¿åº¦
+ * @note æ§åˆ¶RS485èŠ¯ç‰‡çš„DEå¼•è„šï¼Œå®ç°æ”¶å‘åˆ‡æ¢
+ *       å‘é€å‰æ‹‰é«˜DEï¼Œå‘é€åå»¶æ—¶å†æ‹‰ä½DE
  */
 void modbus_master_send_frame(modbus_master_t *master, uint8_t *data, uint16_t length)
 {
-    /* À­¸ß¿ØÖÆÒı½Å£¬ÉèÖÃÎª·¢ËÍÄ£Ê½ */
+    /* æ‹‰é«˜æ§åˆ¶å¼•è„šï¼Œè®¾ç½®ä¸ºå‘é€æ¨¡å¼ */
     HAL_GPIO_WritePin(UART1_CTRL_GPIO_Port, UART1_CTRL_Pin, GPIO_PIN_SET);
     HAL_Delay(1);
 
-    /* Í¨¹ı´®¿Ú·¢ËÍÊı¾İ */
+    /* é€šè¿‡ä¸²å£å‘é€æ•°æ® */
     HAL_UART_Transmit(master->huart, data, length, 100);
 
-    /* ·¢ËÍÍê³ÉºóÑÓÊ±£¬È·±£Êı¾İ·¢ËÍÍê±Ï */
+    /* å‘é€å®Œæˆåå»¶æ—¶ï¼Œç¡®ä¿æ•°æ®å‘é€å®Œæ¯• */
     HAL_Delay(1);
 
-    /* À­µÍ¿ØÖÆÒı½Å£¬ÉèÖÃÎª½ÓÊÕÄ£Ê½ */
+    /* æ‹‰ä½æ§åˆ¶å¼•è„šï¼Œè®¾ç½®ä¸ºæ¥æ”¶æ¨¡å¼ */
     HAL_GPIO_WritePin(UART1_CTRL_GPIO_Port, UART1_CTRL_Pin, GPIO_PIN_RESET);
 }
 
 /**
- * @brief ½ÓÊÕModbusÊı¾İÖ¡
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @return ½ÓÊÕµ½µÄÊı¾İ³¤¶È£¬0±íÊ¾ÎŞÊı¾İ
- * @note ²ÉÓÃ³¬Ê±·½Ê½½ÓÊÕ£¬¸ù¾İµÚÈı¸ö×Ö½ÚÈ·¶¨ÍêÕûÖ¡³¤¶È
+ * @brief æ¥æ”¶Modbusæ•°æ®å¸§
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @return æ¥æ”¶åˆ°çš„æ•°æ®é•¿åº¦ï¼Œ0è¡¨ç¤ºæ— æ•°æ®
+ * @note é‡‡ç”¨è¶…æ—¶æ–¹å¼æ¥æ”¶ï¼Œæ ¹æ®ç¬¬ä¸‰ä¸ªå­—èŠ‚ç¡®å®šå®Œæ•´å¸§é•¿åº¦
  */
 uint8_t modbus_master_receive_frame(modbus_master_t *master)
 {
@@ -433,19 +433,19 @@ uint8_t modbus_master_receive_frame(modbus_master_t *master)
     uint32_t timeout_start = HAL_GetTick();
     uint16_t rx_count = 0;
 
-    /* 50ms³¬Ê±Ñ­»·½ÓÊÕ */
+    /* 50msè¶…æ—¶å¾ªç¯æ¥æ”¶ */
     while ((HAL_GetTick() - timeout_start) < 50)
     {
-        /* ·Ç×èÈû·½Ê½½ÓÊÕµ¥×Ö½Ú */
+        /* éé˜»å¡æ–¹å¼æ¥æ”¶å•å­—èŠ‚ */
         if (HAL_UART_Receive(master->huart, &ch, 1, 10) == HAL_OK)
         {
-            /* ´æÈë½ÓÊÕ»º³åÇø */
+            /* å­˜å…¥æ¥æ”¶ç¼“å†²åŒº */
             modbus_master_rx_data[rx_count++] = ch;
 
-            /* ÒÑÊÕµ½ÖÁÉÙ5×Ö½Ú£¬¿ÉÒÔ¼ÆËãÍêÕûÖ¡³¤¶È */
+            /* å·²æ”¶åˆ°è‡³å°‘5å­—èŠ‚ï¼Œå¯ä»¥è®¡ç®—å®Œæ•´å¸§é•¿åº¦ */
             if (rx_count >= 5)
             {
-                /* ÍêÕûÖ¡³¤¶È = µÚÈı¸ö×Ö½Ú(×Ö½ÚÊı) + 5(µØÖ·+¹¦ÄÜÂë+×Ö½ÚÊı+CRC) */
+                /* å®Œæ•´å¸§é•¿åº¦ = ç¬¬ä¸‰ä¸ªå­—èŠ‚(å­—èŠ‚æ•°) + 5(åœ°å€+åŠŸèƒ½ç +å­—èŠ‚æ•°+CRC) */
                 if (rx_count >= modbus_master_rx_data[2] + 5)
                 {
                     memcpy(master->rx_buffer, modbus_master_rx_data, rx_count);
@@ -456,7 +456,7 @@ uint8_t modbus_master_receive_frame(modbus_master_t *master)
         }
     }
 
-    /* ´¦Àí²»ÍêÕûÖ¡£¨³¬Ê±Ç°ÒÑÓĞÊı¾İ£© */
+    /* å¤„ç†ä¸å®Œæ•´å¸§ï¼ˆè¶…æ—¶å‰å·²æœ‰æ•°æ®ï¼‰ */
     if (rx_count > 0)
     {
         memcpy(master->rx_buffer, modbus_master_rx_data, rx_count);
@@ -468,28 +468,28 @@ uint8_t modbus_master_receive_frame(modbus_master_t *master)
 }
 
 /**
- * @brief ´¦ÀíModbusÏìÓ¦Êı¾İ
- * @param master Ö÷»ú½á¹¹ÌåÖ¸Õë
- * @param data ÏìÓ¦Êı¾İ»º³åÇø
- * @param length Êı¾İ³¤¶È
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ÑéÖ¤CRCĞ£ÑéºÍ¹¦ÄÜÂëÊÇ·ñÕı³£
+ * @brief å¤„ç†Modbuså“åº”æ•°æ®
+ * @param master ä¸»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param data å“åº”æ•°æ®ç¼“å†²åŒº
+ * @param length æ•°æ®é•¿åº¦
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note éªŒè¯CRCæ ¡éªŒå’ŒåŠŸèƒ½ç æ˜¯å¦æ­£å¸¸
  */
 uint8_t modbus_master_process_response(modbus_master_t *master, uint8_t *data, uint16_t length)
 {
-    /* Ö¡³¤¶È¼ì²é£¬×îĞ¡ĞèÒª5×Ö½Ú */
+    /* å¸§é•¿åº¦æ£€æŸ¥ï¼Œæœ€å°éœ€è¦5å­—èŠ‚ */
     if (length < 5)
     {
         return 0;
     }
 
-    /* CRCĞ£Ñé */
+    /* CRCæ ¡éªŒ */
     if (!modbus_check_crc(data, length))
     {
         return 0;
     }
 
-    /* ¼ì²éÊÇ·ñÎªÒì³£ÏìÓ¦ (¹¦ÄÜÂë×î¸ßÎ»Îª1) */
+    /* æ£€æŸ¥æ˜¯å¦ä¸ºå¼‚å¸¸å“åº” (åŠŸèƒ½ç æœ€é«˜ä½ä¸º1) */
     if (data[1] & 0x80)
     {
         return 0;
@@ -499,11 +499,11 @@ uint8_t modbus_master_process_response(modbus_master_t *master, uint8_t *data, u
 }
 
 /**
- * @brief »ñÈ¡´«¸ĞÆ÷Öµ
- * @param sensor_index ´«¸ĞÆ÷Ë÷Òı
- * @param value ÖµÊä³öÖ¸Õë
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note »ñÈ¡´«¸ĞÆ÷µÄµÚÒ»¸ö¼Ä´æÆ÷Öµ
+ * @brief è·å–ä¼ æ„Ÿå™¨å€¼
+ * @param sensor_index ä¼ æ„Ÿå™¨ç´¢å¼•
+ * @param value å€¼è¾“å‡ºæŒ‡é’ˆ
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note è·å–ä¼ æ„Ÿå™¨çš„ç¬¬ä¸€ä¸ªå¯„å­˜å™¨å€¼
  */
 uint8_t modbus_master_get_sensor_value(uint8_t sensor_index, uint16_t *value)
 {
@@ -529,9 +529,9 @@ uint8_t modbus_master_get_sensor_value(uint8_t sensor_index, uint16_t *value)
 }
 
 /**
- * @brief »ñÈ¡´«¸ĞÆ÷Êı¾İ
- * @param sensor_index ´«¸ĞÆ÷Ë÷Òı
- * @return ´«¸ĞÆ÷Êı¾İ»º³åÇøÖ¸Õë
+ * @brief è·å–ä¼ æ„Ÿå™¨æ•°æ®
+ * @param sensor_index ä¼ æ„Ÿå™¨ç´¢å¼•
+ * @return ä¼ æ„Ÿå™¨æ•°æ®ç¼“å†²åŒºæŒ‡é’ˆ
  */
 uint8_t* modbus_master_get_sensor_data(uint8_t sensor_index)
 {
@@ -543,9 +543,9 @@ uint8_t* modbus_master_get_sensor_data(uint8_t sensor_index)
 }
 
 /**
- * @brief »ñÈ¡´«¸ĞÆ÷Êı¾İ³¤¶È
- * @param sensor_index ´«¸ĞÆ÷Ë÷Òı
- * @return Êı¾İ³¤¶È
+ * @brief è·å–ä¼ æ„Ÿå™¨æ•°æ®é•¿åº¦
+ * @param sensor_index ä¼ æ„Ÿå™¨ç´¢å¼•
+ * @return æ•°æ®é•¿åº¦
  */
 uint16_t modbus_master_get_sensor_data_length(uint8_t sensor_index)
 {
@@ -557,9 +557,9 @@ uint16_t modbus_master_get_sensor_data_length(uint8_t sensor_index)
 }
 
 /**
- * @brief ¼ì²é´«¸ĞÆ÷ÊÇ·ñÔÚÏß
- * @param sensor_index ´«¸ĞÆ÷Ë÷Òı
- * @return 1:ÔÚÏß 0:ÀëÏß
+ * @brief æ£€æŸ¥ä¼ æ„Ÿå™¨æ˜¯å¦åœ¨çº¿
+ * @param sensor_index ä¼ æ„Ÿå™¨ç´¢å¼•
+ * @return 1:åœ¨çº¿ 0:ç¦»çº¿
  */
 uint8_t modbus_master_is_sensor_online(uint8_t sensor_index)
 {
@@ -571,11 +571,11 @@ uint8_t modbus_master_is_sensor_online(uint8_t sensor_index)
 }
 
 /**
- * @brief »ñÈ¡¼Ä´æÆ÷Öµ
- * @param sensor_index ´«¸ĞÆ÷Ë÷Òı
- * @param register_index ¼Ä´æÆ÷Ë÷Òı (´Ó0¿ªÊ¼)
- * @return ¼Ä´æÆ÷Öµ (16Î»)
- * @note ×Ô¶¯½«Á½¸ö×Ö½Ú×éºÏ³É16Î»Öµ (´ó¶Ë¸ñÊ½)
+ * @brief è·å–å¯„å­˜å™¨å€¼
+ * @param sensor_index ä¼ æ„Ÿå™¨ç´¢å¼•
+ * @param register_index å¯„å­˜å™¨ç´¢å¼• (ä»0å¼€å§‹)
+ * @return å¯„å­˜å™¨å€¼ (16ä½)
+ * @note è‡ªåŠ¨å°†ä¸¤ä¸ªå­—èŠ‚ç»„åˆæˆ16ä½å€¼ (å¤§ç«¯æ ¼å¼)
  */
 uint16_t modbus_master_get_register_value(uint8_t sensor_index, uint8_t register_index)
 {
@@ -586,13 +586,13 @@ uint16_t modbus_master_get_register_value(uint8_t sensor_index, uint8_t register
     
     modbus_sensor_t *sensor = &sensor_master.sensors[sensor_index];
     
-    /* ¼ì²éË÷ÒıÊÇ·ñ³¬³öÊı¾İ·¶Î§ */
+    /* æ£€æŸ¥ç´¢å¼•æ˜¯å¦è¶…å‡ºæ•°æ®èŒƒå›´ */
     if ((register_index * 2 + 1) >= sensor->data_length)
     {
         return 0;
     }
     
-    /* ×éºÏ¸ßµÍ×Ö½Ú (´ó¶Ë¸ñÊ½: ¸ß×Ö½ÚÔÚÇ°) */
+    /* ç»„åˆé«˜ä½å­—èŠ‚ (å¤§ç«¯æ ¼å¼: é«˜å­—èŠ‚åœ¨å‰) */
     uint16_t value = (sensor->data[register_index * 2] << 8) | 
                      sensor->data[register_index * 2 + 1];
     

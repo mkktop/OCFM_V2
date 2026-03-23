@@ -1,15 +1,15 @@
 /**
  * @file modbus.c
- * @brief ModbusºËĞÄ¹¦ÄÜÊµÏÖ
- * @details Ìá¹©CRC16Ğ£Ñé¡¢ModbusÖ¡¹¹½¨ºÍ½âÎöµÈºËĞÄ¹¦ÄÜ
+ * @brief Modbusæ ¸å¿ƒåŠŸèƒ½å®ç°
+ * @details æä¾›CRC16æ ¡éªŒã€Modbuså¸§æ„å»ºå’Œè§£æç­‰æ ¸å¿ƒåŠŸèƒ½
  */
 
 #include "modbus.h"
 
 /**
- * @brief CRC¸ßÎ»²éÕÒ±í
- * @note ÓÃÓÚModbus CRC16¿ìËÙ¼ÆËã (²é±í·¨)
- *       ¶àÏîÊ½: 0xA001 (±ê×¼Modbus RTU)
+ * @brief CRCé«˜ä½æŸ¥æ‰¾è¡¨
+ * @note ç”¨äºModbus CRC16å¿«é€Ÿè®¡ç®— (æŸ¥è¡¨æ³•)
+ *       å¤šé¡¹å¼: 0xA001 (æ ‡å‡†Modbus RTU)
  */
 static const uint8_t aucCRCHi[] = {
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41,
@@ -34,9 +34,9 @@ static const uint8_t aucCRCHi[] = {
 };
 
 /**
- * @brief CRCµÍÎ»²éÕÒ±í
- * @note ÓÃÓÚModbus CRC16¿ìËÙ¼ÆËã (²é±í·¨)
- *       ¶àÏîÊ½: 0xA001 (±ê×¼Modbus RTU)
+ * @brief CRCä½ä½æŸ¥æ‰¾è¡¨
+ * @note ç”¨äºModbus CRC16å¿«é€Ÿè®¡ç®— (æŸ¥è¡¨æ³•)
+ *       å¤šé¡¹å¼: 0xA001 (æ ‡å‡†Modbus RTU)
  */
 static const uint8_t aucCRCLo[] = {
     0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06, 0x07, 0xC7,
@@ -64,149 +64,149 @@ static const uint8_t aucCRCLo[] = {
 };
 
 /**
- * @brief ¼ÆËãModbus CRC16Ğ£ÑéÂë
- * @param buffer Êı¾İ»º³åÇø
- * @param length Êı¾İ³¤¶È
- * @return CRC16Ğ£ÑéÂë (16Î»)
- * @note Ê¹ÓÃ²é±í·¨£¬Ğ§ÂÊ¸ß
- *       Modbus RTU±ê×¼: ¶àÏîÊ½0xA001, ³õÊ¼Öµ0xFFFF
+ * @brief è®¡ç®—Modbus CRC16æ ¡éªŒç 
+ * @param buffer æ•°æ®ç¼“å†²åŒº
+ * @param length æ•°æ®é•¿åº¦
+ * @return CRC16æ ¡éªŒç  (16ä½)
+ * @note ä½¿ç”¨æŸ¥è¡¨æ³•ï¼Œæ•ˆç‡é«˜
+ *       Modbus RTUæ ‡å‡†: å¤šé¡¹å¼0xA001, åˆå§‹å€¼0xFFFF
  */
 uint16_t modbus_crc16(uint8_t *buffer, uint16_t length)
 {
-    /* ³õÊ¼»¯CRCÖµÎª0xFFFF */
+    /* åˆå§‹åŒ–CRCå€¼ä¸º0xFFFF */
     uint8_t  u8CRCHi = 0xFF;
     uint8_t  u8CRCLo = 0xFF;
     uint16_t u16Index;
 
-    /* ±éÀúÃ¿¸ö×Ö½Ú½øĞĞCRC¼ÆËã */
+    /* éå†æ¯ä¸ªå­—èŠ‚è¿›è¡ŒCRCè®¡ç®— */
     while (length--)
     {
-        /* ¼ÆËã²é±íË÷Òı */
+        /* è®¡ç®—æŸ¥è¡¨ç´¢å¼• */
         u16Index = u8CRCLo ^ *buffer++;
-        /* ²é±í¸üĞÂCRCÖµ */
+        /* æŸ¥è¡¨æ›´æ–°CRCå€¼ */
         u8CRCLo = u8CRCHi ^ aucCRCHi[u16Index];
         u8CRCHi = aucCRCLo[u16Index];
     }
 
-    /* ·µ»ØCRCÖµ (¸ß×Ö½ÚÔÚÇ°) */
+    /* è¿”å›CRCå€¼ (é«˜å­—èŠ‚åœ¨å‰) */
     return (uint16_t)((uint16_t)u8CRCHi << 8 | u8CRCLo);
 }
 
 /**
- * @brief ÑéÖ¤Modbus CRC16Ğ£ÑéÂë
- * @param buffer Êı¾İ»º³åÇø (°üº¬CRC)
- * @param length Êı¾İ×Ü³¤¶È (°üº¬2×Ö½ÚCRC)
- * @return 1:Ğ£Ñé³É¹¦ 0:Ğ£ÑéÊ§°Ü
- * @note ´Ó½ÓÊÕÊı¾İÖĞÌáÈ¡CRC²¢Óë¼ÆËãÖµ±È½Ï
+ * @brief éªŒè¯Modbus CRC16æ ¡éªŒç 
+ * @param buffer æ•°æ®ç¼“å†²åŒº (åŒ…å«CRC)
+ * @param length æ•°æ®æ€»é•¿åº¦ (åŒ…å«2å­—èŠ‚CRC)
+ * @return 1:æ ¡éªŒæˆåŠŸ 0:æ ¡éªŒå¤±è´¥
+ * @note ä»æ¥æ”¶æ•°æ®ä¸­æå–CRCå¹¶ä¸è®¡ç®—å€¼æ¯”è¾ƒ
  */
 uint8_t modbus_check_crc(uint8_t *buffer, uint16_t length)
 {
-    /* Êı¾İ³¤¶ÈÖÁÉÙ°üº¬: µØÖ·(1) + ¹¦ÄÜÂë(1) + CRC(2) = 4×Ö½Ú */
+    /* æ•°æ®é•¿åº¦è‡³å°‘åŒ…å«: åœ°å€(1) + åŠŸèƒ½ç (1) + CRC(2) = 4å­—èŠ‚ */
     if (length < 4)
     {
         return 0;
     }
 
-    /* ´ÓÊı¾İÖ¡Ä©Î²ÌáÈ¡½ÓÊÕµ½µÄCRC (µÍ×Ö½ÚÔÚÇ°) */
+    /* ä»æ•°æ®å¸§æœ«å°¾æå–æ¥æ”¶åˆ°çš„CRC (ä½å­—èŠ‚åœ¨å‰) */
     uint16_t crc_received = buffer[length - 2] | (buffer[length - 1] << 8);
-    /* ¼ÆËãÊı¾İ²¿·ÖµÄCRC (²»°üº¬Ö¡Ä©Î²µÄ2×Ö½ÚCRC) */
+    /* è®¡ç®—æ•°æ®éƒ¨åˆ†çš„CRC (ä¸åŒ…å«å¸§æœ«å°¾çš„2å­—èŠ‚CRC) */
     uint16_t crc_calculated = modbus_crc16(buffer, length - 2);
 
-    /* ±È½ÏÁ½ÕßÊÇ·ñÏàµÈ */
+    /* æ¯”è¾ƒä¸¤è€…æ˜¯å¦ç›¸ç­‰ */
     return (crc_received == crc_calculated) ? 1 : 0;
 }
 
 /**
- * @brief ¹¹½¨Modbus¶Á¼Ä´æÆ÷ÇëÇóÖ¡
- * @param buffer Êä³ö»º³åÇø (ÖÁÉÙ8×Ö½Ú)
- * @param slave_id ´Ó»úID (1-247)
- * @param function_code ¹¦ÄÜÂë (0x03/0x04)
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @note ¹¹½¨±ê×¼Modbus RTUÇëÇóÖ¡£¬¸ñÊ½:
- *       [ID][¹¦ÄÜÂë][ÆğÊ¼µØÖ·¸ß][ÆğÊ¼µØÖ·µÍ][ÊıÁ¿¸ß][ÊıÁ¿µÍ][CRCµÍ][CRC¸ß]
+ * @brief æ„å»ºModbusè¯»å¯„å­˜å™¨è¯·æ±‚å¸§
+ * @param buffer è¾“å‡ºç¼“å†²åŒº (è‡³å°‘8å­—èŠ‚)
+ * @param slave_id ä»æœºID (1-247)
+ * @param function_code åŠŸèƒ½ç  (0x03/0x04)
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @note æ„å»ºæ ‡å‡†Modbus RTUè¯·æ±‚å¸§ï¼Œæ ¼å¼:
+ *       [ID][åŠŸèƒ½ç ][èµ·å§‹åœ°å€é«˜][èµ·å§‹åœ°å€ä½][æ•°é‡é«˜][æ•°é‡ä½][CRCä½][CRCé«˜]
  */
 void modbus_build_request(uint8_t *buffer, uint8_t slave_id, uint8_t function_code, 
                          uint16_t start_addr, uint16_t quantity)
 {
-    /* Ìî³ä´Ó»úµØÖ· */
+    /* å¡«å……ä»æœºåœ°å€ */
     buffer[0] = slave_id;
-    /* Ìî³ä¹¦ÄÜÂë */
+    /* å¡«å……åŠŸèƒ½ç  */
     buffer[1] = function_code;
-    /* Ìî³äÆğÊ¼µØÖ· (¸ß×Ö½ÚÔÚÇ°) */
+    /* å¡«å……èµ·å§‹åœ°å€ (é«˜å­—èŠ‚åœ¨å‰) */
     buffer[2] = (uint8_t)(start_addr >> 8);
     buffer[3] = (uint8_t)(start_addr & 0xFF);
-    /* Ìî³ä¼Ä´æÆ÷ÊıÁ¿ (¸ß×Ö½ÚÔÚÇ°) */
+    /* å¡«å……å¯„å­˜å™¨æ•°é‡ (é«˜å­—èŠ‚åœ¨å‰) */
     buffer[4] = (uint8_t)(quantity >> 8);
     buffer[5] = (uint8_t)(quantity & 0xFF);
 
-    /* ¼ÆËãCRC16²¢Ìí¼Óµ½Ö¡Ä©Î² */
+    /* è®¡ç®—CRC16å¹¶æ·»åŠ åˆ°å¸§æœ«å°¾ */
     uint16_t crc = modbus_crc16(buffer, 6);
-    buffer[6] = (uint8_t)(crc & 0xFF);   /* CRCµÍ×Ö½Ú */
-    buffer[7] = (uint8_t)(crc >> 8);     /* CRC¸ß×Ö½Ú */
+    buffer[6] = (uint8_t)(crc & 0xFF);   /* CRCä½å­—èŠ‚ */
+    buffer[7] = (uint8_t)(crc >> 8);     /* CRCé«˜å­—èŠ‚ */
 }
 
 /**
- * @brief ¹¹½¨ModbusÒì³£ÏìÓ¦Ö¡
- * @param buffer Êä³ö»º³åÇø (ÖÁÉÙ5×Ö½Ú)
- * @param function_code Ô­Ê¼¹¦ÄÜÂë
- * @param exception_code Òì³£´úÂë
- * @return ÏìÓ¦Ö¡³¤¶È (5×Ö½Ú)
- * @note Òì³£ÏìÓ¦¸ñÊ½: [ID][¹¦ÄÜÂë|0x80][Òì³£Âë][CRCµÍ][CRC¸ß]
+ * @brief æ„å»ºModbuså¼‚å¸¸å“åº”å¸§
+ * @param buffer è¾“å‡ºç¼“å†²åŒº (è‡³å°‘5å­—èŠ‚)
+ * @param function_code åŸå§‹åŠŸèƒ½ç 
+ * @param exception_code å¼‚å¸¸ä»£ç 
+ * @return å“åº”å¸§é•¿åº¦ (5å­—èŠ‚)
+ * @note å¼‚å¸¸å“åº”æ ¼å¼: [ID][åŠŸèƒ½ç |0x80][å¼‚å¸¸ç ][CRCä½][CRCé«˜]
  */
 uint8_t modbus_build_exception_response(uint8_t *buffer, uint8_t function_code, uint8_t exception_code)
 {
-    /* ´Ó»úµØÖ·ÉèÎª1 (¿É¸ù¾İĞèÒªĞŞ¸Ä) */
+    /* ä»æœºåœ°å€è®¾ä¸º1 (å¯æ ¹æ®éœ€è¦ä¿®æ”¹) */
     buffer[0] = 0x01;
-    /* ¹¦ÄÜÂë×î¸ßÎ»ÖÃ1±íÊ¾Òì³£ */
+    /* åŠŸèƒ½ç æœ€é«˜ä½ç½®1è¡¨ç¤ºå¼‚å¸¸ */
     buffer[1] = function_code | 0x80;
-    /* Ìî³äÒì³£´úÂë */
+    /* å¡«å……å¼‚å¸¸ä»£ç  */
     buffer[2] = exception_code;
 
-    /* ¼ÆËãCRC */
+    /* è®¡ç®—CRC */
     uint16_t crc = modbus_crc16(buffer, 3);
     buffer[3] = (uint8_t)(crc & 0xFF);
     buffer[4] = (uint8_t)(crc >> 8);
 
-    /* ·µ»ØÏìÓ¦Ö¡³¤¶È */
+    /* è¿”å›å“åº”å¸§é•¿åº¦ */
     return 5;
 }
 
 /**
- * @brief ½âÎöModbusÏìÓ¦Êı¾İ
- * @param request ÇëÇóÊı¾İ
- * @param response ÏìÓ¦Êı¾İ
- * @param response_len ÏìÓ¦Êı¾İ³¤¶È
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ÑéÖ¤´Ó»úID¡¢¹¦ÄÜÂëºÍCRC
+ * @brief è§£æModbuså“åº”æ•°æ®
+ * @param request è¯·æ±‚æ•°æ®
+ * @param response å“åº”æ•°æ®
+ * @param response_len å“åº”æ•°æ®é•¿åº¦
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note éªŒè¯ä»æœºIDã€åŠŸèƒ½ç å’ŒCRC
  */
 uint8_t modbus_parse_response(uint8_t *request, uint8_t *response, uint16_t response_len)
 {
-    /* ÏìÓ¦Ö¡×îĞ¡³¤¶È: µØÖ·(1) + ¹¦ÄÜÂë(1) + CRC(2) = 4×Ö½Ú */
+    /* å“åº”å¸§æœ€å°é•¿åº¦: åœ°å€(1) + åŠŸèƒ½ç (1) + CRC(2) = 4å­—èŠ‚ */
     if (response_len < 4)
     {
         return 0;
     }
 
-    /* ÑéÖ¤´Ó»úIDÊÇ·ñÆ¥Åä */
+    /* éªŒè¯ä»æœºIDæ˜¯å¦åŒ¹é… */
     if (request[0] != response[0])
     {
         return 0;
     }
 
-    /* ¼ì²éÊÇ·ñÎªÒì³£ÏìÓ¦ (¹¦ÄÜÂë×î¸ßÎ»Îª1) */
+    /* æ£€æŸ¥æ˜¯å¦ä¸ºå¼‚å¸¸å“åº” (åŠŸèƒ½ç æœ€é«˜ä½ä¸º1) */
     if (response[1] & 0x80)
     {
         return 0;
     }
 
-    /* ÑéÖ¤¹¦ÄÜÂëÊÇ·ñÆ¥Åä */
+    /* éªŒè¯åŠŸèƒ½ç æ˜¯å¦åŒ¹é… */
     if (request[1] != response[1])
     {
         return 0;
     }
 
-    /* CRCĞ£Ñé */
+    /* CRCæ ¡éªŒ */
     if (!modbus_check_crc(response, response_len))
     {
         return 0;

@@ -1,7 +1,7 @@
 /**
  * @file modbus.h
- * @brief ModbusºËĞÄ¶¨ÒåºÍº¯ÊıÉùÃ÷
- * @details ¶¨ÒåModbusĞ­Òé³£ÓÃµÄ¹¦ÄÜÂë¡¢Òì³£ÂëºÍÊı¾İ½á¹¹
+ * @brief Modbusæ ¸å¿ƒå®šä¹‰å’Œå‡½æ•°å£°æ˜
+ * @details å®šä¹‰Modbusåè®®å¸¸ç”¨çš„åŠŸèƒ½ç ã€å¼‚å¸¸ç å’Œæ•°æ®ç»“æ„
  */
 
 #ifndef __MODBUS_H
@@ -14,95 +14,95 @@ extern "C" {
 #include <stdint.h>
 
 /**
- * @brief ModbusĞ­ÒéÀàĞÍ
+ * @brief Modbusåè®®ç±»å‹
  */
-#define MODBUS_RTU     0   /**< RTUÄ£Ê½ (¶ş½øÖÆ, ¸ßĞ§) */
-#define MODBUS_ASCII   1   /**< ASCIIÄ£Ê½ (¿É¶ÁĞÔºÃ, Ğ§ÂÊµÍ) */
+#define MODBUS_RTU     0   /**< RTUæ¨¡å¼ (äºŒè¿›åˆ¶, é«˜æ•ˆ) */
+#define MODBUS_ASCII   1   /**< ASCIIæ¨¡å¼ (å¯è¯»æ€§å¥½, æ•ˆç‡ä½) */
 
 /**
- * @brief Modbus¹¦ÄÜÂë¶¨Òå
- * @note Ö»±£Áô±£³Ö¼Ä´æÆ÷Ïà¹Ø¹¦ÄÜÂë
+ * @brief ModbusåŠŸèƒ½ç å®šä¹‰
+ * @note åªä¿ç•™ä¿æŒå¯„å­˜å™¨ç›¸å…³åŠŸèƒ½ç 
  */
-#define MODBUS_FUNC_READ_HOLDING        0x03  /**< ¶Á±£³Ö¼Ä´æÆ÷ (Read Holding Registers) */
-#define MODBUS_FUNC_WRITE_SINGLE_REG    0x06  /**< Ğ´µ¥¸ö¼Ä´æÆ÷ (Write Single Register) */
-#define MODBUS_FUNC_WRITE_MULTIPLE_REG  0x10  /**< Ğ´¶à¸ö¼Ä´æÆ÷ (Write Multiple Registers) */
+#define MODBUS_FUNC_READ_HOLDING        0x03  /**< è¯»ä¿æŒå¯„å­˜å™¨ (Read Holding Registers) */
+#define MODBUS_FUNC_WRITE_SINGLE_REG    0x06  /**< å†™å•ä¸ªå¯„å­˜å™¨ (Write Single Register) */
+#define MODBUS_FUNC_WRITE_MULTIPLE_REG  0x10  /**< å†™å¤šä¸ªå¯„å­˜å™¨ (Write Multiple Registers) */
 
 /**
- * @brief ModbusÒì³£Âë¶¨Òå
- * @note µ±´Ó»úÎŞ·¨´¦ÀíÇëÇóÊ±·µ»ØÒì³£ÏìÓ¦
+ * @brief Modbuså¼‚å¸¸ç å®šä¹‰
+ * @note å½“ä»æœºæ— æ³•å¤„ç†è¯·æ±‚æ—¶è¿”å›å¼‚å¸¸å“åº”
  */
-#define MODBUS_EX_ILLEGAL_FUNCTION    0x01  /**< ·Ç·¨¹¦ÄÜÂë */
-#define MODBUS_EX_ILLEGAL_DATA_ADDR   0x02  /**< ·Ç·¨Êı¾İµØÖ· */
-#define MODBUS_EX_ILLEGAL_DATA_VALUE  0x03  /**< ·Ç·¨Êı¾İÖµ */
-#define MODBUS_EX_SERVER_FAILURE      0x04  /**< ´Ó»úÉè±¸¹ÊÕÏ */
+#define MODBUS_EX_ILLEGAL_FUNCTION    0x01  /**< éæ³•åŠŸèƒ½ç  */
+#define MODBUS_EX_ILLEGAL_DATA_ADDR   0x02  /**< éæ³•æ•°æ®åœ°å€ */
+#define MODBUS_EX_ILLEGAL_DATA_VALUE  0x03  /**< éæ³•æ•°æ®å€¼ */
+#define MODBUS_EX_SERVER_FAILURE      0x04  /**< ä»æœºè®¾å¤‡æ•…éšœ */
 
 /**
- * @brief ModbusÊı¾İ½á¹¹Ìå
- * @note Í¨ÓÃModbusÖ¡½á¹¹£¬ÓÃÓÚ½âÎöºÍ¹¹½¨ModbusÊı¾İ
+ * @brief Modbusæ•°æ®ç»“æ„ä½“
+ * @note é€šç”¨Modbuså¸§ç»“æ„ï¼Œç”¨äºè§£æå’Œæ„å»ºModbusæ•°æ®
  */
 typedef struct
 {
-    uint8_t  u8id;              /**< ´Ó»úID (1-247) */
-    uint8_t  u8fct;             /**< ¹¦ÄÜÂë */
-    uint16_t u16RegAdd;         /**< ¼Ä´æÆ÷µØÖ· */
-    uint16_t u16CoilsNo;        /**< ÏßÈ¦/¼Ä´æÆ÷ÊıÁ¿ */
-    uint16_t u16RegNum;         /**< ¼Ä´æÆ÷ÊıÁ¿ */
-    uint8_t  au8data[256];      /**< Êı¾İ»º³åÇø */
-    uint16_t u16CRC;            /**< CRCĞ£ÑéÂë */
-    uint8_t  u8len;             /**< Êı¾İ³¤¶È */
-    uint8_t  u8state;           /**< ×´Ì¬ */
-    int8_t   i8state;           /**< ÏêÏ¸×´Ì¬ */
-    int32_t  i32timeout;        /**< ³¬Ê±Ê±¼ä (ºÁÃë) */
-    uint32_t u32timeStart;      /**< ³¬Ê±ÆğÊ¼Ê±¼ä */
-    uint8_t  au8buffer[256];    /**< Ô­Ê¼Êı¾İ»º³åÇø */
+    uint8_t  u8id;              /**< ä»æœºID (1-247) */
+    uint8_t  u8fct;             /**< åŠŸèƒ½ç  */
+    uint16_t u16RegAdd;         /**< å¯„å­˜å™¨åœ°å€ */
+    uint16_t u16CoilsNo;        /**< çº¿åœˆ/å¯„å­˜å™¨æ•°é‡ */
+    uint16_t u16RegNum;         /**< å¯„å­˜å™¨æ•°é‡ */
+    uint8_t  au8data[256];      /**< æ•°æ®ç¼“å†²åŒº */
+    uint16_t u16CRC;            /**< CRCæ ¡éªŒç  */
+    uint8_t  u8len;             /**< æ•°æ®é•¿åº¦ */
+    uint8_t  u8state;           /**< çŠ¶æ€ */
+    int8_t   i8state;           /**< è¯¦ç»†çŠ¶æ€ */
+    int32_t  i32timeout;        /**< è¶…æ—¶æ—¶é—´ (æ¯«ç§’) */
+    uint32_t u32timeStart;      /**< è¶…æ—¶èµ·å§‹æ—¶é—´ */
+    uint8_t  au8buffer[256];    /**< åŸå§‹æ•°æ®ç¼“å†²åŒº */
 }__attribute__((packed)) modbus_t;
 
 /**
- * @brief ¼ÆËãModbus CRC16Ğ£ÑéÂë
- * @param buffer Êı¾İ»º³åÇø
- * @param length Êı¾İ³¤¶È
- * @return CRC16Ğ£ÑéÂë (16Î»)
- * @note Ê¹ÓÃ²é±í·¨£¬Ğ§ÂÊ¸ß£»±ê×¼Modbus RTU¶àÏîÊ½0xA001
+ * @brief è®¡ç®—Modbus CRC16æ ¡éªŒç 
+ * @param buffer æ•°æ®ç¼“å†²åŒº
+ * @param length æ•°æ®é•¿åº¦
+ * @return CRC16æ ¡éªŒç  (16ä½)
+ * @note ä½¿ç”¨æŸ¥è¡¨æ³•ï¼Œæ•ˆç‡é«˜ï¼›æ ‡å‡†Modbus RTUå¤šé¡¹å¼0xA001
  */
 uint16_t modbus_crc16(uint8_t *buffer, uint16_t length);
 
 /**
- * @brief ÑéÖ¤Modbus CRC16Ğ£ÑéÂë
- * @param buffer Êı¾İ»º³åÇø (°üº¬CRC)
- * @param length Êı¾İ×Ü³¤¶È (°üº¬2×Ö½ÚCRC)
- * @return 1:Ğ£Ñé³É¹¦ 0:Ğ£ÑéÊ§°Ü
+ * @brief éªŒè¯Modbus CRC16æ ¡éªŒç 
+ * @param buffer æ•°æ®ç¼“å†²åŒº (åŒ…å«CRC)
+ * @param length æ•°æ®æ€»é•¿åº¦ (åŒ…å«2å­—èŠ‚CRC)
+ * @return 1:æ ¡éªŒæˆåŠŸ 0:æ ¡éªŒå¤±è´¥
  */
 uint8_t modbus_check_crc(uint8_t *buffer, uint16_t length);
 
 /**
- * @brief ¹¹½¨Modbus¶Á¼Ä´æÆ÷ÇëÇóÖ¡
- * @param buffer Êä³ö»º³åÇø (ÖÁÉÙ8×Ö½Ú)
- * @param slave_id ´Ó»úID (1-247)
- * @param function_code ¹¦ÄÜÂë (0x03/0x04)
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @note ÇëÇóÖ¡¸ñÊ½: [ID(1)][¹¦ÄÜÂë(1)][ÆğÊ¼µØÖ·(2)][ÊıÁ¿(2)][CRC(2)] = 8×Ö½Ú
+ * @brief æ„å»ºModbusè¯»å¯„å­˜å™¨è¯·æ±‚å¸§
+ * @param buffer è¾“å‡ºç¼“å†²åŒº (è‡³å°‘8å­—èŠ‚)
+ * @param slave_id ä»æœºID (1-247)
+ * @param function_code åŠŸèƒ½ç  (0x03/0x04)
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @note è¯·æ±‚å¸§æ ¼å¼: [ID(1)][åŠŸèƒ½ç (1)][èµ·å§‹åœ°å€(2)][æ•°é‡(2)][CRC(2)] = 8å­—èŠ‚
  */
 void modbus_build_request(uint8_t *buffer, uint8_t slave_id, uint8_t function_code, 
                          uint16_t start_addr, uint16_t quantity);
 
 /**
- * @brief ½âÎöModbusÏìÓ¦Êı¾İ
- * @param request ÇëÇóÊı¾İ
- * @param response ÏìÓ¦Êı¾İ
- * @param response_len ÏìÓ¦Êı¾İ³¤¶È
- * @return 1:³É¹¦ 0:Ê§°Ü
- * @note ÑéÖ¤´Ó»úID¡¢¹¦ÄÜÂëºÍCRC
+ * @brief è§£æModbuså“åº”æ•°æ®
+ * @param request è¯·æ±‚æ•°æ®
+ * @param response å“åº”æ•°æ®
+ * @param response_len å“åº”æ•°æ®é•¿åº¦
+ * @return 1:æˆåŠŸ 0:å¤±è´¥
+ * @note éªŒè¯ä»æœºIDã€åŠŸèƒ½ç å’ŒCRC
  */
 uint8_t modbus_parse_response(uint8_t *request, uint8_t *response, uint16_t response_len);
 
 /**
- * @brief ¹¹½¨ModbusÒì³£ÏìÓ¦Ö¡
- * @param buffer Êä³ö»º³åÇø (ÖÁÉÙ5×Ö½Ú)
- * @param function_code Ô­Ê¼¹¦ÄÜÂë
- * @param exception_code Òì³£´úÂë (¼ûMODBUS_EX_*¶¨Òå)
- * @return ÏìÓ¦Ö¡³¤¶È (5×Ö½Ú)
- * @note Òì³£ÏìÓ¦¸ñÊ½: [ID][¹¦ÄÜÂë|0x80][Òì³£Âë][CRC]
+ * @brief æ„å»ºModbuså¼‚å¸¸å“åº”å¸§
+ * @param buffer è¾“å‡ºç¼“å†²åŒº (è‡³å°‘5å­—èŠ‚)
+ * @param function_code åŸå§‹åŠŸèƒ½ç 
+ * @param exception_code å¼‚å¸¸ä»£ç  (è§MODBUS_EX_*å®šä¹‰)
+ * @return å“åº”å¸§é•¿åº¦ (5å­—èŠ‚)
+ * @note å¼‚å¸¸å“åº”æ ¼å¼: [ID][åŠŸèƒ½ç |0x80][å¼‚å¸¸ç ][CRC]
  */
 uint8_t modbus_build_exception_response(uint8_t *buffer, uint8_t function_code, uint8_t exception_code);
 

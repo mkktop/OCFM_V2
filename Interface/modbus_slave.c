@@ -1,7 +1,7 @@
 /**
  * @file modbus_slave.c
- * @brief Modbus´Ó»úÊµÏÖ - ÏìÓ¦ÓÃ»§Ö¸Áî
- * @details Í¨¹ı´®¿Ú2Á¬½ÓÓÃ»§Éè±¸£¬ÏìÓ¦ModbusÖ¸Áî
+ * @brief Modbusä»æœºå®ç° - å“åº”ç”¨æˆ·æŒ‡ä»¤
+ * @details é€šè¿‡ä¸²å£2è¿æ¥ç”¨æˆ·è®¾å¤‡ï¼Œå“åº”ModbusæŒ‡ä»¤
  */
 
 #include "modbus_slave.h"
@@ -9,39 +9,39 @@
 #include <string.h>
 
 /**
- * @brief ±£³Ö¼Ä´æÆ÷Êı×é
- * @note ËùÓĞÊı¾İ¶¼Ê¹ÓÃ±£³Ö¼Ä´æÆ÷´æ´¢£¬µØÖ··¶Î§: 0x0000 - 0x003F
+ * @brief ä¿æŒå¯„å­˜å™¨æ•°ç»„
+ * @note æ‰€æœ‰æ•°æ®éƒ½ä½¿ç”¨ä¿æŒå¯„å­˜å™¨å­˜å‚¨ï¼Œåœ°å€èŒƒå›´: 0x0000 - 0x003F
  */
 static uint16_t holding_registers[HOLDING_REG_SIZE];
 
 /**
- * @brief ³õÊ¼»¯Modbus´Ó»ú
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param huart ´®¿Ú¾ä±úÖ¸Õë
- * @note ³õÊ¼»¯´®¿ÚºÍ¼Ä´æÆ÷Êı¾İ
+ * @brief åˆå§‹åŒ–Modbusä»æœº
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param huart ä¸²å£å¥æŸ„æŒ‡é’ˆ
+ * @note åˆå§‹åŒ–ä¸²å£å’Œå¯„å­˜å™¨æ•°æ®
  */
 void modbus_slave_init(modbus_slave_t *slave, UART_HandleTypeDef *huart)
 {
-    /* ÇåÁã½á¹¹Ìå */
+    /* æ¸…é›¶ç»“æ„ä½“ */
     memset(slave, 0, sizeof(modbus_slave_t));
     
-    /* ÉèÖÃ´®¿Ú¾ä±ú */
+    /* è®¾ç½®ä¸²å£å¥æŸ„ */
     slave->huart = huart;
     
-    /* ÉèÖÃ³õÊ¼×´Ì¬ */
+    /* è®¾ç½®åˆå§‹çŠ¶æ€ */
     slave->state = MODBUS_SLAVE_STATE_IDLE;
     
-    /* ÉèÖÃÄ¬ÈÏ´Ó»úID */
+    /* è®¾ç½®é»˜è®¤ä»æœºID */
     slave->slave_id = MODBUS_SLAVE_ID;
     
-    /* ÇåÁã¼Ä´æÆ÷ */
+    /* æ¸…é›¶å¯„å­˜å™¨ */
     memset(holding_registers, 0, sizeof(holding_registers));
 }
 
 /**
- * @brief ÉèÖÃ´Ó»úID
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param id ´Ó»úID (1-247)
+ * @brief è®¾ç½®ä»æœºID
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param id ä»æœºID (1-247)
  */
 void modbus_slave_set_id(modbus_slave_t *slave, uint8_t id)
 {
@@ -52,22 +52,22 @@ void modbus_slave_set_id(modbus_slave_t *slave, uint8_t id)
 }
 
 /**
- * @brief Modbus´Ó»úÈÎÎñ´¦Àí
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @note ÔÚÖ÷Ñ­»·ÖĞµ÷ÓÃ£¬´¦Àí½ÓÊÕµ½µÄÊı¾İ²¢ÏìÓ¦
+ * @brief Modbusä»æœºä»»åŠ¡å¤„ç†
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @note åœ¨ä¸»å¾ªç¯ä¸­è°ƒç”¨ï¼Œå¤„ç†æ¥æ”¶åˆ°çš„æ•°æ®å¹¶å“åº”
  */
 void modbus_slave_task(modbus_slave_t *slave)
 {
     uint8_t ch;
     
-    /* ³¢ÊÔ½ÓÊÕµ¥×Ö½ÚÊı¾İ */
+    /* å°è¯•æ¥æ”¶å•å­—èŠ‚æ•°æ® */
     if (HAL_UART_Receive(slave->huart, &ch, 1, 1) == HAL_OK)
     {
-        /* ½«Êı¾İ´æÈë½ÓÊÕ»º³åÇø */
+        /* å°†æ•°æ®å­˜å…¥æ¥æ”¶ç¼“å†²åŒº */
         slave->rx_buffer[slave->rx_length++] = ch;
         slave->last_receive_time = HAL_GetTick();
         
-        /* ¼ì²é»º³åÇøÊÇ·ñÒç³ö */
+        /* æ£€æŸ¥ç¼“å†²åŒºæ˜¯å¦æº¢å‡º */
         if (slave->rx_length >= MODBUS_SLAVE_BUF_SIZE)
         {
             slave->rx_length = 0;
@@ -75,63 +75,63 @@ void modbus_slave_task(modbus_slave_t *slave)
     }
     else
     {
-        /* ¼ì²éÊÇ·ñ½ÓÊÕÍê³É (3.5¸ö×Ö·ûÊ±¼äÎŞĞÂÊı¾İ) */
+        /* æ£€æŸ¥æ˜¯å¦æ¥æ”¶å®Œæˆ (3.5ä¸ªå­—ç¬¦æ—¶é—´æ— æ–°æ•°æ®) */
         if (slave->rx_length > 0 && 
             (HAL_GetTick() - slave->last_receive_time) > 10)
         {
-            /* ´¦Àí½ÓÊÕµ½µÄÊı¾İ */
+            /* å¤„ç†æ¥æ”¶åˆ°çš„æ•°æ® */
             uint16_t response_len = modbus_slave_process(slave, 
                                                           slave->rx_buffer, 
                                                           slave->rx_length);
             
-            /* Èç¹ûÓĞÏìÓ¦Êı¾İ£¬·¢ËÍÏìÓ¦ */
+            /* å¦‚æœæœ‰å“åº”æ•°æ®ï¼Œå‘é€å“åº” */
             if (response_len > 0)
             {
                 modbus_slave_send(slave, slave->tx_buffer, response_len);
             }
             
-            /* Çå¿Õ½ÓÊÕ»º³åÇø */
+            /* æ¸…ç©ºæ¥æ”¶ç¼“å†²åŒº */
             slave->rx_length = 0;
         }
     }
 }
 
 /**
- * @brief ´¦Àí½ÓÊÕµ½µÄÊı¾İ
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param data ½ÓÊÕµ½µÄÊı¾İ
- * @param length Êı¾İ³¤¶È
- * @return ´¦ÀíºóµÄÏìÓ¦³¤¶È£¬0±íÊ¾ÎŞĞèÏìÓ¦
+ * @brief å¤„ç†æ¥æ”¶åˆ°çš„æ•°æ®
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param data æ¥æ”¶åˆ°çš„æ•°æ®
+ * @param length æ•°æ®é•¿åº¦
+ * @return å¤„ç†åçš„å“åº”é•¿åº¦ï¼Œ0è¡¨ç¤ºæ— éœ€å“åº”
  */
 uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t length)
 {
-    /* ¼ì²é×îĞ¡Ö¡³¤¶È (µØÖ·+¹¦ÄÜÂë+CRC = 4×Ö½Ú) */
+    /* æ£€æŸ¥æœ€å°å¸§é•¿åº¦ (åœ°å€+åŠŸèƒ½ç +CRC = 4å­—èŠ‚) */
     if (length < 4)
     {
         return 0;
     }
     
-    /* ÑéÖ¤CRC */
+    /* éªŒè¯CRC */
     if (!modbus_check_crc(data, length))
     {
         return 0;
     }
     
-    /* ¼ì²é´Ó»úµØÖ·ÊÇ·ñÆ¥Åä */
+    /* æ£€æŸ¥ä»æœºåœ°å€æ˜¯å¦åŒ¹é… */
     if (data[0] != slave->slave_id && data[0] != 0)
     {
         return 0;
     }
     
-    /* »ñÈ¡¹¦ÄÜÂë */
+    /* è·å–åŠŸèƒ½ç  */
     uint8_t function_code = data[1];
     
-    /* ¸ù¾İ¹¦ÄÜÂë´¦ÀíÇëÇó */
+    /* æ ¹æ®åŠŸèƒ½ç å¤„ç†è¯·æ±‚ */
     switch (function_code)
     {
         case MODBUS_FUNC_READ_HOLDING:
         {
-            /* ¶Á±£³Ö¼Ä´æÆ÷ (0x03) */
+            /* è¯»ä¿æŒå¯„å­˜å™¨ (0x03) */
             uint16_t start_addr = (data[2] << 8) | data[3];
             uint16_t quantity = (data[4] << 8) | data[5];
             return modbus_slave_read_holding_registers(slave, start_addr, quantity, slave->tx_buffer);
@@ -139,7 +139,7 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
         
         case MODBUS_FUNC_WRITE_SINGLE_REG:
         {
-            /* Ğ´µ¥¸ö¼Ä´æÆ÷ (0x06) */
+            /* å†™å•ä¸ªå¯„å­˜å™¨ (0x06) */
             uint16_t register_addr = (data[2] << 8) | data[3];
             uint16_t value = (data[4] << 8) | data[5];
             return modbus_slave_write_single_register(slave, register_addr, value, slave->tx_buffer);
@@ -147,7 +147,7 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
         
         case MODBUS_FUNC_WRITE_MULTIPLE_REG:
         {
-            /* Ğ´¶à¸ö¼Ä´æÆ÷ (0x10) */
+            /* å†™å¤šä¸ªå¯„å­˜å™¨ (0x10) */
             uint16_t start_addr = (data[2] << 8) | data[3];
             uint16_t quantity = (data[4] << 8) | data[5];
             uint8_t byte_count = data[6];
@@ -156,7 +156,7 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
         
         default:
         {
-            /* ²»Ö§³ÖµÄ¹¦ÄÜÂë£¬·µ»ØÒì³£ÏìÓ¦ */
+            /* ä¸æ”¯æŒçš„åŠŸèƒ½ç ï¼Œè¿”å›å¼‚å¸¸å“åº” */
             return modbus_slave_build_exception(slave, function_code, 
                                                  MODBUS_EX_ILLEGAL_FUNCTION, 
                                                  slave->tx_buffer);
@@ -165,77 +165,77 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
 }
 
 /**
- * @brief ¶Á±£³Ö¼Ä´æÆ÷ (¹¦ÄÜÂë0x03)
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @param response ÏìÓ¦»º³åÇø
- * @return ÏìÓ¦³¤¶È
+ * @brief è¯»ä¿æŒå¯„å­˜å™¨ (åŠŸèƒ½ç 0x03)
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @param response å“åº”ç¼“å†²åŒº
+ * @return å“åº”é•¿åº¦
  */
 uint16_t modbus_slave_read_holding_registers(modbus_slave_t *slave, 
                                                uint16_t start_addr, 
                                                uint16_t quantity,
                                                uint8_t *response)
 {
-    /* ¼ì²éµØÖ··¶Î§ */
+    /* æ£€æŸ¥åœ°å€èŒƒå›´ */
     if (start_addr + quantity > HOLDING_REG_SIZE)
     {
         return modbus_slave_build_exception(slave, MODBUS_FUNC_READ_HOLDING, 
                                              MODBUS_EX_ILLEGAL_DATA_ADDR, response);
     }
     
-    /* ¼ì²éÊıÁ¿·¶Î§ (×î´ó125¸ö¼Ä´æÆ÷) */
+    /* æ£€æŸ¥æ•°é‡èŒƒå›´ (æœ€å¤§125ä¸ªå¯„å­˜å™¨) */
     if (quantity < 1 || quantity > 125)
     {
         return modbus_slave_build_exception(slave, MODBUS_FUNC_READ_HOLDING, 
                                              MODBUS_EX_ILLEGAL_DATA_VALUE, response);
     }
     
-    /* ¹¹½¨ÏìÓ¦Ö¡ */
-    response[0] = slave->slave_id;              /* ´Ó»úµØÖ· */
-    response[1] = MODBUS_FUNC_READ_HOLDING;     /* ¹¦ÄÜÂë */
-    response[2] = quantity * 2;                 /* ×Ö½ÚÊı */
+    /* æ„å»ºå“åº”å¸§ */
+    response[0] = slave->slave_id;              /* ä»æœºåœ°å€ */
+    response[1] = MODBUS_FUNC_READ_HOLDING;     /* åŠŸèƒ½ç  */
+    response[2] = quantity * 2;                 /* å­—èŠ‚æ•° */
     
-    /* Ìî³ä¼Ä´æÆ÷Êı¾İ (´ó¶Ë¸ñÊ½) */
+    /* å¡«å……å¯„å­˜å™¨æ•°æ® (å¤§ç«¯æ ¼å¼) */
     for (uint16_t i = 0; i < quantity; i++)
     {
-        response[3 + i * 2] = holding_registers[start_addr + i] >> 8;       /* ¸ß×Ö½Ú */
-        response[3 + i * 2 + 1] = holding_registers[start_addr + i] & 0xFF; /* µÍ×Ö½Ú */
+        response[3 + i * 2] = holding_registers[start_addr + i] >> 8;       /* é«˜å­—èŠ‚ */
+        response[3 + i * 2 + 1] = holding_registers[start_addr + i] & 0xFF; /* ä½å­—èŠ‚ */
     }
     
-    /* ¼ÆËãCRC */
+    /* è®¡ç®—CRC */
     uint16_t crc = modbus_crc16(response, 3 + quantity * 2);
-    response[3 + quantity * 2] = crc & 0xFF;        /* CRCµÍ×Ö½Ú */
-    response[3 + quantity * 2 + 1] = crc >> 8;      /* CRC¸ß×Ö½Ú */
+    response[3 + quantity * 2] = crc & 0xFF;        /* CRCä½å­—èŠ‚ */
+    response[3 + quantity * 2 + 1] = crc >> 8;      /* CRCé«˜å­—èŠ‚ */
     
-    /* ·µ»ØÏìÓ¦³¤¶È */
+    /* è¿”å›å“åº”é•¿åº¦ */
     return 5 + quantity * 2;
 }
 
 /**
- * @brief Ğ´µ¥¸ö¼Ä´æÆ÷ (¹¦ÄÜÂë0x06)
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param register_addr ¼Ä´æÆ÷µØÖ·
- * @param value Öµ
- * @param response ÏìÓ¦»º³åÇø
- * @return ÏìÓ¦³¤¶È
+ * @brief å†™å•ä¸ªå¯„å­˜å™¨ (åŠŸèƒ½ç 0x06)
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param register_addr å¯„å­˜å™¨åœ°å€
+ * @param value å€¼
+ * @param response å“åº”ç¼“å†²åŒº
+ * @return å“åº”é•¿åº¦
  */
 uint16_t modbus_slave_write_single_register(modbus_slave_t *slave,
                                               uint16_t register_addr,
                                               uint16_t value,
                                               uint8_t *response)
 {
-    /* ¼ì²éµØÖ··¶Î§ */
+    /* æ£€æŸ¥åœ°å€èŒƒå›´ */
     if (register_addr >= HOLDING_REG_SIZE)
     {
         return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_SINGLE_REG, 
                                              MODBUS_EX_ILLEGAL_DATA_ADDR, response);
     }
     
-    /* Ğ´Èë¼Ä´æÆ÷ */
+    /* å†™å…¥å¯„å­˜å™¨ */
     holding_registers[register_addr] = value;
     
-    /* ¹¹½¨ÏìÓ¦Ö¡ (Ô­Ñù·µ»ØÇëÇó) */
+    /* æ„å»ºå“åº”å¸§ (åŸæ ·è¿”å›è¯·æ±‚) */
     response[0] = slave->slave_id;
     response[1] = MODBUS_FUNC_WRITE_SINGLE_REG;
     response[2] = register_addr >> 8;
@@ -243,7 +243,7 @@ uint16_t modbus_slave_write_single_register(modbus_slave_t *slave,
     response[4] = value >> 8;
     response[5] = value & 0xFF;
     
-    /* ¼ÆËãCRC */
+    /* è®¡ç®—CRC */
     uint16_t crc = modbus_crc16(response, 6);
     response[6] = crc & 0xFF;
     response[7] = crc >> 8;
@@ -252,13 +252,13 @@ uint16_t modbus_slave_write_single_register(modbus_slave_t *slave,
 }
 
 /**
- * @brief Ğ´¶à¸ö¼Ä´æÆ÷ (¹¦ÄÜÂë0x10)
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param start_addr ÆğÊ¼µØÖ·
- * @param quantity ¼Ä´æÆ÷ÊıÁ¿
- * @param data Êı¾İ
- * @param response ÏìÓ¦»º³åÇø
- * @return ÏìÓ¦³¤¶È
+ * @brief å†™å¤šä¸ªå¯„å­˜å™¨ (åŠŸèƒ½ç 0x10)
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param start_addr èµ·å§‹åœ°å€
+ * @param quantity å¯„å­˜å™¨æ•°é‡
+ * @param data æ•°æ®
+ * @param response å“åº”ç¼“å†²åŒº
+ * @return å“åº”é•¿åº¦
  */
 uint16_t modbus_slave_write_multiple_registers(modbus_slave_t *slave,
                                                  uint16_t start_addr,
@@ -266,27 +266,27 @@ uint16_t modbus_slave_write_multiple_registers(modbus_slave_t *slave,
                                                  uint8_t *data,
                                                  uint8_t *response)
 {
-    /* ¼ì²éµØÖ··¶Î§ */
+    /* æ£€æŸ¥åœ°å€èŒƒå›´ */
     if (start_addr + quantity > HOLDING_REG_SIZE)
     {
         return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG, 
                                              MODBUS_EX_ILLEGAL_DATA_ADDR, response);
     }
     
-    /* ¼ì²éÊıÁ¿·¶Î§ */
+    /* æ£€æŸ¥æ•°é‡èŒƒå›´ */
     if (quantity < 1 || quantity > 123)
     {
         return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG, 
                                              MODBUS_EX_ILLEGAL_DATA_VALUE, response);
     }
     
-    /* Ğ´Èë¼Ä´æÆ÷ */
+    /* å†™å…¥å¯„å­˜å™¨ */
     for (uint16_t i = 0; i < quantity; i++)
     {
         holding_registers[start_addr + i] = (data[i * 2] << 8) | data[i * 2 + 1];
     }
     
-    /* ¹¹½¨ÏìÓ¦Ö¡ */
+    /* æ„å»ºå“åº”å¸§ */
     response[0] = slave->slave_id;
     response[1] = MODBUS_FUNC_WRITE_MULTIPLE_REG;
     response[2] = start_addr >> 8;
@@ -294,7 +294,7 @@ uint16_t modbus_slave_write_multiple_registers(modbus_slave_t *slave,
     response[4] = quantity >> 8;
     response[5] = quantity & 0xFF;
     
-    /* ¼ÆËãCRC */
+    /* è®¡ç®—CRC */
     uint16_t crc = modbus_crc16(response, 6);
     response[6] = crc & 0xFF;
     response[7] = crc >> 8;
@@ -303,24 +303,24 @@ uint16_t modbus_slave_write_multiple_registers(modbus_slave_t *slave,
 }
 
 /**
- * @brief ¹¹½¨Òì³£ÏìÓ¦
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param function_code ¹¦ÄÜÂë
- * @param exception_code Òì³£Âë
- * @param response ÏìÓ¦»º³åÇø
- * @return ÏìÓ¦³¤¶È
+ * @brief æ„å»ºå¼‚å¸¸å“åº”
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param function_code åŠŸèƒ½ç 
+ * @param exception_code å¼‚å¸¸ç 
+ * @param response å“åº”ç¼“å†²åŒº
+ * @return å“åº”é•¿åº¦
  */
 uint16_t modbus_slave_build_exception(modbus_slave_t *slave,
                                         uint8_t function_code,
                                         uint8_t exception_code,
                                         uint8_t *response)
 {
-    /* ¹¹½¨Òì³£ÏìÓ¦Ö¡ */
+    /* æ„å»ºå¼‚å¸¸å“åº”å¸§ */
     response[0] = slave->slave_id;
-    response[1] = function_code | 0x80;     /* ¹¦ÄÜÂë×î¸ßÎ»ÖÃ1 */
+    response[1] = function_code | 0x80;     /* åŠŸèƒ½ç æœ€é«˜ä½ç½®1 */
     response[2] = exception_code;
     
-    /* ¼ÆËãCRC */
+    /* è®¡ç®—CRC */
     uint16_t crc = modbus_crc16(response, 3);
     response[3] = crc & 0xFF;
     response[4] = crc >> 8;
@@ -329,10 +329,10 @@ uint16_t modbus_slave_build_exception(modbus_slave_t *slave,
 }
 
 /**
- * @brief ·¢ËÍÏìÓ¦Êı¾İ
- * @param slave ´Ó»ú½á¹¹ÌåÖ¸Õë
- * @param data Êı¾İ
- * @param length ³¤¶È
+ * @brief å‘é€å“åº”æ•°æ®
+ * @param slave ä»æœºç»“æ„ä½“æŒ‡é’ˆ
+ * @param data æ•°æ®
+ * @param length é•¿åº¦
  */
 void modbus_slave_send(modbus_slave_t *slave, uint8_t *data, uint16_t length)
 {
@@ -340,9 +340,9 @@ void modbus_slave_send(modbus_slave_t *slave, uint8_t *data, uint16_t length)
 }
 
 /**
- * @brief »ñÈ¡±£³Ö¼Ä´æÆ÷Öµ
- * @param addr ¼Ä´æÆ÷µØÖ·
- * @return ¼Ä´æÆ÷Öµ
+ * @brief è·å–ä¿æŒå¯„å­˜å™¨å€¼
+ * @param addr å¯„å­˜å™¨åœ°å€
+ * @return å¯„å­˜å™¨å€¼
  */
 uint16_t modbus_slave_get_holding_register(uint16_t addr)
 {
@@ -354,9 +354,9 @@ uint16_t modbus_slave_get_holding_register(uint16_t addr)
 }
 
 /**
- * @brief ÉèÖÃ±£³Ö¼Ä´æÆ÷Öµ
- * @param addr ¼Ä´æÆ÷µØÖ·
- * @param value Öµ
+ * @brief è®¾ç½®ä¿æŒå¯„å­˜å™¨å€¼
+ * @param addr å¯„å­˜å™¨åœ°å€
+ * @param value å€¼
  */
 void modbus_slave_set_holding_register(uint16_t addr, uint16_t value)
 {
@@ -367,25 +367,25 @@ void modbus_slave_set_holding_register(uint16_t addr, uint16_t value)
 }
 
 /**
- * @brief ÉèÖÃ32Î»ÎŞ·ûºÅÕûÊı (Õ¼ÓÃ2¸ö¼Ä´æÆ÷)
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @param value 32Î»Öµ
- * @note ´ó¶Ë¸ñÊ½: ¸ßÎ»¼Ä´æÆ÷ÔÚÇ°
- *       ¼Ä´æÆ÷addr´æ´¢¸ß16Î»£¬¼Ä´æÆ÷addr+1´æ´¢µÍ16Î»
+ * @brief è®¾ç½®32ä½æ— ç¬¦å·æ•´æ•° (å ç”¨2ä¸ªå¯„å­˜å™¨)
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @param value 32ä½å€¼
+ * @note å¤§ç«¯æ ¼å¼: é«˜ä½å¯„å­˜å™¨åœ¨å‰
+ *       å¯„å­˜å™¨addrå­˜å‚¨é«˜16ä½ï¼Œå¯„å­˜å™¨addr+1å­˜å‚¨ä½16ä½
  */
 void modbus_slave_set_uint32(uint16_t addr, uint32_t value)
 {
     if (addr + 1 < HOLDING_REG_SIZE)
     {
-        holding_registers[addr] = (uint16_t)(value >> 16);      /* ¸ß16Î» */
-        holding_registers[addr + 1] = (uint16_t)(value & 0xFFFF); /* µÍ16Î» */
+        holding_registers[addr] = (uint16_t)(value >> 16);      /* é«˜16ä½ */
+        holding_registers[addr + 1] = (uint16_t)(value & 0xFFFF); /* ä½16ä½ */
     }
 }
 
 /**
- * @brief »ñÈ¡32Î»ÎŞ·ûºÅÕûÊı
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @return 32Î»Öµ
+ * @brief è·å–32ä½æ— ç¬¦å·æ•´æ•°
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @return 32ä½å€¼
  */
 uint32_t modbus_slave_get_uint32(uint16_t addr)
 {
@@ -398,9 +398,9 @@ uint32_t modbus_slave_get_uint32(uint16_t addr)
 }
 
 /**
- * @brief ÉèÖÃ32Î»ÓĞ·ûºÅÕûÊı (Õ¼ÓÃ2¸ö¼Ä´æÆ÷)
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @param value 32Î»Öµ
+ * @brief è®¾ç½®32ä½æœ‰ç¬¦å·æ•´æ•° (å ç”¨2ä¸ªå¯„å­˜å™¨)
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @param value 32ä½å€¼
  */
 void modbus_slave_set_int32(uint16_t addr, int32_t value)
 {
@@ -408,9 +408,9 @@ void modbus_slave_set_int32(uint16_t addr, int32_t value)
 }
 
 /**
- * @brief »ñÈ¡32Î»ÓĞ·ûºÅÕûÊı
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @return 32Î»Öµ
+ * @brief è·å–32ä½æœ‰ç¬¦å·æ•´æ•°
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @return 32ä½å€¼
  */
 int32_t modbus_slave_get_int32(uint16_t addr)
 {
@@ -418,15 +418,15 @@ int32_t modbus_slave_get_int32(uint16_t addr)
 }
 
 /**
- * @brief ÉèÖÃ¸¡µãÊı (Õ¼ÓÃ2¸ö¼Ä´æÆ÷)
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @param value ¸¡µãÊıÖµ
- * @note IEEE 754¸ñÊ½´æ´¢£¬´ó¶ËÄ£Ê½
- *       Í¨¹ıÁªºÏÌåÊµÏÖfloatÓëuint32µÄ×ª»»
+ * @brief è®¾ç½®æµ®ç‚¹æ•° (å ç”¨2ä¸ªå¯„å­˜å™¨)
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @param value æµ®ç‚¹æ•°å€¼
+ * @note IEEE 754æ ¼å¼å­˜å‚¨ï¼Œå¤§ç«¯æ¨¡å¼
+ *       é€šè¿‡è”åˆä½“å®ç°floatä¸uint32çš„è½¬æ¢
  */
 void modbus_slave_set_float(uint16_t addr, float value)
 {
-    /* Ê¹ÓÃÁªºÏÌåÊµÏÖfloatµ½uint32µÄ×ª»» */
+    /* ä½¿ç”¨è”åˆä½“å®ç°floatåˆ°uint32çš„è½¬æ¢ */
     typedef union {
         float f;
         uint32_t u;
@@ -439,9 +439,9 @@ void modbus_slave_set_float(uint16_t addr, float value)
 }
 
 /**
- * @brief »ñÈ¡¸¡µãÊı
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @return ¸¡µãÊıÖµ
+ * @brief è·å–æµ®ç‚¹æ•°
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @return æµ®ç‚¹æ•°å€¼
  */
 float modbus_slave_get_float(uint16_t addr)
 {
@@ -457,17 +457,17 @@ float modbus_slave_get_float(uint16_t addr)
 }
 
 /**
- * @brief ÉèÖÃË«¾«¶È¸¡µãÊı (Õ¼ÓÃ4¸ö¼Ä´æÆ÷)
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @param value Ë«¾«¶È¸¡µãÊıÖµ
- * @note IEEE 754¸ñÊ½´æ´¢£¬´ó¶ËÄ£Ê½
- *       ¼Ä´æÆ÷addr´æ´¢×î¸ß16Î»£¬addr+3´æ´¢×îµÍ16Î»
+ * @brief è®¾ç½®åŒç²¾åº¦æµ®ç‚¹æ•° (å ç”¨4ä¸ªå¯„å­˜å™¨)
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @param value åŒç²¾åº¦æµ®ç‚¹æ•°å€¼
+ * @note IEEE 754æ ¼å¼å­˜å‚¨ï¼Œå¤§ç«¯æ¨¡å¼
+ *       å¯„å­˜å™¨addrå­˜å‚¨æœ€é«˜16ä½ï¼Œaddr+3å­˜å‚¨æœ€ä½16ä½
  */
 void modbus_slave_set_double(uint16_t addr, double value)
 {
     if (addr + 3 < HOLDING_REG_SIZE)
     {
-        /* Ê¹ÓÃÁªºÏÌåÊµÏÖdoubleµ½uint64µÄ×ª»» */
+        /* ä½¿ç”¨è”åˆä½“å®ç°doubleåˆ°uint64çš„è½¬æ¢ */
         typedef union {
             double d;
             uint64_t u;
@@ -476,7 +476,7 @@ void modbus_slave_set_double(uint16_t addr, double value)
         double_union_t du;
         du.d = value;
         
-        /* ·Ö½âÎª4¸ö16Î»¼Ä´æÆ÷´æ´¢ (´ó¶ËÄ£Ê½) */
+        /* åˆ†è§£ä¸º4ä¸ª16ä½å¯„å­˜å™¨å­˜å‚¨ (å¤§ç«¯æ¨¡å¼) */
         holding_registers[addr] = (uint16_t)(du.u >> 48);
         holding_registers[addr + 1] = (uint16_t)(du.u >> 32);
         holding_registers[addr + 2] = (uint16_t)(du.u >> 16);
@@ -485,9 +485,9 @@ void modbus_slave_set_double(uint16_t addr, double value)
 }
 
 /**
- * @brief »ñÈ¡Ë«¾«¶È¸¡µãÊı
- * @param addr ÆğÊ¼¼Ä´æÆ÷µØÖ·
- * @return Ë«¾«¶È¸¡µãÊıÖµ
+ * @brief è·å–åŒç²¾åº¦æµ®ç‚¹æ•°
+ * @param addr èµ·å§‹å¯„å­˜å™¨åœ°å€
+ * @return åŒç²¾åº¦æµ®ç‚¹æ•°å€¼
  */
 double modbus_slave_get_double(uint16_t addr)
 {
