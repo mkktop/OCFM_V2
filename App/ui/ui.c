@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "global.h"
 #include "app_model.h"
+#include "app_sensor.h"
 ui_manager_t *ui_manager;//ui管理器指针,所有页面均可调用
 
 /**
@@ -64,6 +65,12 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     lv_subject_copy_string(&ui_manager->subjects.time_short_str, g_app_model.time_short_str);
     // 将累计记录时间字符串复制到 Subject（触发 Observer 回调更新 UI）
     lv_subject_copy_string(&ui_manager->subjects.record_time_str, g_app_model.record_time_str);
+
+    // 更新水位显示（使用传感器预计算的水位值)
+    SensorData_t *sensor = app_sensor_get_data();
+    char water_level_str[16];
+    snprintf(water_level_str, sizeof(water_level_str), "L:%.3fm", sensor->water_level_m);
+    lv_subject_copy_string(&ui_manager->subjects.water_level_str, water_level_str);
 }
 
 /// @brief 初始化容器样式，创建一个没有内外边距圆角的对象
@@ -140,17 +147,18 @@ static void create_details_tile(lv_obj_t *tile)
     lv_obj_set_style_text_color(time_label, lv_color_hex(0x2effde), 0);//设置时间标签文本颜色
     lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);//设置时间标签字体
     lv_subject_add_observer_obj(&ui_manager->subjects.time_short_str, string_label_observer_cb, time_label, NULL);//绑定时间标签到简短时间 Subject
-    //创建一个弹性空间，用于分隔时间标签和闹钟标签
+    //创建一个弹性空间，用于分隔时间标签和水位标签
     lv_obj_t *spacer = lv_obj_create(top_bar);//创建弹性空间
-    lv_obj_set_flex_grow(spacer, 1);//设置弹性空间flex增长系数为1，用于分隔时间标签和闹钟标签
+    lv_obj_set_flex_grow(spacer, 1);//设置弹性空间flex增长系数为1，用于分隔时间标签和水位标签
     lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);//设置弹性空间背景透明度为透明
     lv_obj_set_style_border_width(spacer, 0, 0);//设置弹性空间边框宽度为0
     lv_obj_set_height(spacer, 30);//设置弹性空间高度为30px
-    //创建报警标签
-    lv_obj_t *alarm_label = lv_label_create(top_bar);//创建报警标签
-    lv_label_set_text(alarm_label, "UP alarm");//设置报警标签文本
-    lv_obj_set_style_text_font(alarm_label, &lv_font_montserrat_24, 0);//设置报警标签字体
-    lv_obj_set_style_text_color(alarm_label, lv_color_hex(0xFF0000), 0);//设置报警标签文本颜色
+    //创建水位标签
+    lv_obj_t *water_level_label = lv_label_create(top_bar);//创建水位标签
+    lv_label_set_text(water_level_label, "L:0.000m");//设置水位标签初始文本
+    lv_obj_set_style_text_font(water_level_label, &lv_font_montserrat_24, 0);//设置水位标签字体
+    lv_obj_set_style_text_color(water_level_label, lv_color_hex(0x2effde), 0);//设置水位标签文本颜色
+    lv_subject_add_observer_obj(&ui_manager->subjects.water_level_str, string_label_observer_cb, water_level_label, NULL);//绑定水位标签到水位Subject
 
 
     //创建瞬时流量容器
@@ -405,10 +413,15 @@ void ui_create(void)
                            ui_manager->subjects.time_short_prev_buf, 
                            sizeof(ui_manager->subjects.time_short_buf), 
                            "");
-    lv_subject_init_string(&ui_manager->subjects.record_time_str, 
-                           ui_manager->subjects.record_time_buf, 
-                           ui_manager->subjects.record_time_prev_buf, 
-                           sizeof(ui_manager->subjects.record_time_buf), 
+    lv_subject_init_string(&ui_manager->subjects.record_time_str,
+                           ui_manager->subjects.record_time_buf,
+                           ui_manager->subjects.record_time_prev_buf,
+                           sizeof(ui_manager->subjects.record_time_buf),
+                           "");
+    lv_subject_init_string(&ui_manager->subjects.water_level_str,
+                           ui_manager->subjects.water_level_buf,
+                           ui_manager->subjects.water_level_prev_buf,
+                           sizeof(ui_manager->subjects.water_level_buf),
                            "");
     lv_subject_init_float(&ui_manager->subjects.total_flow, 0.0f);
 

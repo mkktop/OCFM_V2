@@ -101,6 +101,13 @@ uint8_t app_config_is_valid(void)
  */
 void app_config_init(void)
 {
+#if CONFIG_FACTORY_RESET
+    /* 强制恢复出厂设置 */
+    app_config_set_default();
+    app_config_save();
+    return;
+#endif
+
     /* 从EEPROM加载配置 */
     if (app_config_load() == 1) {
         /* 检查配置是否有效 */

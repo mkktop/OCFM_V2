@@ -276,28 +276,36 @@ typedef enum
 /*                           系统配置默认值                                      */
 /*============================================================================*/
 
+/*
+ * 恢复出厂设置开关
+ * 1: 启动时恢复默认值并保存到EEPROM
+ * 0: 正常从EEPROM加载配置
+ * 注意：恢复完成后应改回0
+ */
+#define CONFIG_FACTORY_RESET    1
+
 // 基本参数默认值
-#define DEFAULT_RANGE_MAX        10000       /* 最大量程 10000mm */
-#define DEFAULT_HEIGHT           1000        /* 高度 1000mm */
-#define DEFAULT_CALIBRATION_4MA  400         /* 4mA校准值 */
-#define DEFAULT_CALIBRATION_20MA 20000       /* 20mA校准值 */
+#define DEFAULT_RANGE_MAX        5000       /* 最大量程 10000mm */
+#define DEFAULT_HEIGHT           5000        /* 高度 1000mm */
+#define DEFAULT_CALIBRATION_4MA  313         /* 4mA校准值 */
+#define DEFAULT_CALIBRATION_20MA 1583       /* 20mA校准值 */
 #define DEFAULT_RANGE_4MA        0           /* 4mA量程 */
-#define DEFAULT_RANGE_20MA       10000       /* 20mA量程 */
-#define DEFAULT_POINT_NUM        1           /* 小数点数量 */
+#define DEFAULT_RANGE_20MA       1935       /* 20mA量程 */
+#define DEFAULT_POINT_NUM        3           /* 小数点数量 */
 
 // 测量参数默认值
-#define DEFAULT_WINDOW_WIDTH     500         /* 窗口宽度 500mm */
-#define DEFAULT_FILTER_COUNT     3           /* 滤波次数 */
-#define DEFAULT_DELAY_TIME       100         /* 延迟时间 100ms */
-#define DEFAULT_ANTENNA_TYPE     0           /* 天线类型 */
-#define DEFAULT_BLIND_AREA       300         /* 盲区 300mm */
-#define DEFAULT_W_COEFF          10          /* 窗口系数 */
-#define DEFAULT_M_COEFF          1           /* 测量系数 */
+#define DEFAULT_WINDOW_WIDTH     100         /* 窗口宽度 500mm */
+#define DEFAULT_FILTER_COUNT     2           /* 滤波次数 */
+#define DEFAULT_DELAY_TIME       50         /* 延迟时间 100ms */
+#define DEFAULT_ANTENNA_TYPE     1           /* 天线类型 */
+#define DEFAULT_BLIND_AREA       50         /* 盲区 300mm */
+#define DEFAULT_W_COEFF          8          /* 窗口系数 */
+#define DEFAULT_M_COEFF          3           /* 测量系数 */
 
 // Modbus从机参数默认值
 #define DEFAULT_MODBUS_ADDR      1           /* Modbus地址 */
-#define DEFAULT_MODBUS_BAUD      9600        /* 波特率 9600 */
-#define DEFAULT_MODBUS_STOP      1           /* 停止位 1位 */
+#define DEFAULT_MODBUS_BAUD      1           /* 波特率索引 */
+#define DEFAULT_MODBUS_STOP      1           /* 停止位索引 */
 
 // 报警参数默认值
 #define DEFAULT_ALARM_AH         8000        /* 上限报警 */
@@ -309,11 +317,11 @@ typedef enum
 
 // 其他参数默认值
 #define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */
-#define DEFAULT_DIS_OFFSET       0           /* 偏移量 */
+#define DEFAULT_DIS_OFFSET       10           /* 偏移量 */
 #define DEFAULT_CANALS_TYPE      0           /* 水渠类型 (巴歇尔槽) */
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
 #define DEFAULT_INSTANT_UNIT     0           /* 瞬时流量单位 (L/s) */
-#define DEFAULT_SUM_POINT        2           /* 累计流量小数点数 */
+#define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
 
 extern ui_manager_t *ui_manager;

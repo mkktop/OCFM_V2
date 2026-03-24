@@ -33,6 +33,7 @@
 #include "rtc_time.h"
 #include "app_button.h"
 #include "app_sensor.h"
+#include "app_config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -154,6 +155,8 @@ void MX_FREERTOS_Init(void) {
 void main_task_func(void *argument)
 {
   /* USER CODE BEGIN main_task_func */
+  app_config_init();  // 初始化配置（从EEPROM加载或使用默认值）
+  app_sensor_init();  // 初始化传感器模块
   lv_init();  // 初始化LVGL库
   lv_tick_set_cb(xTaskGetTickCount);  // 设置LVGL定时器回调函数，使用FreeRTOS的tick计数
   lv_delay_set_cb(vTaskDelay);  // 设置LVGL延时回调函数，使用FreeRTOS的延时函数

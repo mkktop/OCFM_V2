@@ -36,7 +36,8 @@ extern "C" {
  */
 typedef struct
 {
-    uint16_t distance;          /**< 距离值 (mm) */
+    float distance_m;           /**< 距离值 - 传感器到水面 */
+    float water_level_m;        /**< 水位值 - 安装高度 - 距离 */
     uint8_t is_online;          /**< 传感器在线状态 (1:在线 0:离线) */
     uint32_t last_update_time;  /**< 最后更新时间戳 (ms) */
 } SensorData_t;
@@ -64,9 +65,9 @@ void app_sensor_poll(void);
 
 /**
  * @brief  获取距离值
- * @retval 距离值 (mm)，传感器离线时返回0
+ * @retval 距离值 (m)，传感器离线时返回0
  */
-uint16_t app_sensor_get_distance(void);
+float app_sensor_get_distance(void);
 
 /**
  * @brief  检查传感器是否在线

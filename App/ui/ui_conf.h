@@ -25,12 +25,16 @@ typedef struct{
         lv_subject_t time_short_str;    ///< 简短时间字符串，格式：HH:MM
         lv_subject_t record_time_str;
         lv_subject_t total_flow;
+        lv_subject_t water_level_str;    ///< 水位字符串 Subject
         char time_buf[32];
         char time_prev_buf[32];
         char time_short_buf[16];        ///< 简短时间缓冲区
         char time_short_prev_buf[16];    ///< 简短时间前一个值缓冲区
         char record_time_buf[64];
         char record_time_prev_buf[64];
+        /* 水位 Subject */
+        char water_level_buf[16];
+        char water_level_prev_buf[16];
     } subjects;
 }ui_manager_t;
 

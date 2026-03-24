@@ -11,6 +11,7 @@
  */
 
 #include "app_sensor.h"
+#include "app_config.h"
 #include "modbus_master.h"
 #include "global.h"
 #include "usart.h"
@@ -85,8 +86,22 @@ void app_sensor_poll(void)
 
         if (g_sensor_data.is_online)
         {
-            /* 读取距离值（第一个寄存器） */
-            g_sensor_data.distance = modbus_master_get_register_value(0, 0);
+            /* 读取距离值（第一个寄存器），直接转换为米 */
+            uint16_t distance_mm = modbus_master_get_register_value(0, 0);
+            g_sensor_data.distance_m = distance_mm / 1000.0f;
+
+            /* 计算水位 = 安装高度 - 距离（只有距离>0时才计算） */
+            if (distance_mm > 0)
+            {
+                float install_height_m = app_config_get_height() / 1000.0f;
+                g_sensor_data.water_level_m = install_height_m - g_sensor_data.distance_m;
+            }
+            else
+            {
+                /* 距离为0时，水位也为0（传感器未就绪） */
+                g_sensor_data.water_level_m = 0.0f;
+            }
+
             g_sensor_data.last_update_time = HAL_GetTick();
         }
     }
@@ -94,15 +109,15 @@ void app_sensor_poll(void)
 
 /**
  * @brief  获取距离值
- * @retval 距离值 (mm)，传感器离线时返回0
+ * @retval 距离值 (m)，传感器离线时返回0
  */
-uint16_t app_sensor_get_distance(void)
+float app_sensor_get_distance(void)
 {
     if (g_sensor_data.is_online)
     {
-        return g_sensor_data.distance;
+        return g_sensor_data.distance_m;
     }
-    return 0;
+    return 0.0f;
 }
 
 /**
