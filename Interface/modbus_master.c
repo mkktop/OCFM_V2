@@ -46,9 +46,9 @@ modbus_master_t sensor_master;
 /**
  * @brief DMA接收缓冲区
  * @note  用于HAL_UARTEx_ReceiveToIdle_DMA函数的接收缓冲区
- *        大小设置为256字节，可容纳最长的Modbus RTU响应帧
+ *        大小设置为128字节，足够容纳Modbus RTU响应帧
  */
-static uint8_t dma_rx_buffer[256];
+static uint8_t dma_rx_buffer[128];
 
 /**
  * @brief 接收完成标志
@@ -172,9 +172,10 @@ void modbus_master_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size)
         rx_complete_flag = 1;
 
         /*
-         * 重新启动DMA接收
-         * 注意：必须在处理完当前数据后重新启动，否则后续数据无法接收
+         * 清除DMA缓冲区并重新启动接收
+         * 注意：必须在处理完当前数据后清除并重新启动，避免旧数据残留
          */
+        memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
         HAL_UARTEx_ReceiveToIdle_DMA(huart, dma_rx_buffer, sizeof(dma_rx_buffer));
     }
 }
@@ -283,9 +284,16 @@ void modbus_master_poll(modbus_master_t *master)
             master->tx_length = 8;
             memcpy(master->tx_buffer, req_buffer, 8);
 
-            /* 清除接收相关标志，准备接收响应 */
+            /*
+             * 发送前重置 DMA 接收状态
+             * 这一步很关键：停止当前 DMA 接收，清除缓冲区，重新启动
+             * 否则之前的回环数据会累积，导致 length 不断增大
+             */
+            HAL_UART_AbortReceive(master->huart);
+            memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
             rx_complete_flag = 0;
             master->rx_length = 0;
+            HAL_UARTEx_ReceiveToIdle_DMA(master->huart, dma_rx_buffer, sizeof(dma_rx_buffer));
 
             /* 发送Modbus请求帧 */
             modbus_master_send_frame(master, master->tx_buffer, master->tx_length);
