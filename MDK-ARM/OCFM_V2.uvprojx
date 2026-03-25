@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,LV_LVGL_H_INCLUDE_SIMPLE,LV_CONF_INCLUDE_SIMPLE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../FATFS/Target;../FATFS/App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/FatFs/src;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/lvgl;../Drivers/AT24C02;../Drivers/File;../App;../Drivers/Button;..\Interface</IncludePath>
+              <IncludePath>../Core/Inc;../FATFS/Target;../FATFS/App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/FatFs/src;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/lvgl;../Drivers/AT24C02;../Drivers/File;../App;../Drivers/Button;../Interface</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -4906,6 +4906,16 @@
               <FileName>app_sensor.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\App\app_sensor.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_flow_calc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_flow_calc.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_flow_calc.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\app_flow_calc.h</FilePath>
             </File>
           </Files>
         </Group>

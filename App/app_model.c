@@ -1,122 +1,92 @@
 /**
  * @file app_model.c
- * @brief Ó¦ÓÃÊı¾İÄ£ĞÍ²ãÊµÏÖ
- * @details ÊµÏÖÊı¾İÄ£ĞÍµÄ³õÊ¼»¯ºÍ¸üĞÂÂß¼­
- * 
- * @see app_model.h
+ * @brief åº”ç”¨æ•°æ®æ¨¡å‹å®ç°
+ * @details å®ç°æ•°æ®æ¨¡å‹çš„åˆå§‹åŒ–å’Œæ›´æ–°é€»è¾‘
  */
 
 #include "app_model.h"
+#include "app_flow_calc.h"
+#include "app_sensor.h"
 #include "global.h"
 #include "rtc_time.h"
 #include <stdio.h>
 
 /**
- * @brief È«¾ÖÓ¦ÓÃÊı¾İÄ£ĞÍÊµÀı
- * @details ¸ÃÊµÀıÔÚÕû¸ö³ÌĞòÔËĞĞÆÚ¼ä´æÔÚ£¬¹© UI ²ã¶ÁÈ¡Êı¾İ
- * @note Ê¹ÓÃÁã³õÊ¼»¯£¬È·±£ËùÓĞ³ÉÔ±³õÊ¼ÖµÎª 0 »ò NULL
+ * @brief å…¨å±€åº”ç”¨æ•°æ®æ¨¡å‹å®ä¾‹
  */
 AppDataModel g_app_model = {0};
 
 /**
- * @brief ³õÊ¼»¯Ó¦ÓÃÊı¾İÄ£ĞÍ
- * @details ÔÚÏµÍ³Æô¶¯Ê±µ÷ÓÃ£¬³õÊ¼»¯Êı¾İÄ£ĞÍµÄ³õÊ¼×´Ì¬
- * 
- * @note ±ØĞëÔÚ ui_create() Ö®Ç°µ÷ÓÃ£¬ÒòÎª ui_create() »á³õÊ¼»¯ LVGL Subject
- * 
- * @par ³õÊ¼»¯ÄÚÈİ
- * - record_time_sec£ºÀÛ¼Æ¼ÇÂ¼Ê±¼ä³õÊ¼»¯Îª 0
- * - total_flow£ºÀÛ¼ÆÁ÷Á¿³õÊ¼»¯Îª 0.0
- * - time_str ºÍ record_time_str ³õÊ¼»¯ÎªÁã×Ö·û´®
- * 
- * @see app_model_update()
+ * @brief åˆå§‹åŒ–åº”ç”¨æ•°æ®æ¨¡å‹
  */
 void app_model_init(void)
 {
-    // ³õÊ¼»¯ÀÛ¼Æ¼ÇÂ¼Ê±¼äÎª 0 Ãë
     g_app_model.record_time_sec = 0;
-    // ³õÊ¼»¯ÀÛ¼ÆÁ÷Á¿Îª 0.0
     g_app_model.total_flow = 0.0;
+    g_app_model.instant_flow = 0.0f;
+    g_app_model.water_level_m = 0.0f;
+    g_app_model.sensor_online = 0;
 }
 
 /**
- * @brief ¸ñÊ½»¯ÀÛ¼ÆÊ±¼äÎª×Ö·û´®
- * @param total_sec ×ÜÃëÊı
- * @param buf Êä³ö»º³åÇø
- * @param buf_size »º³åÇø´óĞ¡
- * 
- * @note ÕâÊÇÒ»¸ö¾²Ì¬£¨ÄÚ²¿£©º¯Êı£¬Ö»ÔÚ±¾ÎÄ¼şÖĞÊ¹ÓÃ
- * 
- * @par Êä³ö¸ñÊ½
- * ¸ñÊ½Îª£ºN day HH:MM:SS£¬ÀıÈç£º125 day 08:30:15
- * - N£ºÌìÊı
- * - HH£ºĞ¡Ê±£¨00-23£©
- * - MM£º·ÖÖÓ£¨00-59£©
- * - SS£ºÃë£¨00-59£©
+ * @brief æ ¼å¼åŒ–ç´¯è®¡æ—¶é—´ä¸ºå­—ç¬¦ä¸²
  */
 static void format_record_time(uint32_t total_sec, char *buf, size_t buf_size)
 {
-    // ¼ÆËãÌìÊı£º×ÜÃëÊı / (24Ğ¡Ê± * 3600Ãë)
     uint32_t days = total_sec / (24 * 3600);
-    // ¼ÆËãĞ¡Ê±£º(×ÜÃëÊı % Ò»ÌìÃëÊı) / 3600Ãë
     uint32_t hours = (total_sec % (24 * 3600)) / 3600;
-    // ¼ÆËã·ÖÖÓ£º(×ÜÃëÊı % 3600Ãë) / 60Ãë
     uint32_t minutes = (total_sec % 3600) / 60;
-    // ¼ÆËãÃëÊı£º×ÜÃëÊı % 60Ãë
     uint32_t seconds = total_sec % 60;
 
-    // ¸ñÊ½»¯Êä³ö×Ö·û´®
-    snprintf(buf, buf_size, "%lu day %02lu:%02lu:%02lu", 
-             (unsigned long)days, 
-             (unsigned long)hours, 
-             (unsigned long)minutes, 
+    snprintf(buf, buf_size, "%lu day %02lu:%02lu:%02lu",
+             (unsigned long)days,
+             (unsigned long)hours,
+             (unsigned long)minutes,
              (unsigned long)seconds);
 }
 
 /**
- * @brief ¸üĞÂÓ¦ÓÃÊı¾İÄ£ĞÍ
- * @details ´Ó RTC »ñÈ¡µ±Ç°Ê±¼ä£¬²¢¸üĞÂÀÛ¼Æ¼ÇÂ¼Ê±¼ä
- * 
- * @note ¸Ãº¯Êı»á±» LVGL ¶¨Ê±Æ÷Ã¿µ÷ÓÃÒ»´Î£¬¸üĞÂÒÔÏÂÊı¾İ£º
- *       - µ±Ç°Ê±¼ä£¨´Ó RTC ¶ÁÈ¡£¬¸ñÊ½£ºYYYY/MM/DD HH:MM:SS£©
- *       - ÀÛ¼Æ¼ÇÂ¼Ê±¼ä£¨µİÔö 1 Ãë£©
- *       - ÀÛ¼Æ¼ÇÂ¼Ê±¼ä×Ö·û´®£¨¸ñÊ½£ºN day HH:MM:SS£©
- * 
- * @warning ¸Ãº¯ÊıÖĞ²»ÄÜÖ´ĞĞºÄÊ±²Ù×÷£¬·ñÔò»áÓ°Ïì UI ÏìÓ¦
- * 
- * @par Êı¾İÁ÷Ïò
- * 1. ´Ó RTC Ó²¼ş¶ÁÈ¡µ±Ç°Ê±¼ä
- * 2. ¸ñÊ½»¯µ±Ç°Ê±¼äÎª×Ö·û´®£¬´æÈë time_str
- * 3. ÀÛ¼Æ¼ÇÂ¼Ê±¼äµİÔö 1 Ãë
- * 4. ¸ñÊ½»¯ÀÛ¼ÆÊ±¼ä²¢´æÈë record_time_str
- * 
- * @see app_model_init()
+ * @brief æ›´æ–°åº”ç”¨æ•°æ®æ¨¡å‹
+ * @details æ¯ç§’è°ƒç”¨ä¸€æ¬¡ï¼Œæ›´æ–°ï¼š
+ *       - å½“å‰æ—¶é—´
+ *       - ç´¯è®¡è®°å½•æ—¶é—´
+ *       - æµé‡è®¡ç®—
+ *       - åŒæ­¥æµé‡æ•°æ®åˆ°æ¨¡å‹
  */
 void app_model_update(void)
 {
-    // ´Ó RTC ¶ÁÈ¡µ±Ç°Ê±¼ä
+    SensorData_t *sensor;
+
+    /* ä» RTC è·å–å½“å‰æ—¶é—´ */
     RTC_TimeData time_data;
     RTC_Time_Get(&time_data);
 
-    // ¸ñÊ½»¯µ±Ç°Ê±¼äÎª×Ö·û´®
-    // ¸ñÊ½£ºYYYY/MM/DD HH:MM:SS£¬ÀıÈç£º2026/03/18 14:30:45
     snprintf(g_app_model.time_str, sizeof(g_app_model.time_str),
              "%04d/%02d/%02d %02d:%02d:%02d",
              time_data.year, time_data.month, time_data.date,
              time_data.hour, time_data.minute, time_data.second);
 
-    // ¸ñÊ½»¯¼ò¶ÌÊ±¼ä×Ö·û´®
-    // ¸ñÊ½£ºHH:MM£¬ÀıÈç£º14:30
     snprintf(g_app_model.time_short_str, sizeof(g_app_model.time_short_str),
              "%02d:%02d",
              time_data.hour, time_data.minute);
 
-    // ÀÛ¼Æ¼ÇÂ¼Ê±¼äµİÔö 1 Ãë
+    /* ç´¯è®¡è®°å½•æ—¶é—´åŠ 1ç§’ */
     g_app_model.record_time_sec++;
-
-    // ¸ñÊ½»¯ÀÛ¼ÆÊ±¼äÎª×Ö·û´®
-    // ¸ñÊ½£ºN day HH:MM:SS£¬ÀıÈç£º125 day 08:30:15
     format_record_time(g_app_model.record_time_sec,
                        g_app_model.record_time_str,
                        sizeof(g_app_model.record_time_str));
+
+    /* æ›´æ–°æµé‡è®¡ç®— */
+    //flow_calc_update();
+
+    /* åŒæ­¥æµé‡æ•°æ® */
+    g_app_model.instant_flow = flow_calc_get_instant();
+    g_app_model.total_flow = flow_calc_get_total();
+
+    /* åŒæ­¥ä¼ æ„Ÿå™¨çŠ¶æ€ */
+    sensor = app_sensor_get_data();
+    if (sensor != NULL) {
+        g_app_model.water_level_m = sensor->water_level_m;
+        g_app_model.sensor_online = sensor->is_online;
+    }
 }

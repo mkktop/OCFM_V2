@@ -56,21 +56,27 @@ static void string_label_observer_cb(lv_observer_t *observer, lv_subject_t *subj
  */
 static void ui_update_timer_cb(lv_timer_t *timer)
 {
-    // 从 RTC 获取最新数据并更新到数据模型中
+    char buf[32];
+
+    /* 更新数据模型 (时间 + 流量计算) */
     app_model_update();
 
-    // 将当前时间字符串复制到 Subject（触发 Observer 回调更新 UI）
+    /* 同步时间到 Subject */
     lv_subject_copy_string(&ui_manager->subjects.time_str, g_app_model.time_str);
-    // 将简短时间字符串复制到 Subject（触发 Observer 回调更新 UI）
     lv_subject_copy_string(&ui_manager->subjects.time_short_str, g_app_model.time_short_str);
-    // 将累计记录时间字符串复制到 Subject（触发 Observer 回调更新 UI）
     lv_subject_copy_string(&ui_manager->subjects.record_time_str, g_app_model.record_time_str);
 
-    // 更新水位显示（使用传感器预计算的水位值)
-    SensorData_t *sensor = app_sensor_get_data();
-    char water_level_str[16];
-    snprintf(water_level_str, sizeof(water_level_str), "L:%.3fm", sensor->water_level_m);
-    lv_subject_copy_string(&ui_manager->subjects.water_level_str, water_level_str);
+    /* 同步水位到 Subject */
+    snprintf(buf, sizeof(buf), "L:%.3fm", g_app_model.water_level_m);
+    lv_subject_copy_string(&ui_manager->subjects.water_level_str, buf);
+
+    /* 同步瞬时流量到 Subject */
+    snprintf(buf, sizeof(buf), "%.2f", g_app_model.instant_flow);
+    lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, buf);
+
+    /* 同步累计流量到 Subject */
+    snprintf(buf, sizeof(buf), "%.2f", g_app_model.total_flow);
+    lv_subject_copy_string(&ui_manager->subjects.total_flow_str, buf);
 }
 
 /// @brief 初始化容器样式，创建一个没有内外边距圆角的对象
@@ -180,12 +186,13 @@ static void create_details_tile(lv_obj_t *tile)
     //创建瞬时流量data标签
     lv_obj_t *inst_flaw_data_label = lv_label_create(inst_flaw_obj);//创建瞬时流量data标签
     lv_obj_set_size(inst_flaw_data_label, LV_PCT(90), 50);//设置瞬时流量data标签宽度为50%
-    lv_label_set_text(inst_flaw_data_label, "87.287");//设置瞬时流量data标签文本
+    lv_label_set_text(inst_flaw_data_label, "0.00");//设置瞬时流量data标签文本
     lv_obj_set_style_text_font(inst_flaw_data_label, &lv_font_montserrat_48, 0);//设置瞬时流量data标签字体
     lv_obj_set_style_text_color(inst_flaw_data_label, lv_color_hex(0xFFFFFF), 0);//设置瞬时流量data标签文本颜色
     lv_obj_set_style_text_align(inst_flaw_data_label, LV_TEXT_ALIGN_CENTER, 0);//设置瞬时流量datadata标签文本居中对齐
     lv_obj_set_style_bg_color(inst_flaw_data_label, lv_color_hex(0x4F4F4F), 0);//设置瞬时流量data标签背景颜色
     lv_obj_set_style_bg_opa(inst_flaw_data_label, LV_OPA_COVER, 0);//设置瞬时流量data标签背景透明度为覆盖，即完全不透明
+    lv_subject_add_observer_obj(&ui_manager->subjects.instant_flow_str, string_label_observer_cb, inst_flaw_data_label, NULL);//绑定瞬时流量标签到Subject
 
     //创建累计流量容器
     lv_obj_t *total_flaw_obj = lv_obj_create(tile);//创建累计流量容器
@@ -207,12 +214,13 @@ static void create_details_tile(lv_obj_t *tile)
     //创建累计流量data标签
     lv_obj_t *total_flaw_data_label = lv_label_create(total_flaw_obj);//创建累计流量data标签
     lv_obj_set_size(total_flaw_data_label, LV_PCT(90), 30);//设置累计流量data标签宽度为50%
-    lv_label_set_text(total_flaw_data_label, "565426374.223");//设置累计流量data标签文本
+    lv_label_set_text(total_flaw_data_label, "0.00");//设置累计流量data标签文本
     lv_obj_set_style_text_font(total_flaw_data_label, &lv_font_montserrat_26, 0);//设置累计流量data标签字体
     lv_obj_set_style_text_color(total_flaw_data_label, lv_color_hex(0xFFFFFF), 0);//设置累计流量data标签文本颜色
     lv_obj_set_style_text_align(total_flaw_data_label, LV_TEXT_ALIGN_CENTER, 0);//设置累计流量data标签文本居中对齐
     lv_obj_set_style_bg_color(total_flaw_data_label, lv_color_hex(0x4F4F4F), 0);//设置累计流量data标签背景颜色
     lv_obj_set_style_bg_opa(total_flaw_data_label, LV_OPA_COVER, 0);//设置累计流量data标签背景透明度为覆盖，即完全不透明
+    lv_subject_add_observer_obj(&ui_manager->subjects.total_flow_str, string_label_observer_cb, total_flaw_data_label, NULL);//绑定累计流量标签到Subject
 
 
     //创建底部容器
@@ -423,7 +431,16 @@ void ui_create(void)
                            ui_manager->subjects.water_level_prev_buf,
                            sizeof(ui_manager->subjects.water_level_buf),
                            "");
-    lv_subject_init_float(&ui_manager->subjects.total_flow, 0.0f);
+    lv_subject_init_string(&ui_manager->subjects.total_flow_str,
+                           ui_manager->subjects.total_flow_buf,
+                           ui_manager->subjects.total_flow_prev_buf,
+                           sizeof(ui_manager->subjects.total_flow_buf),
+                           "");
+    lv_subject_init_string(&ui_manager->subjects.instant_flow_str,
+                           ui_manager->subjects.instant_flow_buf,
+                           ui_manager->subjects.instant_flow_prev_buf,
+                           sizeof(ui_manager->subjects.instant_flow_buf),
+                           "");
 
     //初始化首页屏幕
     ui_manager->main_screen = init_screen();

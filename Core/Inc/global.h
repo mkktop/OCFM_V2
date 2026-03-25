@@ -248,7 +248,7 @@ uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value);
  */
 typedef enum
 {
-    FLOW_UNIT_L_S = 0,     /* 升/秒 (基准单位) */
+    FLOW_UNIT_L_S = 1,     /* 升/秒 (基准单位) */
     FLOW_UNIT_L_MIN,       /* 升/分钟 */
     FLOW_UNIT_L_H,         /* 升/小时 */
     FLOW_UNIT_M3_H,        /* 立方米/小时 */
@@ -267,7 +267,7 @@ typedef enum
  */
 typedef enum
 {
-    PARSHALL_FLUME = 0,       /* 巴歇尔水槽 */
+    PARSHALL_FLUME = 1,       /* 巴歇尔水槽 */
     TRIANGULAR_WEIR,          /* 三角堰 */
     RECTANGULAR_WEIR,         /* 矩形堰 */
 } canals_type_t;
@@ -318,9 +318,9 @@ typedef enum
 // 其他参数默认值
 #define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */
 #define DEFAULT_DIS_OFFSET       10           /* 偏移量 */
-#define DEFAULT_CANALS_TYPE      0           /* 水渠类型 (巴歇尔槽) */
+#define DEFAULT_CANALS_TYPE      1           /* 水渠类型 (巴歇尔槽) */
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
-#define DEFAULT_INSTANT_UNIT     0           /* 瞬时流量单位 (L/s) */
+#define DEFAULT_INSTANT_UNIT     1           /* 瞬时流量单位 (L/s) */
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
 

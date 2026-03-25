@@ -231,6 +231,32 @@ app_history_screen_button_handler()
 
 **注意：** 所有配置修改后需调用 `app_config_save()` 才能持久化。
 
+## 传感器应用层 (app_sensor)
+
+`App/app_sensor.c/h` 封装了水位传感器的Modbus主机通信，提供简洁的应用层接口。
+
+**架构层次：**
+```
+app_sensor (应用层)
+    ↓
+modbus_master (协议层)
+    ↓
+UART1 + DMA (硬件层)
+```
+
+**核心API：**
+- `app_sensor_init()` - 初始化传感器模块（在系统启动时调用）
+- `app_sensor_poll()` - 轮询任务（需在FreeRTOS任务中周期性调用，建议10ms）
+- `app_sensor_get_distance()` - 获取距离值 (m)
+- `app_sensor_is_online()` - 检查传感器在线状态
+- `app_sensor_get_data()` - 获取完整传感器数据结构
+
+**水位计算公式：**
+```
+水位 = 安装高度 - 距离
+```
+安装高度从 `app_config_get_height()` 获取，单位mm。
+
 ## UI页面结构
 
 ### 主屏幕瓦片视图 (Tileview)

@@ -83,6 +83,11 @@ const osThreadAttr_t modbus_master_t_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for flow_refresh_timer */
+osTimerId_t flow_refresh_timerHandle;
+const osTimerAttr_t flow_refresh_timer_attributes = {
+  .name = "flow_refresh_timer"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -93,6 +98,7 @@ void main_task_func(void *argument);
 void log_task_func(void *argument);
 void button_scan_fun(void *argument);
 void modbus_master_task_func(void *argument);
+void flow_refresh_fun(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -114,8 +120,13 @@ void MX_FREERTOS_Init(void) {
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
+  /* Create the timer(s) */
+  /* creation of flow_refresh_timer */
+  flow_refresh_timerHandle = osTimerNew(flow_refresh_fun, osTimerPeriodic, NULL, &flow_refresh_timer_attributes);
+
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+  osTimerStart(flow_refresh_timerHandle, 1000);  // 1秒周期
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -232,6 +243,14 @@ void modbus_master_task_func(void *argument)
     osDelay(10);  /* 10ms周期 */
   }
   /* USER CODE END modbus_master_task_func */
+}
+
+/* flow_refresh_fun function */
+void flow_refresh_fun(void *argument)
+{
+  /* USER CODE BEGIN flow_refresh_fun */
+  flow_calc_update();
+  /* USER CODE END flow_refresh_fun */
 }
 
 /* Private application code --------------------------------------------------*/
