@@ -49,7 +49,9 @@ OCFM_V2/
 │   ├── app_model.c/h        # 数据模型 (MVVM模式)
 │   ├── app_log.c/h          # 日志功能
 │   ├── app_config.c/h       # 系统配置管理 (EEPROM存储)
-│   └── app_button.c/h       # 应用层按键处理
+│   ├── app_button.c/h       # 应用层按键处理
+│   ├── app_sensor.c/h       # 传感器应用层 (Modbus主机封装)
+│   └── app_flow_calc.c/h    # 流量计算模块 (堰槽公式)
 ├── Drivers/
 │   ├── STM32F4xx_HAL_Driver/# HAL库
 │   ├── CMSIS/               # CMSIS头文件
@@ -85,8 +87,6 @@ OCFM_V2/
 | main_task | Normal | 事件驱动 | LVGL界面刷新 (lv_timer_handler) |
 | log_task | Low | 5s | 日志输出、RTC时间更新 |
 | button_scan_tas | Low | 10ms | 按键扫描 (调用 button_driver_scan) |
-
-**注意：** 当前实现使用简化任务模型。完整架构规划见 `.trae/documents/明渠流量计架构设计.md`
 
 ## 代码规范
 
@@ -139,23 +139,12 @@ void button_callback(...) {
 }
 ```
 
-## Modbus寄存器映射
-
-主要保持寄存器 (完整列表见 Core/Inc/global.h)：
-- 0x0001: 水位 (uint16)
-- 0x0002: 距离 (uint16)
-- 0x0003: 温度 (uint16)
-- 0x0004-0x0005: 瞬时流量 (float, 占2个寄存器)
-- 0x0006-0x0009: 累计流量 (double, 占4个寄存器)
-- 0x000A-0x000D: 继电器状态 (各占1个uint16)
-
 ## 重要文件
 
 - `Core/Inc/global.h` - 系统配置、寄存器定义、数据结构
 - `Core/Src/freertos.c` - FreeRTOS任务定义
 - `Middlewares/lvgl/lv_conf.h` - LVGL配置
 - `.eide/eide.yml` - EIDE构建配置
-- `.trae/documents/明渠流量计架构设计.md` - 详细架构设计文档
 
 ## UI 数据更新架构
 
@@ -176,8 +165,6 @@ Model (AppDataModel) → Subject (lv_subject_t) → View (UI控件)
 3. 在 `App/ui/ui.c` 的 `ui_create()` 中初始化 Subject
 4. 在 `ui_update_timer_cb()` 中同步数据
 5. 使用 `lv_subject_add_observer_obj()` 绑定到 UI 控件
-
-详见 `UI_DATA_ARCHITECTURE.md`
 
 ## 按键处理架构
 
@@ -256,6 +243,39 @@ UART1 + DMA (硬件层)
 水位 = 安装高度 - 距离
 ```
 安装高度从 `app_config_get_height()` 获取，单位mm。
+
+## 流量计算模块 (app_flow_calc)
+
+`App/app_flow_calc.c/h` 实现流量计算功能，基于堰槽公式（巴歇尔槽、三角堰、矩形堰）计算瞬时流量和累计流量。
+
+**核心API：**
+- `flow_calc_update()` - 更新流量计算（每秒调用一次）
+- `flow_calc_get_instant()` - 获取当前瞬时流量
+- `flow_calc_get_total()` - 获取累计流量 (m³)
+- `flow_calc_reset_total()` - 清零累计流量
+- `flow_calc_load_total()` - 从EEPROM备份加载累计流量
+- `flow_calc_save_total()` - 保存累计流量到EEPROM备份
+- `flow_calc_process()` - 处理EEPROM保存请求（在主循环调用，避免定时器中阻塞）
+
+**水渠类型：**
+- PARSHALL_FLUME (1) - 巴歇尔水槽
+- TRIANGULAR_WEIR (2) - 三角堰
+- RECTANGULAR_WEIR (3) - 矩形堰
+
+**累计流量存储：**
+- 存储地址：`TOTAL_FLOW_EEPROM_ADDR` (240)
+- 使用 `TOTAL_FLOW_MAGIC_NUMBER` (0x5A5A5A5AU) 作为校验
+- 每次重大变更时调用 `flow_calc_save_total()` 备份
+
+## Modbus寄存器映射
+
+主要保持寄存器 (完整列表见 Core/Inc/global.h)：
+- 0x0001: 水位 (uint16)
+- 0x0002: 距离 (uint16)
+- 0x0003: 温度 (uint16)
+- 0x0004-0x0005: 瞬时流量 (float, 占2个寄存器)
+- 0x0006-0x0009: 累计流量 (double, 占4个寄存器)
+- 0x000A-0x000D: 继电器状态 (各占1个uint16)
 
 ## UI页面结构
 
