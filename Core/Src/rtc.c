@@ -85,6 +85,13 @@ void MX_RTC_Init(void)
   {
     Error_Handler();
   }
+
+  /** Enable Calibrartion
+  */
+  if (HAL_RTCEx_SetCalibrationOutPut(&hrtc, RTC_CALIBOUTPUT_1HZ) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN RTC_Init 2 */
   // 标记RTC已初始化，写入备份寄存器
   HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0xA5A5);
