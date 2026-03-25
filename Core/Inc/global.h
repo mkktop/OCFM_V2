@@ -158,6 +158,17 @@
  */
 #define CONFIG_EEPROM_ADDR     0
 
+/**
+ * @brief 累计流量在EEPROM中的存储地址 (最后一页)
+ * @note 与配置区分开，避免频繁写入影响配置区寿命
+ */
+#define TOTAL_FLOW_EEPROM_ADDR     240
+
+/**
+ * @brief 累计流量存储校验标志
+ */
+#define TOTAL_FLOW_MAGIC_NUMBER    0x5A5A5A5AU
+
 typedef struct
 {
     uint32_t magic_number;      /* 配置有效标志 */

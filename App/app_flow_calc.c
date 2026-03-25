@@ -12,6 +12,9 @@
 
 #include "app_flow_calc.h"
 #include "app_sensor.h"
+#include "rtc.h"
+#include "at24c02.h"
+#include <string.h>
 
 /*============================================================================*/
 /*                           私有类型                                          */
@@ -34,12 +37,24 @@ typedef struct {
     float flow_range_up;       /**< 最大流量限制 (L/s) */
 } Water_Channel;
 
+/**
+ * @brief 累计流量EEPROM存储结构体
+ */
+typedef struct {
+    uint32_t magic;            /**< 校验标志 */
+    double total_flow;         /**< 累计流量 (m³) */
+    uint32_t reserved;         /**< 保留字段 */
+} TotalFlowStorage_t;
+
 /*============================================================================*/
 /*                           私有变量                                          */
 /*============================================================================*/
 
 static float s_instant_flow = 0.0f;     /**< 当前瞬时流量 (根据配置的单位) */
 static double s_total_flow_m3 = 0.0;    /**< 累计流量 (m³) */
+static uint8_t s_bkp_save_counter = 0;  /**< 备份寄存器保存计数器 (10秒周期) */
+static uint16_t s_eeprom_save_counter = 0; /**< EEPROM保存计数器 (5分钟周期) */
+static volatile uint8_t s_eeprom_save_pending = 0; /**< EEPROM待保存标志 */
 
 /*============================================================================*/
 /*                           私有数据                                          */
@@ -182,10 +197,112 @@ static float flow_calc_instant(float water_level_m)
 /*============================================================================*/
 
 /**
+ * @brief  保存累计流量到备份寄存器
+ */
+void flow_calc_save_total(void)
+{
+    uint32_t buf[2];
+    extern RTC_HandleTypeDef hrtc;
+
+    memcpy(buf, &s_total_flow_m3, sizeof(double));
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, buf[0]);
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR2, buf[1]);
+}
+
+/**
+ * @brief  从备份寄存器加载累计流量
+ * @retval 1: 加载成功, 0: 数据无效
+ */
+static uint8_t flow_calc_load_from_backup(void)
+{
+    uint32_t buf[2];
+    double total_flow = 0.0;
+    extern RTC_HandleTypeDef hrtc;
+
+    buf[0] = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1);
+    buf[1] = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR2);
+    memcpy(&total_flow, buf, sizeof(double));
+
+    /* 检查是否为有效数据 (NaN检查) */
+    if (total_flow >= 0.0 && total_flow < 1e12) {
+        s_total_flow_m3 = total_flow;
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * @brief  保存累计流量到EEPROM
+ * @retval 1: 成功, 0: 失败
+ */
+static uint8_t flow_calc_save_to_eeprom(void)
+{
+    TotalFlowStorage_t storage;
+
+    storage.magic = TOTAL_FLOW_MAGIC_NUMBER;
+    storage.total_flow = s_total_flow_m3;
+    storage.reserved = 0;
+
+    return at24c02_write_buffer(TOTAL_FLOW_EEPROM_ADDR, sizeof(TotalFlowStorage_t),
+                                (uint8_t*)&storage);
+}
+
+/**
+ * @brief  从EEPROM加载累计流量
+ * @retval 1: 加载成功, 0: 数据无效
+ */
+static uint8_t flow_calc_load_from_eeprom(void)
+{
+    TotalFlowStorage_t storage;
+
+    if (at24c02_read_buffer(TOTAL_FLOW_EEPROM_ADDR, sizeof(TotalFlowStorage_t),
+                            (uint8_t*)&storage) != 1) {
+        return 0;
+    }
+
+    /* 校验magic number */
+    if (storage.magic != TOTAL_FLOW_MAGIC_NUMBER) {
+        return 0;
+    }
+
+    /* 检查是否为有效数据 (NaN检查) */
+    if (storage.total_flow < 0.0 || storage.total_flow >= 1e12) {
+        return 0;
+    }
+
+    s_total_flow_m3 = storage.total_flow;
+    return 1;
+}
+
+/**
+ * @brief  从备份寄存器加载累计流量 (双重保险)
+ * @note   优先从备份寄存器读取，失败则从EEPROM读取
+ */
+void flow_calc_load_total(void)
+{
+    /* 优先从备份寄存器加载 */
+    if (flow_calc_load_from_backup()) {
+        return;
+    }
+
+    /* 备份寄存器无效，尝试从EEPROM加载 */
+    if (flow_calc_load_from_eeprom()) {
+        /* 同步到备份寄存器 */
+        flow_calc_save_total();
+        return;
+    }
+
+    /* 两者都无效，使用默认值0 */
+    s_total_flow_m3 = 0.0;
+}
+
+/**
  * @brief  更新流量计算 (每秒调用)
  * @note   从传感器获取水位，计算瞬时流量并累加累计流量
  *         - 瞬时流量: 根据配置的单位显示
  *         - 累计流量: 固定使用 m³
+ *         - 每10秒保存到备份寄存器
+ *         - 每5分钟保存到EEPROM
  */
 void flow_calc_update(void)
 {
@@ -210,6 +327,30 @@ void flow_calc_update(void)
     /* 单位转换 */
     if (app_config_get_instant_unit() != FLOW_UNIT_L_S) {
         s_instant_flow = flow_convert_instant(s_instant_flow, app_config_get_instant_unit());
+    }
+
+    /* 每10秒保存累计流量到备份寄存器 */
+    if (++s_bkp_save_counter >= 10) {
+        s_bkp_save_counter = 0;
+        flow_calc_save_total();
+    }
+
+    /* 每5分钟设置EEPROM保存标志 (5分钟 = 300秒) */
+    if (++s_eeprom_save_counter >= 300) {
+        s_eeprom_save_counter = 0;
+        s_eeprom_save_pending = 1;
+    }
+}
+
+/**
+ * @brief  处理EEPROM保存请求 (在主循环中调用)
+ * @note   避免在定时器中直接操作I2C，防止阻塞
+ */
+void flow_calc_process(void)
+{
+    if (s_eeprom_save_pending) {
+        s_eeprom_save_pending = 0;
+        flow_calc_save_to_eeprom();
     }
 }
 
@@ -237,4 +378,6 @@ double flow_calc_get_total(void)
 void flow_calc_reset_total(void)
 {
     s_total_flow_m3 = 0.0;
+    flow_calc_save_total();       /* 同步清除备份寄存器 */
+    flow_calc_save_to_eeprom();   /* 同步清除EEPROM */
 }

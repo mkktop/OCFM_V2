@@ -33,4 +33,20 @@ double flow_calc_get_total(void);
  */
 void flow_calc_reset_total(void);
 
+/**
+ * @brief  从备份寄存器加载累计流量
+ */
+void flow_calc_load_total(void);
+
+/**
+ * @brief  保存累计流量到备份寄存器
+ */
+void flow_calc_save_total(void);
+
+/**
+ * @brief  处理EEPROM保存请求 (在主循环中调用)
+ * @note   避免在定时器中直接操作I2C，防止阻塞
+ */
+void flow_calc_process(void);
+
 #endif /* __APP_FLOW_CALC_H__ */
