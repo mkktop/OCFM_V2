@@ -2,11 +2,10 @@
 #define __UI_H__
 #include "ui_conf.h"
 
-
-void ui_create(void);
-
-lv_obj_t * ui_create_tileview(lv_obj_t *parent);//´´½¨ÍßÆ¬ÊÓÍ¼
-void ui_container_style_init(lv_obj_t *obj);//³õÊ¼»¯ÈİÆ÷ÑùÊ½£¬´´½¨Ò»¸öÃ»ÓĞÄÚÍâ±ß¾àÔ²½ÇµÄ¶ÔÏó
-void ui_switch_tile(uint8_t page_index);//ÇĞ»»µ½Ö¸¶¨ÍßÆ¬Ò³
+void ui_create(void);                                   // åˆ›å»ºUI
+lv_obj_t *ui_create_tileview(lv_obj_t *parent);           // åˆ›å»ºç“¦ç‰‡è§†å›¾
+void ui_container_style_init(lv_obj_t *obj);              // åˆå§‹åŒ–å®¹å™¨æ ·å¼(æ— è¾¹è·åœ†è§’)
+void ui_switch_screen(lv_obj_t *new_screen, lv_screen_load_anim_t anim_type, uint32_t time);  // åˆ‡æ¢å±å¹•
+void ui_switch_tile(uint8_t page_index);                  // åˆ‡æ¢åˆ°æŒ‡å®šç“¦ç‰‡é¡µ
 
 #endif /* __UI_H__ */
