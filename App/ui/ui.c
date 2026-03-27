@@ -45,7 +45,7 @@ static void string_label_observer_cb(lv_observer_t *observer, lv_subject_t *subj
  * @par 工作原理
  * 1. 调用 app_model_update() 从 RTC 获取最新时间
  * 2. 将更新后的时间字符串复制到 time_str Subject
- * 3. 将更新后的累计时间字符串复制到 record_time_str Subject
+ * 3. 将更新后的累计时间字符串复制到 total_time_str Subject
  * 4. Subject 会自动触发绑定的 Observer 回调，更新 UI 控件
  * 
  * @warning 该函数中不能执行耗时操作，否则会影响 UI 响应
@@ -56,27 +56,22 @@ static void string_label_observer_cb(lv_observer_t *observer, lv_subject_t *subj
  */
 static void ui_update_timer_cb(lv_timer_t *timer)
 {
-    char buf[32];
-
-    /* 更新数据模型 (时间 + 流量计算) */
+    /* 更新数据模型 (时间 + 流量计算 + 格式化) */
     app_model_update();
 
     /* 同步时间到 Subject */
     lv_subject_copy_string(&ui_manager->subjects.time_str, g_app_model.time_str);
     lv_subject_copy_string(&ui_manager->subjects.time_short_str, g_app_model.time_short_str);
-    lv_subject_copy_string(&ui_manager->subjects.record_time_str, g_app_model.record_time_str);
+    lv_subject_copy_string(&ui_manager->subjects.total_time_str, g_app_model.total_time_str);
 
     /* 同步水位到 Subject */
-    snprintf(buf, sizeof(buf), "L:%.3fm", g_app_model.water_level_m);
-    lv_subject_copy_string(&ui_manager->subjects.water_level_str, buf);
+    lv_subject_copy_string(&ui_manager->subjects.water_level_str, g_app_model.water_level_str);
 
     /* 同步瞬时流量到 Subject */
-    snprintf(buf, sizeof(buf), "%.2f", g_app_model.instant_flow);
-    lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, buf);
+    lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, g_app_model.instant_flow_str);
 
     /* 同步累计流量到 Subject */
-    snprintf(buf, sizeof(buf), "%.2f", g_app_model.total_flow);
-    lv_subject_copy_string(&ui_manager->subjects.total_flow_str, buf);
+    lv_subject_copy_string(&ui_manager->subjects.total_flow_str, g_app_model.total_flow_str);
 }
 
 /// @brief 初始化容器样式，创建一个没有内外边距圆角的对象
@@ -346,7 +341,7 @@ static void create_flow_record_tile(lv_obj_t *tile){
     lv_obj_set_style_text_font(record_time_value, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_align(record_time_value, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(record_time_value, LV_ALIGN_CENTER, 0, 0);
-    lv_subject_add_observer_obj(&ui_manager->subjects.record_time_str, string_label_observer_cb, record_time_value, NULL);
+    lv_subject_add_observer_obj(&ui_manager->subjects.total_time_str, string_label_observer_cb, record_time_value, NULL);
 
     // 底部：累计流量
     lv_obj_t *total_flow_label = lv_label_create(tile);
@@ -421,10 +416,10 @@ void ui_create(void)
                            ui_manager->subjects.time_short_prev_buf, 
                            sizeof(ui_manager->subjects.time_short_buf), 
                            "");
-    lv_subject_init_string(&ui_manager->subjects.record_time_str,
-                           ui_manager->subjects.record_time_buf,
-                           ui_manager->subjects.record_time_prev_buf,
-                           sizeof(ui_manager->subjects.record_time_buf),
+    lv_subject_init_string(&ui_manager->subjects.total_time_str,
+                           ui_manager->subjects.total_time_buf,
+                           ui_manager->subjects.total_time_prev_buf,
+                           sizeof(ui_manager->subjects.total_time_buf),
                            "");
     lv_subject_init_string(&ui_manager->subjects.water_level_str,
                            ui_manager->subjects.water_level_buf,

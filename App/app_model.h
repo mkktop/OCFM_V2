@@ -22,11 +22,14 @@ extern "C" {
 typedef struct {
     char time_str[32];          ///< 当前时间字符串，格式：YYYY/MM/DD HH:MM:SS
     char time_short_str[16];    ///< 简短时间字符串，格式：HH:MM
-    uint32_t record_time_sec;   ///< 累计记录时间，单位：秒
-    char record_time_str[64];   ///< 累计记录时间字符串，格式：N day HH:MM:SS
+    uint32_t total_time_sec;    ///< 累计时长 (秒)
+    char total_time_str[32];    ///< 累计时长字符串，格式：N day HH:MM:SS
+    char water_level_str[16];   ///< 水位字符串，格式：L:x.xxxm
+    char instant_flow_str[16];  ///< 瞬时流量字符串
+    char total_flow_str[24];    ///< 累计流量字符串
     double total_flow;          ///< 累计流量 (m³)
     float instant_flow;         ///< 瞬时流量 (L/s)
-    float water_level_m;        ///< 当前水位 (m)
+    float water_level_m;        ///< 当前水位
     uint8_t sensor_online;      ///< 传感器在线状态 (1:在线 0:离线)
 } AppDataModel;
 
@@ -53,7 +56,8 @@ void app_model_init(void);
  * 
  * @note 该函数会被 LVGL 定时器每调用一次，更新以下数据：
  *       - 当前时间（从 RTC 读取）
- *       - 累计记录时间（递增）
+ *       - 流量数据（从 app_flow_calc 获取）
+ *       - 传感器状态（从 app_sensor 获取）
  * 
  * @warning 该函数中不能执行耗时操作，否则会影响 UI 响应
  * 

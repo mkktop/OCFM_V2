@@ -26,8 +26,8 @@ typedef struct{
         char time_buf[32], time_prev_buf[32];
         lv_subject_t time_short_str;
         char time_short_buf[16], time_short_prev_buf[16];
-        lv_subject_t record_time_str;
-        char record_time_buf[64], record_time_prev_buf[64];
+        lv_subject_t total_time_str;
+        char total_time_buf[32], total_time_prev_buf[32];
 
         // 流量相关
         lv_subject_t instant_flow_str;

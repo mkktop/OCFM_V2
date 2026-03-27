@@ -29,12 +29,18 @@ float flow_calc_get_instant(void);
 double flow_calc_get_total(void);
 
 /**
- * @brief  清零累计流量
+ * @brief  清零累计流量和累计时长
  */
 void flow_calc_reset_total(void);
 
 /**
- * @brief  从备份寄存器加载累计流量
+ * @brief  获取累计时长
+ * @retval 累计时长 (秒)
+ */
+uint32_t flow_calc_get_total_time(void);
+
+/**
+ * @brief  从备份寄存器/EEPROM加载累计流量和累计时长
  */
 void flow_calc_load_total(void);
 

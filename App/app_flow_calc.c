@@ -79,6 +79,7 @@ typedef struct {
 typedef struct {
     uint32_t magic;            /**< 校验标志 */
     double total_flow;         /**< 累计流量 (m³) */
+    uint32_t total_time;       /**< 累计时长 (秒) */
     uint32_t reserved;         /**< 保留字段 */
 } TotalFlowStorage_t;
 
@@ -88,6 +89,7 @@ typedef struct {
 
 static float s_instant_flow = 0.0f;     /**< 当前瞬时流量 (根据配置的单位) */
 static double s_total_flow_m3 = 0.0;    /**< 累计流量 (m³) */
+static uint32_t s_total_time_sec = 0;   /**< 累计时长 (秒) */
 static uint8_t s_bkp_save_counter = 0;  /**< 备份寄存器保存计数器 (10秒周期) */
 static uint16_t s_eeprom_save_counter = 0; /**< EEPROM保存计数器 (5分钟周期) */
 static volatile uint8_t s_eeprom_save_pending = 0; /**< EEPROM待保存标志 */
@@ -313,22 +315,27 @@ static float flow_calc_instant(float water_level_m)
 /*============================================================================*/
 
 /**
- * @brief  保存累计流量到备份寄存器
- * @note   使用3个备份寄存器: DR1/DR2存储累计流量, DR3存储magic number
+ * @brief  保存累计流量和累计时长到备份寄存器
+ * @note   DR1/DR2: 累计流量(double), DR3: magic
+ *         DR4: 累计时长(uint32)
  */
 void flow_calc_save_total(void)
 {
     uint32_t buf[2];
     extern RTC_HandleTypeDef hrtc;
 
+    /* 保存累计流量 */
     memcpy(buf, &s_total_flow_m3, sizeof(double));
     HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, buf[0]);
     HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR2, buf[1]);
     HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR3, TOTAL_FLOW_MAGIC_NUMBER);
+
+    /* 保存累计时长 */
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR4, s_total_time_sec);
 }
 
 /**
- * @brief  从备份寄存器加载累计流量
+ * @brief  从备份寄存器加载累计流量和累计时长
  * @retval 1: 加载成功, 0: 数据无效
  */
 static uint8_t flow_calc_load_from_backup(void)
@@ -336,9 +343,10 @@ static uint8_t flow_calc_load_from_backup(void)
     uint32_t buf[2];
     uint32_t magic;
     double total_flow = 0.0;
+    uint32_t total_time = 0;
     extern RTC_HandleTypeDef hrtc;
 
-    /* 先校验magic number */
+    /* 校验magic number */
     magic = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR3);
     if (magic != TOTAL_FLOW_MAGIC_NUMBER) {
         return 0;
@@ -349,15 +357,20 @@ static uint8_t flow_calc_load_from_backup(void)
     memcpy(&total_flow, buf, sizeof(double));
 
     /* 检查是否为有效数据 (NaN检查) */
-    if (total_flow >= 0.0 && total_flow < 1e12) {
-        s_total_flow_m3 = total_flow;
-        return 1;
+    if (total_flow < 0.0 || total_flow >= 1e12) {
+        return 0;
     }
-    return 0;
+
+    /* 读取累计时长 */
+    total_time = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR4);
+
+    s_total_flow_m3 = total_flow;
+    s_total_time_sec = total_time;
+    return 1;
 }
 
 /**
- * @brief  保存累计流量到EEPROM
+ * @brief  保存累计流量和累计时长到EEPROM
  * @retval 1: 成功, 0: 失败
  */
 static uint8_t flow_calc_save_to_eeprom(void)
@@ -366,6 +379,7 @@ static uint8_t flow_calc_save_to_eeprom(void)
 
     storage.magic = TOTAL_FLOW_MAGIC_NUMBER;
     storage.total_flow = s_total_flow_m3;
+    storage.total_time = s_total_time_sec;
     storage.reserved = 0;
 
     return at24c02_write_buffer(TOTAL_FLOW_EEPROM_ADDR, sizeof(TotalFlowStorage_t),
@@ -373,7 +387,7 @@ static uint8_t flow_calc_save_to_eeprom(void)
 }
 
 /**
- * @brief  从EEPROM加载累计流量
+ * @brief  从EEPROM加载累计流量和累计时长
  * @retval 1: 加载成功, 0: 数据无效
  */
 static uint8_t flow_calc_load_from_eeprom(void)
@@ -395,12 +409,18 @@ static uint8_t flow_calc_load_from_eeprom(void)
         return 0;
     }
 
+    /* 检查累计时长是否有效 */
+    if (storage.total_time > 0xFFFFFFFFUL / 2) {
+        storage.total_time = 0;
+    }
+
     s_total_flow_m3 = storage.total_flow;
+    s_total_time_sec = storage.total_time;
     return 1;
 }
 
 /**
- * @brief  从备份寄存器加载累计流量 (双重保险)
+ * @brief  从备份寄存器/EEPROM加载累计流量和累计时长
  * @note   优先从备份寄存器读取，失败则从EEPROM读取
  */
 void flow_calc_load_total(void)
@@ -419,13 +439,15 @@ void flow_calc_load_total(void)
 
     /* 两者都无效，使用默认值0 */
     s_total_flow_m3 = 0.0;
+    s_total_time_sec = 0;
 }
 
 /**
  * @brief  更新流量计算 (每秒调用)
- * @note   从传感器获取水位，计算瞬时流量并累加累计流量
+ * @note   从传感器获取水位，计算瞬时流量并累加累计流量和累计时长
  *         - 瞬时流量: 根据配置的单位显示
  *         - 累计流量: 固定使用 m³
+ *         - 累计时长: 单位 秒
  *         - 每10秒保存到备份寄存器
  *         - 每5分钟保存到EEPROM
  */
@@ -433,6 +455,9 @@ void flow_calc_update(void)
 {
     SensorData_t *sensor;
     float water_level_m;
+
+    /* 累计时长加1秒 */
+    s_total_time_sec++;
 
     /* 获取传感器数据 */
     sensor = app_sensor_get_data();
@@ -499,11 +524,21 @@ double flow_calc_get_total(void)
 }
 
 /**
- * @brief  清零累计流量
+ * @brief  清零累计流量和累计时长
  */
 void flow_calc_reset_total(void)
 {
     s_total_flow_m3 = 0.0;
+    s_total_time_sec = 0;
     flow_calc_save_total();       /* 同步清除备份寄存器 */
     flow_calc_save_to_eeprom();   /* 同步清除EEPROM */
+}
+
+/**
+ * @brief  获取累计时长
+ * @retval 累计时长 (秒)
+ */
+uint32_t flow_calc_get_total_time(void)
+{
+    return s_total_time_sec;
 }

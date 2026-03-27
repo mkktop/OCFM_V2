@@ -21,9 +21,9 @@ extern "C" {
 #define MODBUS_MASTER_TIMEOUT_MS    500
 
 /**
- * @brief 最大重试次数
+ * @brief 最大重试次数 (约30秒判定离线)
  */
-#define MODBUS_MAX_RETRY            3
+#define MODBUS_MAX_RETRY            20
 
 /**
  * @brief Modbus主机状态枚举
