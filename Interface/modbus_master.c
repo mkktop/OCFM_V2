@@ -76,6 +76,7 @@ static volatile uint16_t rx_complete_length = 0;
  *         - 绑定串口句柄
  *         - 设置初始状态为IDLE
  *         - 启动DMA+空闲中断接收模式
+ *         - 初始化命令队列
  * @retval 无
  */
 void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart)
@@ -92,6 +93,12 @@ void modbus_master_init(modbus_master_t *master, UART_HandleTypeDef *huart)
     /* 初始化轮询索引和传感器计数 */
     master->current_slave_index = 0;
     master->sensor_count = 0;
+
+    /* 初始化命令队列 */
+    master->cmd_head = 0;
+    master->cmd_tail = 0;
+    master->cmd_count = 0;
+    master->current_cmd = NULL;
 
     /*
      * 启动DMA+空闲中断接收模式
@@ -214,6 +221,13 @@ static uint8_t modbus_master_check_rx_complete(void)
 }
 
 /*============================================================================*/
+/*                           私有函数声明                                       */
+/*============================================================================*/
+
+static uint8_t modbus_master_pop_cmd(modbus_master_t *master, modbus_cmd_t *cmd);
+static void modbus_master_finish_cmd(modbus_master_t *master, uint8_t success);
+
+/*============================================================================*/
 /*                           轮询状态机                                         */
 /*============================================================================*/
 
@@ -227,83 +241,100 @@ static uint8_t modbus_master_check_rx_complete(void)
  *         IDLE -> WAITING_RESPONSE -> PROCESSING -> IDLE -> ...
  *         @endcode
  *
- *         状态说明：
- *         - IDLE: 空闲状态，检查当前传感器并构建请求帧
- *         - WAITING_RESPONSE: 等待响应，检查超时和接收完成
- *         - PROCESSING: 处理响应数据，更新传感器状态
+ *         优先级：命令队列 > 传感器轮询
  *
- *         轮询策略：
- *         - 按顺序轮询所有已添加的传感器
- *         - 跳过is_active为0的传感器（离线设备）
- *         - 连续MODBUS_MAX_RETRY次失败后标记设备离线
- *         - 成功通信后重置重试计数器并更新在线状态
+ *         状态说明：
+ *         - IDLE: 空闲状态，优先检查命令队列，然后检查传感器轮询
+ *         - WAITING_RESPONSE: 等待响应，检查超时和接收完成
+ *         - PROCESSING: 处理响应数据，更新传感器状态或命令状态
  *
  * @retval 无
  */
 void modbus_master_poll(modbus_master_t *master)
 {
-    /* 如果没有配置传感器，直接返回 */
-    if (master->sensor_count == 0)
-    {
-        return;
-    }
-
     switch (master->state)
     {
         /*--------------------------------------------------------------------*/
-        /* 空闲状态：准备并发送Modbus请求                                       */
+        /* 空闲状态：优先处理命令队列，然后传感器轮询                              */
         /*--------------------------------------------------------------------*/
         case MODBUS_MASTER_STATE_IDLE:
         {
+            /* 优先级1：检查命令队列 */
+            if (master->cmd_count > 0)
+            {
+                modbus_cmd_t *cmd = &master->cmd_queue[master->cmd_head];
+                master->current_cmd = cmd;
+                cmd->status = MODBUS_CMD_STATUS_SENDING;
+
+                /* 根据命令类型构建请求帧 */
+                if (cmd->type == MODBUS_CMD_WRITE_MULTIPLE)
+                {
+                    master->tx_length = modbus_build_write_multiple_reg(
+                        master->tx_buffer, cmd->slave_id,
+                        cmd->start_addr, cmd->quantity, cmd->data);
+                }
+                else
+                {
+                    master->tx_length = modbus_build_write_single_reg(
+                        master->tx_buffer, cmd->slave_id,
+                        cmd->start_addr, cmd->data[0]);
+                }
+
+                /* 发送前重置 DMA 接收状态 */
+                HAL_UART_AbortReceive(master->huart);
+                memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
+                rx_complete_flag = 0;
+                master->rx_length = 0;
+                HAL_UARTEx_ReceiveToIdle_DMA(master->huart, dma_rx_buffer, sizeof(dma_rx_buffer));
+
+                /* 发送请求帧 */
+                modbus_master_send_frame(master, master->tx_buffer, master->tx_length);
+
+                /* 切换到等待响应状态 */
+                master->state = MODBUS_MASTER_STATE_WAITING_RESPONSE;
+                master->timeout_start = HAL_GetTick();
+                return;
+            }
+
+            /* 优先级2：传感器轮询 */
+            if (master->sensor_count == 0)
+            {
+                return;
+            }
+
             modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
 
-            /*
-             * 轮询间隔控制：
-             * - 在线传感器：每1秒轮询一次
-             * - 离线传感器：每5秒尝试一次
-             */
+            /* 轮询间隔控制 */
             uint32_t poll_interval = sensor->is_active ? 1000 : 5000;
 
             if (HAL_GetTick() - sensor->last_poll_time < poll_interval)
             {
-                /* 未到轮询时间，跳过 */
                 master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
                 break;
             }
 
-            /*
-             * 构建读保持寄存器请求（功能码0x03）
-             * 请求帧格式：[从机地址][功能码][起始地址高][起始地址低][数量高][数量低][CRC低][CRC高]
-             * 总长度：8字节
-             */
+            /* 构建读保持寄存器请求 */
             uint8_t req_buffer[8];
             modbus_build_request(req_buffer, sensor->slave_id, MODBUS_FUNC_READ_HOLDING,
                                  sensor->start_addr, sensor->quantity);
 
-            /* 复制请求帧到发送缓冲区 */
             master->tx_length = 8;
             memcpy(master->tx_buffer, req_buffer, 8);
 
-            /*
-             * 发送前重置 DMA 接收状态
-             * 这一步很关键：停止当前 DMA 接收，清除缓冲区，重新启动
-             * 否则之前的回环数据会累积，导致 length 不断增大
-             */
+            /* 发送前重置 DMA 接收状态 */
             HAL_UART_AbortReceive(master->huart);
             memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
             rx_complete_flag = 0;
             master->rx_length = 0;
             HAL_UARTEx_ReceiveToIdle_DMA(master->huart, dma_rx_buffer, sizeof(dma_rx_buffer));
 
-            /* 发送Modbus请求帧 */
+            /* 发送请求帧 */
             modbus_master_send_frame(master, master->tx_buffer, master->tx_length);
 
-            /* 切换到等待响应状态 */
+            /* 标记为传感器轮询模式（无命令） */
+            master->current_cmd = NULL;
             master->state = MODBUS_MASTER_STATE_WAITING_RESPONSE;
-
-            /* 记录请求发送时间，用于超时判断 */
             master->timeout_start = HAL_GetTick();
-
             break;
         }
 
@@ -312,84 +343,106 @@ void modbus_master_poll(modbus_master_t *master)
         /*--------------------------------------------------------------------*/
         case MODBUS_MASTER_STATE_WAITING_RESPONSE:
         {
-            /* 检查是否超时（MODBUS_MASTER_TIMEOUT_MS毫秒内未收到响应） */
             if ((HAL_GetTick() - master->timeout_start) > MODBUS_MASTER_TIMEOUT_MS)
             {
-                modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
-
-                /* 超时，增加重试计数 */
-                sensor->retry_count++;
-
-                /* 更新轮询时间（用于间隔控制） */
-                sensor->last_poll_time = HAL_GetTick();
-
-                /* 检查是否达到最大重试次数 */
-                if (sensor->retry_count >= MODBUS_MAX_RETRY)
+                /* 超时处理 */
+                if (master->current_cmd != NULL)
                 {
-                    /* 标记传感器为离线状态 */
-                    sensor->is_active = 0;
+                    /* 命令超时，重试或失败 */
+                    master->current_cmd->retry_count++;
+                    if (master->current_cmd->retry_count >= MODBUS_CMD_MAX_RETRY)
+                    {
+                        modbus_master_finish_cmd(master, 0);
+                    }
+                    else
+                    {
+                        /* 重试：保持在当前状态，重新发送 */
+                        master->state = MODBUS_MASTER_STATE_IDLE;
+                    }
                 }
+                else
+                {
+                    /* 传感器轮询超时 */
+                    modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
+                    sensor->retry_count++;
+                    sensor->last_poll_time = HAL_GetTick();
 
-                /* 切换到下一个传感器，回到空闲状态 */
-                master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
-                master->state = MODBUS_MASTER_STATE_IDLE;
+                    if (sensor->retry_count >= MODBUS_MAX_RETRY)
+                    {
+                        sensor->is_active = 0;
+                    }
+
+                    master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
+                    master->state = MODBUS_MASTER_STATE_IDLE;
+                }
             }
             else if (modbus_master_check_rx_complete())
             {
-                /* 收到响应数据，切换到处理状态 */
                 master->state = MODBUS_MASTER_STATE_PROCESSING;
             }
             break;
         }
 
         /*--------------------------------------------------------------------*/
-        /* 处理状态：解析响应数据并更新传感器状态                                 */
+        /* 处理状态：解析响应数据                                               */
         /*--------------------------------------------------------------------*/
         case MODBUS_MASTER_STATE_PROCESSING:
         {
-            /* 尝试处理响应数据 */
-            if (modbus_master_process_response(master, master->rx_buffer, master->rx_length) == 1)
+            uint8_t response_valid = modbus_master_process_response(master, master->rx_buffer, master->rx_length);
+
+            if (master->current_cmd != NULL)
             {
-                modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
-
-                /*
-                 * 响应帧格式：[从机地址][功能码][字节数][数据...][CRC低][CRC高]
-                 * rx_buffer[2] 为数据字节数
-                 */
-                uint8_t byte_count = master->rx_buffer[2];
-
-                /* 检查数据长度是否超出缓冲区 */
-                if (byte_count <= 64)
+                /* 命令响应处理 */
+                if (response_valid)
                 {
-                    /* 复制寄存器数据到传感器缓冲区（跳过地址、功能码、字节数这3个字节） */
-                    memcpy(sensor->data, &master->rx_buffer[3], byte_count);
-                    sensor->data_length = byte_count;
+                    modbus_master_finish_cmd(master, 1);
                 }
-
-                /* 通信成功，恢复在线状态 */
-                sensor->is_active = 1;
-                sensor->retry_count = 0;
-
-                /* 更新最后成功轮询时间 */
-                sensor->last_poll_time = HAL_GetTick();
+                else
+                {
+                    master->current_cmd->retry_count++;
+                    if (master->current_cmd->retry_count >= MODBUS_CMD_MAX_RETRY)
+                    {
+                        modbus_master_finish_cmd(master, 0);
+                    }
+                    else
+                    {
+                        master->state = MODBUS_MASTER_STATE_IDLE;
+                    }
+                }
             }
             else
             {
-                /* 响应处理失败（CRC错误或异常响应） */
-                modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
-                sensor->retry_count++;
-
-                /* 检查是否达到最大重试次数 */
-                if (sensor->retry_count >= MODBUS_MAX_RETRY)
+                /* 传感器轮询响应处理 */
+                if (response_valid)
                 {
-                    sensor->is_active = 0;
-                    sensor->retry_count = 0;
-                }
-            }
+                    modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
+                    uint8_t byte_count = master->rx_buffer[2];
 
-            /* 切换到下一个传感器，回到空闲状态继续轮询 */
-            master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
-            master->state = MODBUS_MASTER_STATE_IDLE;
+                    if (byte_count <= 64)
+                    {
+                        memcpy(sensor->data, &master->rx_buffer[3], byte_count);
+                        sensor->data_length = byte_count;
+                    }
+
+                    sensor->is_active = 1;
+                    sensor->retry_count = 0;
+                    sensor->last_poll_time = HAL_GetTick();
+                }
+                else
+                {
+                    modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
+                    sensor->retry_count++;
+
+                    if (sensor->retry_count >= MODBUS_MAX_RETRY)
+                    {
+                        sensor->is_active = 0;
+                        sensor->retry_count = 0;
+                    }
+                }
+
+                master->current_slave_index = (master->current_slave_index + 1) % master->sensor_count;
+                master->state = MODBUS_MASTER_STATE_IDLE;
+            }
             break;
         }
 
@@ -624,4 +677,176 @@ uint16_t modbus_master_get_register_value(uint8_t sensor_index, uint8_t register
                      sensor->data[register_index * 2 + 1];          /* 低字节 */
 
     return value;
+}
+
+/*============================================================================*/
+/*                           命令队列函数                                       */
+/*============================================================================*/
+
+/**
+ * @brief  从命令队列取出一个命令
+ * @param  master: 主机结构体指针
+ * @param  cmd: 输出命令结构体指针
+ * @retval 1: 成功取出
+ * @retval 0: 队列为空
+ */
+static uint8_t modbus_master_pop_cmd(modbus_master_t *master, modbus_cmd_t *cmd)
+{
+    if (master->cmd_count == 0)
+    {
+        return 0;
+    }
+
+    *cmd = master->cmd_queue[master->cmd_head];
+    master->cmd_head = (master->cmd_head + 1) % MODBUS_CMD_QUEUE_SIZE;
+    master->cmd_count--;
+
+    return 1;
+}
+
+/**
+ * @brief  完成当前命令
+ * @param  master: 主机结构体指针
+ * @param  success: 1-成功 0-失败
+ */
+static void modbus_master_finish_cmd(modbus_master_t *master, uint8_t success)
+{
+    if (master->current_cmd == NULL)
+    {
+        master->state = MODBUS_MASTER_STATE_IDLE;
+        return;
+    }
+
+    master->current_cmd->status = success ? MODBUS_CMD_STATUS_SUCCESS : MODBUS_CMD_STATUS_FAILED;
+
+    /* 调用回调函数 */
+    if (master->current_cmd->callback != NULL)
+    {
+        master->current_cmd->callback(success ? 1 : 0);
+    }
+
+    /* 移出队列 */
+    master->cmd_head = (master->cmd_head + 1) % MODBUS_CMD_QUEUE_SIZE;
+    master->cmd_count--;
+    master->current_cmd = NULL;
+    master->state = MODBUS_MASTER_STATE_IDLE;
+}
+
+/**
+ * @brief  提交写单个寄存器命令
+ * @param  master: 主机结构体指针
+ * @param  slave_id: 从机ID (1-247)
+ * @param  reg_addr: 寄存器地址
+ * @param  value: 写入值
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败-队列满)
+ */
+uint8_t modbus_master_write_reg(modbus_master_t *master, uint8_t slave_id,
+                                 uint16_t reg_addr, uint16_t value,
+                                 void (*callback)(uint8_t result))
+{
+    /* 检查队列是否已满 */
+    if (master->cmd_count >= MODBUS_CMD_QUEUE_SIZE)
+    {
+        return 0xFF;
+    }
+
+    /* 获取队列尾部位置 */
+    uint8_t index = master->cmd_tail;
+    modbus_cmd_t *cmd = &master->cmd_queue[index];
+
+    /* 填充命令信息 */
+    cmd->type = MODBUS_CMD_WRITE_SINGLE;
+    cmd->status = MODBUS_CMD_STATUS_PENDING;
+    cmd->slave_id = slave_id;
+    cmd->start_addr = reg_addr;
+    cmd->quantity = 1;
+    cmd->data[0] = value;
+    cmd->retry_count = 0;
+    cmd->callback = callback;
+
+    /* 更新队列尾指针 */
+    master->cmd_tail = (master->cmd_tail + 1) % MODBUS_CMD_QUEUE_SIZE;
+    master->cmd_count++;
+
+    return index;
+}
+
+/**
+ * @brief  提交写多个寄存器命令
+ * @param  master: 主机结构体指针
+ * @param  slave_id: 从机ID (1-247)
+ * @param  start_addr: 起始地址
+ * @param  quantity: 寄存器数量 (最多16个)
+ * @param  data: 写入数据数组
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败-队列满)
+ */
+uint8_t modbus_master_write_regs(modbus_master_t *master, uint8_t slave_id,
+                                  uint16_t start_addr, uint16_t quantity,
+                                  const uint16_t *data,
+                                  void (*callback)(uint8_t result))
+{
+    /* 检查队列是否已满 */
+    if (master->cmd_count >= MODBUS_CMD_QUEUE_SIZE)
+    {
+        return 0xFF;
+    }
+
+    /* 检查寄存器数量 */
+    if (quantity == 0 || quantity > 16)
+    {
+        return 0xFF;
+    }
+
+    /* 获取队列尾部位置 */
+    uint8_t index = master->cmd_tail;
+    modbus_cmd_t *cmd = &master->cmd_queue[index];
+
+    /* 填充命令信息 */
+    cmd->type = MODBUS_CMD_WRITE_MULTIPLE;
+    cmd->status = MODBUS_CMD_STATUS_PENDING;
+    cmd->slave_id = slave_id;
+    cmd->start_addr = start_addr;
+    cmd->quantity = quantity;
+    cmd->retry_count = 0;
+    cmd->callback = callback;
+
+    /* 复制数据 */
+    for (uint16_t i = 0; i < quantity; i++)
+    {
+        cmd->data[i] = data[i];
+    }
+
+    /* 更新队列尾指针 */
+    master->cmd_tail = (master->cmd_tail + 1) % MODBUS_CMD_QUEUE_SIZE;
+    master->cmd_count++;
+
+    return index;
+}
+
+/**
+ * @brief  检查命令是否完成
+ * @param  master: 主机结构体指针
+ * @param  cmd_index: 命令索引 (由提交函数返回)
+ * @retval 命令状态 (MODBUS_CMD_STATUS_*)
+ */
+modbus_cmd_status_t modbus_master_get_cmd_status(modbus_master_t *master, uint8_t cmd_index)
+{
+    if (cmd_index >= MODBUS_CMD_QUEUE_SIZE)
+    {
+        return MODBUS_CMD_STATUS_FAILED;
+    }
+
+    return master->cmd_queue[cmd_index].status;
+}
+
+/**
+ * @brief  获取命令队列中待处理命令数量
+ * @param  master: 主机结构体指针
+ * @retval 待处理命令数量
+ */
+uint8_t modbus_master_get_pending_cmd_count(modbus_master_t *master)
+{
+    return master->cmd_count;
 }

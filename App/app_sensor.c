@@ -139,3 +139,117 @@ SensorData_t* app_sensor_get_data(void)
 {
     return &g_sensor_data;
 }
+
+/*============================================================================*/
+/*                           参数设置函数实现                                    */
+/*============================================================================*/
+
+/**
+ * @brief  设置传感器单个寄存器 (异步)
+ * @param  reg_addr: 寄存器地址
+ * @param  value: 写入值
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_register(uint16_t reg_addr, uint16_t value,
+                                 void (*callback)(uint8_t result))
+{
+    return modbus_master_write_reg(&sensor_master, SENSOR_SLAVE_ID,
+                                    reg_addr, value, callback);
+}
+
+/**
+ * @brief  设置传感器安装高度 (同步到本地配置和传感器)
+ * @param  height_mm: 安装高度 (毫米)
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_height(uint32_t height_mm, void (*callback)(uint8_t result))
+{
+    /* 更新本地配置 */
+    SystemConfig_t *config = app_config_get();
+    config->height = height_mm;
+    app_config_save();
+
+    /* 下发到传感器 (寄存器地址 REG_HEIGHT = 0x0066) */
+    return app_sensor_set_register(REG_HEIGHT, (uint16_t)height_mm, callback);
+}
+
+/**
+ * @brief  设置传感器量程
+ * @param  range_mm: 量程 (毫米)
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_range(uint32_t range_mm, void (*callback)(uint8_t result))
+{
+    /* 更新本地配置 */
+    SystemConfig_t *config = app_config_get();
+    config->range_max = range_mm;
+    app_config_save();
+
+    /* 下发到传感器 (寄存器地址 REG_RANGE_MAX = 0x0065) */
+    return app_sensor_set_register(REG_RANGE_MAX, (uint16_t)range_mm, callback);
+}
+
+/**
+ * @brief  设置传感器盲区
+ * @param  blind_area_mm: 盲区 (毫米)
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_blind_area(uint32_t blind_area_mm, void (*callback)(uint8_t result))
+{
+    /* 更新本地配置 */
+    SystemConfig_t *config = app_config_get();
+    config->blind_area = blind_area_mm;
+    app_config_save();
+
+    /* 下发到传感器 (寄存器地址 REG_L4 = 0x006A) */
+    return app_sensor_set_register(REG_L4, (uint16_t)blind_area_mm, callback);
+}
+
+/**
+ * @brief  设置传感器多个寄存器 (异步)
+ * @param  start_addr: 起始寄存器地址
+ * @param  quantity: 寄存器数量
+ * @param  data: 写入数据数组
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_registers(uint16_t start_addr, uint16_t quantity,
+                                  const uint16_t *data, void (*callback)(uint8_t result))
+{
+    return modbus_master_write_regs(&sensor_master, SENSOR_SLAVE_ID,
+                                     start_addr, quantity, data, callback);
+}
+
+/**
+ * @brief  设置传感器float参数 (异步，占2个寄存器)
+ * @param  reg_addr: 起始寄存器地址
+ * @param  value: float值
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ * @note   float按Modbus标准拆分为2个uint16_t (大端序)
+ */
+uint8_t app_sensor_set_float(uint16_t reg_addr, float value, void (*callback)(uint8_t result))
+{
+    /* 将float拆分为2个uint16_t (大端序) */
+    uint32_t temp;
+    uint16_t data[2];
+    memcpy(&temp, &value, sizeof(float));
+    data[0] = (uint16_t)(temp >> 16);   /* 高16位 */
+    data[1] = (uint16_t)(temp & 0xFFFF); /* 低16位 */
+
+    return app_sensor_set_registers(reg_addr, 2, data, callback);
+}
+
+/**
+ * @brief  获取命令状态
+ * @param  cmd_index: 命令索引 (由设置函数返回)
+ * @retval 命令状态 (0=空闲/失败, 1=待处理, 2=发送中, 3=成功, 4=失败)
+ */
+uint8_t app_sensor_get_cmd_status(uint8_t cmd_index)
+{
+    return (uint8_t)modbus_master_get_cmd_status(&sensor_master, cmd_index);
+}

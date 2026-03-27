@@ -83,6 +83,72 @@ uint8_t app_sensor_is_online(void);
  */
 SensorData_t* app_sensor_get_data(void);
 
+/*============================================================================*/
+/*                           参数设置函数                                       */
+/*============================================================================*/
+
+/**
+ * @brief  设置传感器单个寄存器 (异步)
+ * @param  reg_addr: 寄存器地址
+ * @param  value: 写入值
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ * @note   非阻塞调用，结果通过回调或轮询 app_sensor_get_cmd_status() 获取
+ */
+uint8_t app_sensor_set_register(uint16_t reg_addr, uint16_t value,
+                                 void (*callback)(uint8_t result));
+
+/**
+ * @brief  设置传感器安装高度 (同步到本地配置和传感器)
+ * @param  height_mm: 安装高度 (毫米)
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_height(uint32_t height_mm, void (*callback)(uint8_t result));
+
+/**
+ * @brief  设置传感器量程
+ * @param  range_mm: 量程 (毫米)
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_range(uint32_t range_mm, void (*callback)(uint8_t result));
+
+/**
+ * @brief  设置传感器盲区
+ * @param  blind_area_mm: 盲区 (毫米)
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_blind_area(uint32_t blind_area_mm, void (*callback)(uint8_t result));
+
+/**
+ * @brief  设置传感器多个寄存器 (异步，用于float等32位数据)
+ * @param  start_addr: 起始寄存器地址
+ * @param  quantity: 寄存器数量 (2个=float, 4个=double)
+ * @param  data: 写入数据数组
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_registers(uint16_t start_addr, uint16_t quantity,
+                                  const uint16_t *data, void (*callback)(uint8_t result));
+
+/**
+ * @brief  设置传感器float参数 (异步，占2个寄存器)
+ * @param  reg_addr: 起始寄存器地址
+ * @param  value: float值
+ * @param  callback: 完成回调函数 (可选，传NULL)
+ * @retval 命令索引 (>=0成功，0xFF失败)
+ */
+uint8_t app_sensor_set_float(uint16_t reg_addr, float value, void (*callback)(uint8_t result));
+
+/**
+ * @brief  获取命令状态
+ * @param  cmd_index: 命令索引 (由设置函数返回)
+ * @retval 命令状态
+ */
+uint8_t app_sensor_get_cmd_status(uint8_t cmd_index);
+
 #ifdef __cplusplus
 }
 #endif

@@ -213,3 +213,77 @@ uint8_t modbus_parse_response(uint8_t *request, uint8_t *response, uint16_t resp
 
     return 1;
 }
+
+/**
+ * @brief 构建写单个寄存器请求帧 (功能码0x06)
+ * @param buffer 输出缓冲区 (至少8字节)
+ * @param slave_id 从机ID (1-247)
+ * @param reg_addr 寄存器地址
+ * @param value 写入值
+ * @return 请求帧长度 (8字节)
+ * @note 请求帧格式: [ID][0x06][地址高][地址低][值高][值低][CRC低][CRC高]
+ */
+uint8_t modbus_build_write_single_reg(uint8_t *buffer, uint8_t slave_id,
+                                       uint16_t reg_addr, uint16_t value)
+{
+    /* 填充从机地址 */
+    buffer[0] = slave_id;
+    /* 填充功能码 0x06 */
+    buffer[1] = MODBUS_FUNC_WRITE_SINGLE_REG;
+    /* 填充寄存器地址 (高字节在前) */
+    buffer[2] = (uint8_t)(reg_addr >> 8);
+    buffer[3] = (uint8_t)(reg_addr & 0xFF);
+    /* 填充写入值 (高字节在前) */
+    buffer[4] = (uint8_t)(value >> 8);
+    buffer[5] = (uint8_t)(value & 0xFF);
+
+    /* 计算CRC16并添加到帧末尾 */
+    uint16_t crc = modbus_crc16(buffer, 6);
+    buffer[6] = (uint8_t)(crc & 0xFF);   /* CRC低字节 */
+    buffer[7] = (uint8_t)(crc >> 8);     /* CRC高字节 */
+
+    return 8;
+}
+
+/**
+ * @brief 构建写多个寄存器请求帧 (功能码0x10)
+ * @param buffer 输出缓冲区 (至少9+2*quantity字节)
+ * @param slave_id 从机ID (1-247)
+ * @param start_addr 起始地址
+ * @param quantity 寄存器数量
+ * @param data 要写入的数据数组
+ * @return 请求帧长度 (9 + 2*quantity)
+ * @note 请求帧格式: [ID][0x10][起始地址高][起始地址低][数量高][数量低][字节数][数据...][CRC低][CRC高]
+ */
+uint8_t modbus_build_write_multiple_reg(uint8_t *buffer, uint8_t slave_id,
+                                         uint16_t start_addr, uint16_t quantity,
+                                         const uint16_t *data)
+{
+    /* 填充从机地址 */
+    buffer[0] = slave_id;
+    /* 填充功能码 0x10 */
+    buffer[1] = MODBUS_FUNC_WRITE_MULTIPLE_REG;
+    /* 填充起始地址 (高字节在前) */
+    buffer[2] = (uint8_t)(start_addr >> 8);
+    buffer[3] = (uint8_t)(start_addr & 0xFF);
+    /* 填充寄存器数量 (高字节在前) */
+    buffer[4] = (uint8_t)(quantity >> 8);
+    buffer[5] = (uint8_t)(quantity & 0xFF);
+    /* 填充字节数 (每个寄存器2字节) */
+    buffer[6] = (uint8_t)(quantity * 2);
+
+    /* 填充数据 (大端序) */
+    for (uint16_t i = 0; i < quantity; i++)
+    {
+        buffer[7 + i * 2] = (uint8_t)(data[i] >> 8);       /* 高字节 */
+        buffer[7 + i * 2 + 1] = (uint8_t)(data[i] & 0xFF); /* 低字节 */
+    }
+
+    /* 计算CRC16并添加到帧末尾 */
+    uint16_t frame_len = 7 + quantity * 2;
+    uint16_t crc = modbus_crc16(buffer, frame_len);
+    buffer[frame_len] = (uint8_t)(crc & 0xFF);     /* CRC低字节 */
+    buffer[frame_len + 1] = (uint8_t)(crc >> 8);   /* CRC高字节 */
+
+    return frame_len + 2;
+}

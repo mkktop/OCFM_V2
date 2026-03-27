@@ -106,6 +106,32 @@ uint8_t modbus_parse_response(uint8_t *request, uint8_t *response, uint16_t resp
  */
 uint8_t modbus_build_exception_response(uint8_t *buffer, uint8_t function_code, uint8_t exception_code);
 
+/**
+ * @brief 构建写单个寄存器请求帧
+ * @param buffer 输出缓冲区 (至少8字节)
+ * @param slave_id 从机ID (1-247)
+ * @param reg_addr 寄存器地址
+ * @param value 写入值
+ * @return 请求帧长度 (8字节)
+ * @note 请求帧格式: [ID][0x06][地址高][地址低][值高][值低][CRC低][CRC高]
+ */
+uint8_t modbus_build_write_single_reg(uint8_t *buffer, uint8_t slave_id,
+                                       uint16_t reg_addr, uint16_t value);
+
+/**
+ * @brief 构建写多个寄存器请求帧
+ * @param buffer 输出缓冲区 (至少9+2*quantity字节)
+ * @param slave_id 从机ID (1-247)
+ * @param start_addr 起始地址
+ * @param quantity 寄存器数量
+ * @param data 要写入的数据数组
+ * @return 请求帧长度 (9 + 2*quantity)
+ * @note 请求帧格式: [ID][0x10][起始地址高][起始地址低][数量高][数量低][字节数][数据...][CRC低][CRC高]
+ */
+uint8_t modbus_build_write_multiple_reg(uint8_t *buffer, uint8_t slave_id,
+                                         uint16_t start_addr, uint16_t quantity,
+                                         const uint16_t *data);
+
 #ifdef __cplusplus
 }
 #endif
