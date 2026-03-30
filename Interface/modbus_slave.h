@@ -36,10 +36,28 @@ typedef struct
     uint8_t rx_buffer[MODBUS_SLAVE_BUF_SIZE];  /**< 接收缓冲区 */
     uint8_t tx_buffer[MODBUS_SLAVE_BUF_SIZE];  /**< 发送缓冲区 */
     uint16_t rx_length;                 /**< 接收数据长度 */
-    uint16_t tx_length;                 /**< 发送数据长度 */
-    uint32_t last_receive_time;         /**< 上次接收时间 */
     uint8_t slave_id;                   /**< 从机ID */
 } modbus_slave_t;
+
+/**
+ * @brief 全局Modbus从机实例
+ */
+extern modbus_slave_t sensor_slave;
+
+/**
+ * @brief 写入回调函数类型
+ * @param start_addr 起始寄存器地址
+ * @param quantity 写入的寄存器数量
+ * @note 每次写入操作(0x06/0x10)只触发一次回调，
+ *       应用层可从 holding_registers[start_addr] 读取写入的值
+ */
+typedef void (*modbus_write_callback_t)(uint16_t start_addr, uint16_t quantity);
+
+/**
+ * @brief 注册写入回调函数
+ * @param callback 回调函数指针
+ */
+void modbus_slave_set_write_callback(modbus_write_callback_t callback);
 
 /**
  * @brief 初始化Modbus从机
@@ -55,6 +73,13 @@ void modbus_slave_init(modbus_slave_t *slave, UART_HandleTypeDef *huart);
  * @param id 从机ID (1-247)
  */
 void modbus_slave_set_id(modbus_slave_t *slave, uint8_t id);
+
+/**
+ * @brief 串口空闲中断回调函数
+ * @param huart 触发中断的串口句柄
+ * @param size 接收到的数据字节数
+ */
+void modbus_slave_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size);
 
 /**
  * @brief Modbus从机任务处理

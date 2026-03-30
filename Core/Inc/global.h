@@ -35,7 +35,7 @@
 /**
  * @brief Modbus从机配置
  */
-#define HOLDING_REG_SIZE        32          /* 保持寄存器数量 */
+#define HOLDING_REG_SIZE        128         /* 保持寄存器数量 (支持地址0x0000-0x1006) */
 #define MODBUS_SLAVE_BUF_SIZE   256         /* 接收缓冲区大小 */
 #define MODBUS_SLAVE_ID         1           /* 本机从机地址 (UART2用户通信) */
  
@@ -81,8 +81,8 @@
 #define REG_DH                  0x0010       /* 上限回差寄存器 占2个寄存器 */
 #define REG_AL                  0x0012       /* 下限报警值寄存器 占2个寄存器 */
 #define REG_DL                  0x0014       /* 下限回差寄存器 占2个寄存器 */
-#define REG_AAH                 0x0015       /* 上上限报警值寄存器 占2个寄存器 */
-#define REG_AAL                 0x0017       /* 下下限报警值寄存器 占2个寄存器 */
+#define REG_AAH                 0x0016       /* 上上限报警值寄存器 占2个寄存器 */
+#define REG_AAL                 0x0018       /* 下下限报警值寄存器 占2个寄存器 */
 
 //传感器参数设置寄存器
 #define REG_RANGE_MAX           0x0065       /* 最大量程寄存器 占1个寄存器 */

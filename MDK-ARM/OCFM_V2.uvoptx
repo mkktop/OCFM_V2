@@ -157,130 +157,34 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>484</LineNumber>
+          <LineNumber>283</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134488792</Address>
+          <Address>134496622</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\Interface\modbus_master.c</Filename>
+          <Filename>..\Interface\modbus_slave.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\OCFM_V2\../Interface/modbus_master.c\484</Expression>
+          <Expression>\\OCFM_V2\../Interface/modbus_slave.c\283</Expression>
         </Bp>
         <Bp>
           <Number>1</Number>
           <Type>0</Type>
-          <LineNumber>101</LineNumber>
+          <LineNumber>203</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134487464</Address>
+          <Address>134231096</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\Drivers\File\log_manager.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\OCFM_V2\../Drivers/File/log_manager.c\101</Expression>
-        </Bp>
-        <Bp>
-          <Number>2</Number>
-          <Type>0</Type>
-          <LineNumber>162</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134487144</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>../Core/Src/freertos.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\OCFM_V2\../Core/Src/freertos.c\162</Expression>
-        </Bp>
-        <Bp>
-          <Number>3</Number>
-          <Type>0</Type>
-          <LineNumber>158</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134487128</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>../Core/Src/freertos.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\OCFM_V2\../Core/Src/freertos.c\158</Expression>
-        </Bp>
-        <Bp>
-          <Number>4</Number>
-          <Type>0</Type>
-          <LineNumber>89</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134252444</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\App\app_sensor.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\OCFM_V2\../App/app_sensor.c\89</Expression>
-        </Bp>
-        <Bp>
-          <Number>5</Number>
-          <Type>0</Type>
-          <LineNumber>343</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>0</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>0</BreakIfRCount>
           <Filename>..\Interface\modbus_master.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression></Expression>
-        </Bp>
-        <Bp>
-          <Number>6</Number>
-          <Type>0</Type>
-          <LineNumber>477</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>0</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>0</BreakIfRCount>
-          <Filename>..\Interface\modbus_master.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression></Expression>
-        </Bp>
-        <Bp>
-          <Number>7</Number>
-          <Type>0</Type>
-          <LineNumber>156</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>0</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>0</BreakIfRCount>
-          <Filename>startup_stm32f407xx.s</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression></Expression>
+          <Expression>\\OCFM_V2\../Interface/modbus_master.c\203</Expression>
         </Bp>
       </Breakpoint>
       <Tracepoint>
@@ -10149,6 +10053,30 @@
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
+    <File>
+      <GroupNumber>177</GroupNumber>
+      <FileNumber>701</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\App\app_modbus_slave.c</PathWithFileName>
+      <FilenameWithoutPath>app_modbus_slave.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>177</GroupNumber>
+      <FileNumber>702</FileNumber>
+      <FileType>5</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\App\app_modbus_slave.h</PathWithFileName>
+      <FilenameWithoutPath>app_modbus_slave.h</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
   </Group>
 
   <Group>
@@ -10159,7 +10087,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>178</GroupNumber>
-      <FileNumber>701</FileNumber>
+      <FileNumber>703</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10171,7 +10099,7 @@
     </File>
     <File>
       <GroupNumber>178</GroupNumber>
-      <FileNumber>702</FileNumber>
+      <FileNumber>704</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10183,7 +10111,7 @@
     </File>
     <File>
       <GroupNumber>178</GroupNumber>
-      <FileNumber>703</FileNumber>
+      <FileNumber>705</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10195,7 +10123,7 @@
     </File>
     <File>
       <GroupNumber>178</GroupNumber>
-      <FileNumber>704</FileNumber>
+      <FileNumber>706</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10215,7 +10143,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>179</GroupNumber>
-      <FileNumber>705</FileNumber>
+      <FileNumber>707</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10227,7 +10155,7 @@
     </File>
     <File>
       <GroupNumber>179</GroupNumber>
-      <FileNumber>706</FileNumber>
+      <FileNumber>708</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10239,7 +10167,7 @@
     </File>
     <File>
       <GroupNumber>179</GroupNumber>
-      <FileNumber>707</FileNumber>
+      <FileNumber>709</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10251,7 +10179,7 @@
     </File>
     <File>
       <GroupNumber>179</GroupNumber>
-      <FileNumber>708</FileNumber>
+      <FileNumber>710</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10263,7 +10191,7 @@
     </File>
     <File>
       <GroupNumber>179</GroupNumber>
-      <FileNumber>709</FileNumber>
+      <FileNumber>711</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10283,7 +10211,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>180</GroupNumber>
-      <FileNumber>710</FileNumber>
+      <FileNumber>712</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10295,7 +10223,7 @@
     </File>
     <File>
       <GroupNumber>180</GroupNumber>
-      <FileNumber>711</FileNumber>
+      <FileNumber>713</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10315,7 +10243,7 @@
     <RteFlg>0</RteFlg>
     <File>
       <GroupNumber>181</GroupNumber>
-      <FileNumber>712</FileNumber>
+      <FileNumber>714</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10327,7 +10255,7 @@
     </File>
     <File>
       <GroupNumber>181</GroupNumber>
-      <FileNumber>713</FileNumber>
+      <FileNumber>715</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10339,7 +10267,7 @@
     </File>
     <File>
       <GroupNumber>181</GroupNumber>
-      <FileNumber>714</FileNumber>
+      <FileNumber>716</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10351,7 +10279,7 @@
     </File>
     <File>
       <GroupNumber>181</GroupNumber>
-      <FileNumber>715</FileNumber>
+      <FileNumber>717</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10363,7 +10291,7 @@
     </File>
     <File>
       <GroupNumber>181</GroupNumber>
-      <FileNumber>716</FileNumber>
+      <FileNumber>718</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -10375,7 +10303,7 @@
     </File>
     <File>
       <GroupNumber>181</GroupNumber>
-      <FileNumber>717</FileNumber>
+      <FileNumber>719</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>

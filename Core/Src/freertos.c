@@ -35,6 +35,8 @@
 #include "app_sensor.h"
 #include "app_config.h"
 #include "app_flow_calc.h"
+#include "../Interface/modbus_slave.h"
+#include "../App/app_modbus_slave.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -84,6 +86,13 @@ const osThreadAttr_t modbus_master_t_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for modbus_slave_ta */
+osThreadId_t modbus_slave_taHandle;
+const osThreadAttr_t modbus_slave_ta_attributes = {
+  .name = "modbus_slave_ta",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for flow_refresh_timer */
 osTimerId_t flow_refresh_timerHandle;
 const osTimerAttr_t flow_refresh_timer_attributes = {
@@ -99,6 +108,7 @@ void main_task_func(void *argument);
 void log_task_func(void *argument);
 void button_scan_fun(void *argument);
 void modbus_master_task_func(void *argument);
+void modbus_slave_task_func(void *argument);
 void flow_refresh_fun(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -146,6 +156,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of modbus_master_t */
   modbus_master_tHandle = osThreadNew(modbus_master_task_func, NULL, &modbus_master_t_attributes);
+
+  /* creation of modbus_slave_ta */
+  modbus_slave_taHandle = osThreadNew(modbus_slave_task_func, NULL, &modbus_slave_ta_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -249,6 +262,49 @@ void modbus_master_task_func(void *argument)
     osDelay(10);  /* 10ms周期 */
   }
   /* USER CODE END modbus_master_task_func */
+}
+
+/* USER CODE BEGIN Header_modbus_slave_task_func */
+/**
+* @brief Function implementing the modbus_slave_ta thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_modbus_slave_task_func */
+void modbus_slave_task_func(void *argument)
+{
+  /* USER CODE BEGIN modbus_slave_task_func */
+  /* 初始化Modbus从机 (UART2, DMA+空闲中断接收) */
+  modbus_slave_init(&sensor_slave, &huart2);
+
+  /* 初始化应用层：将配置参数预填到寄存器 */
+  app_modbus_slave_init();
+
+  /* 注册写入回调 */
+  modbus_slave_set_write_callback(app_modbus_slave_on_write);
+
+  /* 寄存器更新计数器 (每100次=1秒) */
+  uint16_t update_counter = 0;
+
+  /* 无限循环 */
+  for(;;)
+  {
+    /* 非阻塞处理Modbus请求 */
+    modbus_slave_task(&sensor_slave);
+
+    /* 处理延迟EEPROM保存 */
+    app_modbus_slave_process();
+
+    /* 每1秒更新一次寄存器数据 */
+    if (++update_counter >= 100)
+    {
+      update_counter = 0;
+      app_modbus_slave_update();
+    }
+
+    osDelay(10);  /* 10ms周期 */
+  }
+  /* USER CODE END modbus_slave_task_func */
 }
 
 /* flow_refresh_fun function */

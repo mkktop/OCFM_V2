@@ -4917,6 +4917,16 @@
               <FileType>5</FileType>
               <FilePath>..\App\app_flow_calc.h</FilePath>
             </File>
+            <File>
+              <FileName>app_modbus_slave.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_modbus_slave.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_modbus_slave.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\app_modbus_slave.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

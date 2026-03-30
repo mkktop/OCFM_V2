@@ -1,41 +1,189 @@
 /**
  * @file modbus_slave.c
  * @brief Modbus从机实现 - 响应用户指令
- * @details 通过串口2连接用户设备，响应Modbus指令
+ * @details 通过串口2连接用户设备，使用DMA+空闲中断接收，响应Modbus指令
+ *          使用地址映射表，将Modbus地址映射到紧凑数组索引
  */
 
 #include "modbus_slave.h"
 #include "modbus.h"
+#include "global.h"
 #include <string.h>
 
+/*============================================================================*/
+/*                           地址映射表                                         */
+/*============================================================================*/
+
 /**
- * @brief 保持寄存器数组
- * @note 所有数据都使用保持寄存器存储，地址范围: 0x0000 - 0x003F
+ * @brief 映射表项
  */
-static uint16_t holding_registers[HOLDING_REG_SIZE];
+typedef struct {
+    uint16_t reg_addr;   /**< Modbus寄存器地址 */
+    uint8_t  index;      /**< 紧凑数组索引 */
+} reg_map_t;
+
+/**
+ * @brief 寄存器地址映射表
+ * @note 将非连续的Modbus地址映射到连续的数组索引
+ *       表项按reg_addr升序排列，用于二分查找
+ */
+static const reg_map_t reg_map[] = {
+    /* 传感器数据区 (0x0001-0x000D) */
+    {REG_WUWEI,            0},
+    {REG_DISTANCE,         1},
+    {REG_TEMPERATURE,      2},
+    {REG_INSTANT_FLOW,     3},   /* 占2个索引: 3,4 */
+    {REG_SUM_FLOW,         5},   /* 占4个索引: 5,6,7,8 */
+    {REG_RELAY1_STATUS,    9},
+    {REG_RELAY2_STATUS,    10},
+    {REG_RELAY3_STATUS,    11},
+    {REG_RELAY4_STATUS,    12},
+    /* 报警值区 (0x000E-0x0017) */
+    {REG_AH,               13},  /* 占2个: 13,14 */
+    {REG_DH,               15},  /* 占2个: 15,16 */
+    {REG_AL,               17},  /* 占2个: 17,18 */
+    {REG_DL,               19},  /* 占2个: 19,20 */
+    {REG_AAH,              21},  /* 占2个: 21,22 */
+    {REG_AAL,              23},  /* 占2个: 23,24 */
+    /* 传感器参数区 (0x0065-0x006F) */
+    {REG_RANGE_MAX,        25},
+    {REG_HEIGHT,           26},
+    {REG_L1,               27},
+    {REG_L2,               28},
+    {REG_L3,               29},
+    {REG_L4,               30},
+    {REG_L5,               31},
+    {REG_L6,               32},
+    {REG_ADDRESS,          33},
+    {REG_BAUDE_RATE,       34},
+    {REG_STOP_BITS,        35},
+    /* 从机参数区 (0x0101-0x0107) */
+    {REG_CANALS__TYPE,     36},
+    {REG_CHANNEL_ID,       37},
+    {REG_INSTANT_UNIT,     38},
+    {REG_SUM_POINT,        39},
+    {REG_RANGE_4MA,        40},  /* 占2个: 40,41 */
+    {REG_RANGE_20MA,       42},  /* 占2个: 42,43 */
+    /* 出厂校准区 (0x1001-0x1006) */
+    {REG_FACTORY_RANGE,    44},
+    {REG_DEAD_ZONE,        45},
+    {REG_DIS_OFFSET,       46},
+    {REG_CALIBRATION_4MA,  47},
+    {REG_CALIBRATION_20MA, 48},
+    {REG_FACTORY_SETTING,  49},
+};
+
+#define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))
+#define REG_ARRAY_SIZE  50  /* 映射后的紧凑数组大小 */
+
+/**
+ * @brief 保持寄存器紧凑数组
+ * @note 通过地址映射表访问，节省RAM
+ */
+static uint16_t holding_registers[REG_ARRAY_SIZE];
+
+/**
+ * @brief Modbus地址转数组索引 (二分查找)
+ * @param addr Modbus寄存器地址
+ * @return 数组索引，-1表示未找到
+ * @note 只返回起始地址的索引，后续寄存器索引为+1/+2/+3
+ */
+static int16_t reg_addr_to_index(uint16_t addr)
+{
+    int16_t left = 0;
+    int16_t right = REG_MAP_SIZE - 1;
+
+    while (left <= right)
+    {
+        int16_t mid = (left + right) / 2;
+        if (reg_map[mid].reg_addr == addr)
+        {
+            return reg_map[mid].index;
+        }
+        else if (reg_map[mid].reg_addr < addr)
+        {
+            left = mid + 1;
+        }
+        else
+        {
+            right = mid - 1;
+        }
+    }
+    return -1;
+}
+
+/**
+ * @brief 全局Modbus从机实例
+ */
+modbus_slave_t sensor_slave;
+
+/**
+ * @brief DMA接收缓冲区
+ * @note 用于HAL_UARTEx_ReceiveToIdle_DMA函数的接收缓冲区
+ */
+static uint8_t dma_rx_buffer[MODBUS_SLAVE_BUF_SIZE];
+
+/**
+ * @brief 接收完成标志
+ * @note 当空闲中断触发时置1，表示一帧数据接收完成
+ */
+static volatile uint8_t rx_complete_flag = 0;
+
+/**
+ * @brief 接收数据长度
+ * @note 记录最近一次接收到的数据字节数
+ */
+static volatile uint16_t rx_complete_length = 0;
+
+/**
+ * @brief 写入回调函数指针
+ */
+static modbus_write_callback_t write_callback = NULL;
+
+/**
+ * @brief 注册写入回调函数
+ * @param callback 回调函数指针
+ */
+void modbus_slave_set_write_callback(modbus_write_callback_t callback)
+{
+    write_callback = callback;
+}
 
 /**
  * @brief 初始化Modbus从机
  * @param slave 从机结构体指针
  * @param huart 串口句柄指针
- * @note 初始化串口和寄存器数据
+ * @note 初始化串口、寄存器数据，并启动DMA+空闲中断接收
  */
 void modbus_slave_init(modbus_slave_t *slave, UART_HandleTypeDef *huart)
 {
     /* 清零结构体 */
     memset(slave, 0, sizeof(modbus_slave_t));
-    
+
     /* 设置串口句柄 */
     slave->huart = huart;
-    
+
     /* 设置初始状态 */
     slave->state = MODBUS_SLAVE_STATE_IDLE;
-    
+
     /* 设置默认从机ID */
     slave->slave_id = MODBUS_SLAVE_ID;
-    
+
     /* 清零寄存器 */
     memset(holding_registers, 0, sizeof(holding_registers));
+
+    /* 清零接收标志 */
+    rx_complete_flag = 0;
+    rx_complete_length = 0;
+
+    /*
+     * 启动DMA+空闲中断接收模式
+     * 工作原理：
+     * - DMA持续将接收到的数据存入dma_rx_buffer
+     * - 当检测到空闲帧（数据流停止）时，触发空闲中断
+     * - 在中断回调中获取已接收的数据长度
+     */
+    HAL_UARTEx_ReceiveToIdle_DMA(huart, dma_rx_buffer, sizeof(dma_rx_buffer));
 }
 
 /**
@@ -52,48 +200,72 @@ void modbus_slave_set_id(modbus_slave_t *slave, uint8_t id)
 }
 
 /**
+ * @brief 串口空闲中断回调函数
+ * @param huart 触发中断的串口句柄
+ * @param size 接收到的数据字节数
+ * @note 由HAL_UARTEx_RxEventCallback()调用，处理UART2的空闲中断
+ *       将DMA缓冲区数据复制到从机接收缓冲区，重新启动DMA接收
+ */
+void modbus_slave_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size)
+{
+    /* 检查是否为Modbus从机使用的串口 */
+    if (huart == sensor_slave.huart)
+    {
+        /* 将DMA缓冲区数据复制到从机接收缓冲区 */
+        memcpy(sensor_slave.rx_buffer, dma_rx_buffer, size);
+        sensor_slave.rx_length = size;
+
+        /* 记录接收完成信息 */
+        rx_complete_length = size;
+        rx_complete_flag = 1;
+        sensor_slave.state = MODBUS_SLAVE_STATE_PROCESSING;
+
+        /*
+         * 重置DMA接收状态并重新启动
+         * 注意：先中止当前DMA接收，清除缓冲区，再重新启动，避免旧数据残留
+         */
+        HAL_UART_AbortReceive(huart);
+        memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, dma_rx_buffer, sizeof(dma_rx_buffer));
+    }
+}
+
+/**
  * @brief Modbus从机任务处理
  * @param slave 从机结构体指针
- * @note 在主循环中调用，处理接收到的数据并响应
+ * @note 非阻塞方式，需在FreeRTOS任务中周期性调用
+ *       检查DMA+空闲中断是否收到完整帧，处理并响应
  */
 void modbus_slave_task(modbus_slave_t *slave)
 {
-    uint8_t ch;
-    
-    /* 尝试接收单字节数据 */
-    if (HAL_UART_Receive(slave->huart, &ch, 1, 1) == HAL_OK)
+    /* 检查是否收到完整的Modbus请求帧 */
+    if (!rx_complete_flag)
     {
-        /* 将数据存入接收缓冲区 */
-        slave->rx_buffer[slave->rx_length++] = ch;
-        slave->last_receive_time = HAL_GetTick();
-        
-        /* 检查缓冲区是否溢出 */
-        if (slave->rx_length >= MODBUS_SLAVE_BUF_SIZE)
-        {
-            slave->rx_length = 0;
-        }
+        return;
     }
-    else
+    rx_complete_flag = 0;
+
+    /* 更新状态 */
+    slave->state = MODBUS_SLAVE_STATE_PROCESSING;
+
+    /* 处理接收到的数据 */
+    uint16_t response_len = modbus_slave_process(slave,
+                                                  slave->rx_buffer,
+                                                  slave->rx_length);
+
+    /* 广播地址(0)按Modbus协议不返回响应 */
+    uint8_t is_broadcast = (slave->rx_length > 0 && slave->rx_buffer[0] == 0) ? 1 : 0;
+
+    /* 如果有响应数据且非广播，发送响应 */
+    if (response_len > 0 && !is_broadcast)
     {
-        /* 检查是否接收完成 (3.5个字符时间无新数据) */
-        if (slave->rx_length > 0 && 
-            (HAL_GetTick() - slave->last_receive_time) > 10)
-        {
-            /* 处理接收到的数据 */
-            uint16_t response_len = modbus_slave_process(slave, 
-                                                          slave->rx_buffer, 
-                                                          slave->rx_length);
-            
-            /* 如果有响应数据，发送响应 */
-            if (response_len > 0)
-            {
-                modbus_slave_send(slave, slave->tx_buffer, response_len);
-            }
-            
-            /* 清空接收缓冲区 */
-            slave->rx_length = 0;
-        }
+        slave->state = MODBUS_SLAVE_STATE_SENDING;
+        modbus_slave_send(slave, slave->tx_buffer, response_len);
     }
+
+    /* 清空接收缓冲区，恢复空闲状态 */
+    slave->rx_length = 0;
+    slave->state = MODBUS_SLAVE_STATE_IDLE;
 }
 
 /**
@@ -117,12 +289,12 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
         return 0;
     }
     
-    /* 检查从机地址是否匹配 */
+    /* 检查从机地址是否匹配（含广播地址0） */
     if (data[0] != slave->slave_id && data[0] != 0)
     {
         return 0;
     }
-    
+
     /* 获取功能码 */
     uint8_t function_code = data[1];
     
@@ -150,15 +322,14 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
             /* 写多个寄存器 (0x10) */
             uint16_t start_addr = (data[2] << 8) | data[3];
             uint16_t quantity = (data[4] << 8) | data[5];
-            uint8_t byte_count = data[6];
             return modbus_slave_write_multiple_registers(slave, start_addr, quantity, &data[7], slave->tx_buffer);
         }
         
         default:
         {
             /* 不支持的功能码，返回异常响应 */
-            return modbus_slave_build_exception(slave, function_code, 
-                                                 MODBUS_EX_ILLEGAL_FUNCTION, 
+            return modbus_slave_build_exception(slave, function_code,
+                                                 MODBUS_EX_ILLEGAL_FUNCTION,
                                                  slave->tx_buffer);
         }
     }
@@ -172,42 +343,39 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
  * @param response 响应缓冲区
  * @return 响应长度
  */
-uint16_t modbus_slave_read_holding_registers(modbus_slave_t *slave, 
-                                               uint16_t start_addr, 
+uint16_t modbus_slave_read_holding_registers(modbus_slave_t *slave,
+                                               uint16_t start_addr,
                                                uint16_t quantity,
                                                uint8_t *response)
 {
-    /* 检查地址范围 */
-    if (start_addr + quantity > HOLDING_REG_SIZE)
-    {
-        return modbus_slave_build_exception(slave, MODBUS_FUNC_READ_HOLDING, 
-                                             MODBUS_EX_ILLEGAL_DATA_ADDR, response);
-    }
-    
     /* 检查数量范围 (最大125个寄存器) */
     if (quantity < 1 || quantity > 125)
     {
-        return modbus_slave_build_exception(slave, MODBUS_FUNC_READ_HOLDING, 
+        return modbus_slave_build_exception(slave, MODBUS_FUNC_READ_HOLDING,
                                              MODBUS_EX_ILLEGAL_DATA_VALUE, response);
     }
-    
+
     /* 构建响应帧 */
     response[0] = slave->slave_id;              /* 从机地址 */
     response[1] = MODBUS_FUNC_READ_HOLDING;     /* 功能码 */
     response[2] = quantity * 2;                 /* 字节数 */
-    
+
     /* 填充寄存器数据 (大端格式) */
     for (uint16_t i = 0; i < quantity; i++)
     {
-        response[3 + i * 2] = holding_registers[start_addr + i] >> 8;       /* 高字节 */
-        response[3 + i * 2 + 1] = holding_registers[start_addr + i] & 0xFF; /* 低字节 */
+        uint16_t addr = start_addr + i;
+        int16_t idx = reg_addr_to_index(addr);
+        uint16_t value = (idx >= 0) ? holding_registers[idx] : 0;
+
+        response[3 + i * 2] = value >> 8;       /* 高字节 */
+        response[3 + i * 2 + 1] = value & 0xFF; /* 低字节 */
     }
-    
+
     /* 计算CRC */
     uint16_t crc = modbus_crc16(response, 3 + quantity * 2);
     response[3 + quantity * 2] = crc & 0xFF;        /* CRC低字节 */
     response[3 + quantity * 2 + 1] = crc >> 8;      /* CRC高字节 */
-    
+
     /* 返回响应长度 */
     return 5 + quantity * 2;
 }
@@ -225,16 +393,23 @@ uint16_t modbus_slave_write_single_register(modbus_slave_t *slave,
                                               uint16_t value,
                                               uint8_t *response)
 {
-    /* 检查地址范围 */
-    if (register_addr >= HOLDING_REG_SIZE)
+    /* 检查地址是否有效 */
+    int16_t idx = reg_addr_to_index(register_addr);
+    if (idx < 0)
     {
-        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_SINGLE_REG, 
+        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_SINGLE_REG,
                                              MODBUS_EX_ILLEGAL_DATA_ADDR, response);
     }
-    
+
     /* 写入寄存器 */
-    holding_registers[register_addr] = value;
-    
+    holding_registers[idx] = value;
+
+    /* 触发写入回调 */
+    if (write_callback != NULL)
+    {
+        write_callback(register_addr, 1);
+    }
+
     /* 构建响应帧 (原样返回请求) */
     response[0] = slave->slave_id;
     response[1] = MODBUS_FUNC_WRITE_SINGLE_REG;
@@ -266,26 +441,38 @@ uint16_t modbus_slave_write_multiple_registers(modbus_slave_t *slave,
                                                  uint8_t *data,
                                                  uint8_t *response)
 {
-    /* 检查地址范围 */
-    if (start_addr + quantity > HOLDING_REG_SIZE)
-    {
-        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG, 
-                                             MODBUS_EX_ILLEGAL_DATA_ADDR, response);
-    }
-    
     /* 检查数量范围 */
     if (quantity < 1 || quantity > 123)
     {
-        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG, 
+        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG,
                                              MODBUS_EX_ILLEGAL_DATA_VALUE, response);
     }
-    
-    /* 写入寄存器 */
+
+    /* 检查起始地址是否有效 */
+    int16_t idx = reg_addr_to_index(start_addr);
+    if (idx < 0)
+    {
+        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG,
+                                             MODBUS_EX_ILLEGAL_DATA_ADDR, response);
+    }
+
+    /* 写入寄存器 (逐个映射) */
     for (uint16_t i = 0; i < quantity; i++)
     {
-        holding_registers[start_addr + i] = (data[i * 2] << 8) | data[i * 2 + 1];
+        uint16_t addr = start_addr + i;
+        int16_t reg_idx = reg_addr_to_index(addr);
+        if (reg_idx >= 0)
+        {
+            holding_registers[reg_idx] = (data[i * 2] << 8) | data[i * 2 + 1];
+        }
     }
-    
+
+    /* 触发写入回调 (整次操作只触发一次) */
+    if (write_callback != NULL)
+    {
+        write_callback(start_addr, quantity);
+    }
+
     /* 构建响应帧 */
     response[0] = slave->slave_id;
     response[1] = MODBUS_FUNC_WRITE_MULTIPLE_REG;
@@ -333,10 +520,31 @@ uint16_t modbus_slave_build_exception(modbus_slave_t *slave,
  * @param slave 从机结构体指针
  * @param data 数据
  * @param length 长度
+ * @note 使用DMA发送，发送前后切换RS485方向控制引脚
  */
 void modbus_slave_send(modbus_slave_t *slave, uint8_t *data, uint16_t length)
 {
-    HAL_UART_Transmit(slave->huart, data, length, 100);
+    /*
+     * 切换RS485到发送模式
+     * UART2_CTRL引脚高电平 = 发送模式
+     */
+    HAL_GPIO_WritePin(UART2_CTRL_GPIO_Port, UART2_CTRL_Pin, GPIO_PIN_SET);
+    HAL_Delay(1);
+
+    /* 使用DMA发送数据 */
+    HAL_UART_Transmit_DMA(slave->huart, data, length);
+
+    /* 等待发送完成 */
+    while (HAL_UART_GetState(slave->huart) == HAL_UART_STATE_BUSY_TX)
+    {
+    }
+
+    HAL_Delay(1);
+
+    /*
+     * 切换RS485到接收模式
+     */
+    HAL_GPIO_WritePin(UART2_CTRL_GPIO_Port, UART2_CTRL_Pin, GPIO_PIN_RESET);
 }
 
 /**
@@ -346,9 +554,10 @@ void modbus_slave_send(modbus_slave_t *slave, uint8_t *data, uint16_t length)
  */
 uint16_t modbus_slave_get_holding_register(uint16_t addr)
 {
-    if (addr < HOLDING_REG_SIZE)
+    int16_t idx = reg_addr_to_index(addr);
+    if (idx >= 0)
     {
-        return holding_registers[addr];
+        return holding_registers[idx];
     }
     return 0;
 }
@@ -360,9 +569,10 @@ uint16_t modbus_slave_get_holding_register(uint16_t addr)
  */
 void modbus_slave_set_holding_register(uint16_t addr, uint16_t value)
 {
-    if (addr < HOLDING_REG_SIZE)
+    int16_t idx = reg_addr_to_index(addr);
+    if (idx >= 0)
     {
-        holding_registers[addr] = value;
+        holding_registers[idx] = value;
     }
 }
 
@@ -371,14 +581,14 @@ void modbus_slave_set_holding_register(uint16_t addr, uint16_t value)
  * @param addr 起始寄存器地址
  * @param value 32位值
  * @note 大端格式: 高位寄存器在前
- *       寄存器addr存储高16位，寄存器addr+1存储低16位
  */
 void modbus_slave_set_uint32(uint16_t addr, uint32_t value)
 {
-    if (addr + 1 < HOLDING_REG_SIZE)
+    int16_t idx = reg_addr_to_index(addr);
+    if (idx >= 0)
     {
-        holding_registers[addr] = (uint16_t)(value >> 16);      /* 高16位 */
-        holding_registers[addr + 1] = (uint16_t)(value & 0xFFFF); /* 低16位 */
+        holding_registers[idx] = (uint16_t)(value >> 16);
+        holding_registers[idx + 1] = (uint16_t)(value & 0xFFFF);
     }
 }
 
@@ -389,10 +599,11 @@ void modbus_slave_set_uint32(uint16_t addr, uint32_t value)
  */
 uint32_t modbus_slave_get_uint32(uint16_t addr)
 {
-    if (addr + 1 < HOLDING_REG_SIZE)
+    int16_t idx = reg_addr_to_index(addr);
+    if (idx >= 0)
     {
-        return ((uint32_t)holding_registers[addr] << 16) | 
-               (uint32_t)holding_registers[addr + 1];
+        return ((uint32_t)holding_registers[idx] << 16) |
+               (uint32_t)holding_registers[idx + 1];
     }
     return 0;
 }
@@ -422,19 +633,17 @@ int32_t modbus_slave_get_int32(uint16_t addr)
  * @param addr 起始寄存器地址
  * @param value 浮点数值
  * @note IEEE 754格式存储，大端模式
- *       通过联合体实现float与uint32的转换
  */
 void modbus_slave_set_float(uint16_t addr, float value)
 {
-    /* 使用联合体实现float到uint32的转换 */
     typedef union {
         float f;
         uint32_t u;
     } float_union_t;
-    
+
     float_union_t fu;
     fu.f = value;
-    
+
     modbus_slave_set_uint32(addr, fu.u);
 }
 
@@ -449,10 +658,10 @@ float modbus_slave_get_float(uint16_t addr)
         float f;
         uint32_t u;
     } float_union_t;
-    
+
     float_union_t fu;
     fu.u = modbus_slave_get_uint32(addr);
-    
+
     return fu.f;
 }
 
@@ -461,26 +670,24 @@ float modbus_slave_get_float(uint16_t addr)
  * @param addr 起始寄存器地址
  * @param value 双精度浮点数值
  * @note IEEE 754格式存储，大端模式
- *       寄存器addr存储最高16位，addr+3存储最低16位
  */
 void modbus_slave_set_double(uint16_t addr, double value)
 {
-    if (addr + 3 < HOLDING_REG_SIZE)
+    int16_t idx = reg_addr_to_index(addr);
+    if (idx >= 0)
     {
-        /* 使用联合体实现double到uint64的转换 */
         typedef union {
             double d;
             uint64_t u;
         } double_union_t;
-        
+
         double_union_t du;
         du.d = value;
-        
-        /* 分解为4个16位寄存器存储 (大端模式) */
-        holding_registers[addr] = (uint16_t)(du.u >> 48);
-        holding_registers[addr + 1] = (uint16_t)(du.u >> 32);
-        holding_registers[addr + 2] = (uint16_t)(du.u >> 16);
-        holding_registers[addr + 3] = (uint16_t)(du.u & 0xFFFF);
+
+        holding_registers[idx] = (uint16_t)(du.u >> 48);
+        holding_registers[idx + 1] = (uint16_t)(du.u >> 32);
+        holding_registers[idx + 2] = (uint16_t)(du.u >> 16);
+        holding_registers[idx + 3] = (uint16_t)(du.u & 0xFFFF);
     }
 }
 
@@ -491,19 +698,20 @@ void modbus_slave_set_double(uint16_t addr, double value)
  */
 double modbus_slave_get_double(uint16_t addr)
 {
-    if (addr + 3 < HOLDING_REG_SIZE)
+    int16_t idx = reg_addr_to_index(addr);
+    if (idx >= 0)
     {
         typedef union {
             double d;
             uint64_t u;
         } double_union_t;
-        
+
         double_union_t du;
-        du.u = ((uint64_t)holding_registers[addr] << 48) |
-               ((uint64_t)holding_registers[addr + 1] << 32) |
-               ((uint64_t)holding_registers[addr + 2] << 16) |
-               ((uint64_t)holding_registers[addr + 3]);
-        
+        du.u = ((uint64_t)holding_registers[idx] << 48) |
+               ((uint64_t)holding_registers[idx + 1] << 32) |
+               ((uint64_t)holding_registers[idx + 2] << 16) |
+               ((uint64_t)holding_registers[idx + 3]);
+
         return du.d;
     }
     return 0.0;

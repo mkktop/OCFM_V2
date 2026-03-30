@@ -195,13 +195,13 @@ void modbus_master_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size)
  *         - 使用HAL_UARTEx_ReceiveToIdle_DMA()启动接收后
  *         - 检测到空闲帧时
  *
- *         如果使用中断方式而非DMA，请在stm32f4xx_it.c的USART1_IRQHandler中
- *         调用HAL_UARTEx_RxEventCallback()或直接调用modbus_master_rx_idle_callback()
+ *         分别处理UART1（主机）和UART2（从机）的事件
  * @retval 无
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
     modbus_master_rx_idle_callback(huart, size);
+    modbus_slave_rx_idle_callback(huart, size);
 }
 
 /**
