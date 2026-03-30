@@ -696,6 +696,7 @@
 "ocfm_v2\modbus.o"
 "ocfm_v2\modbus_master.o"
 "ocfm_v2\modbus_slave.o"
+"ocfm_v2\ct1820.o"
 --library_type=microlib --strict --scatter "OCFM_V2\OCFM_V2.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
