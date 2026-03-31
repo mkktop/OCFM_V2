@@ -197,7 +197,10 @@ static const set_category_t categories[] = {
 static set_nav_state_t g_set_nav;
 static int8_t g_category_index;
 static volatile uint8_t g_set_busy;
-static lv_obj_t *g_edit_value_label = NULL;
+static lv_obj_t *g_edit_value_label = NULL;   /* 编辑页面大字值标签指针 */
+static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
+static uint8_t g_step_count;                  /* 当前参数的步进级数 */
+static uint8_t g_step_index;                  /* 当前选中的步进索引 */
 
 /*============================================================================*/
 /*                          异步上下文结构体                                   */
@@ -223,6 +226,11 @@ typedef struct {
     uint32_t new_value;         /**< 新的编辑值                      */
 } set_edit_val_context_t;
 
+/** 步进切换上下文 */
+typedef struct {
+    uint8_t new_step_index;     /**< 新的步进索引                    */
+} set_step_context_t;
+
 /*============================================================================*/
 /*                          私有函数声明                                       */
 /*============================================================================*/
@@ -236,6 +244,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx);
 static void update_category_selection(void);
 static void update_parameter_selection(void);
 static void update_edit_value_display(void);
+static uint8_t generate_step_list(uint32_t max_val);
 
 /* --- 按键处理函数 (仅限按键任务上下文调用，不含LVGL操作) --- */
 static void handle_category_key(uint8_t button_id);
@@ -250,6 +259,7 @@ static void async_exit_to_main_cb(void *context);
 static void async_select_category_cb(void *context);
 static void async_select_parameter_cb(void *context);
 static void async_update_edit_val_cb(void *context);
+static void async_update_step_cb(void *context);
 
 /* --- 屏幕切换辅助函数 --- */
 static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
@@ -798,6 +808,10 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 {
     const set_item_t *item = &categories[cat_idx].items[item_idx];
 
+    /* 根据参数最大值生成步进列表，初始使用最小步进 */
+    generate_step_list(item->max_val);
+    g_step_index = 0;
+
     lv_obj_t *screen = lv_obj_create(NULL);
     if (screen == NULL) return NULL;
     ui_container_style_init(screen);
@@ -866,12 +880,11 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     /* 可编辑的值 (大字体，通过 UP/DOWN 经异步回调更新) */
     g_edit_value_label = lv_label_create(content);
     g_set_nav.edit_value = item->get();  /* 从当前值开始编辑 */
-    char edit_buf[16];
-    snprintf(edit_buf, sizeof(edit_buf), "%lu", (unsigned long)g_set_nav.edit_value);
-    lv_label_set_text(g_edit_value_label, edit_buf);
+    lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
     lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
     lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
     lv_obj_set_style_margin_bottom(g_edit_value_label, 5, 0);
+    update_edit_value_display();  /* 初始显示带步进位高亮 */
 
     /* 单位标签 */
     lv_obj_t *unit_label = lv_label_create(content);
@@ -895,7 +908,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_set_style_pad_left(bottom_bar, 20, 0);
 
     lv_obj_t *hint_label = lv_label_create(bottom_bar);
-    lv_label_set_text(hint_label, "UP/DOWN:Adjust  OK:Save  SHIFT:Cancel");
+    lv_label_set_text(hint_label, "UP/DOWN:Adjust  OK:Save  SHIFT:Step");
     lv_obj_set_style_text_color(hint_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
     lv_obj_set_style_text_font(hint_label, &lv_font_montserrat_14, 0);
 
@@ -908,13 +921,70 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
  * 读取 g_set_nav.edit_value 并格式化到 g_edit_value_label。
  * 仅在LVGL上下文中调用 (通过 async_update_edit_val_cb)。
  */
+/**
+ * @brief  更新编辑页面的值显示 (带步进位高亮)
+ *
+ * 读取 g_set_nav.edit_value 并格式化到 g_edit_value_label。
+ * 使用 LVGL recolor 功能在步进对应的位插入高亮颜色标记。
+ *
+ * 例如: 值=5000, 步进=10 → "50#2effde 0#0" (十位高亮)
+ *       值=123, 步进=100 → "1#2effde 2#3" (百位高亮)
+ *
+ * @note  必须在 g_edit_value_label 上先调用 lv_label_set_recolor(true)
+ */
 static void update_edit_value_display(void)
 {
     if (g_edit_value_label == NULL) return;
 
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%lu", (unsigned long)g_set_nav.edit_value);
-    lv_label_set_text(g_edit_value_label, buf);
+    uint32_t value = g_set_nav.edit_value;
+    uint32_t step = g_step_list[g_step_index];
+
+    /* 将当前值转为字符串 */
+    char val_str[16];
+    snprintf(val_str, sizeof(val_str), "%lu", (unsigned long)value);
+    int len = (int)strlen(val_str);
+
+    /* 根据步进值计算需要高亮的位: step=1→第0位(个位), step=10→第1位(十位), ... */
+    int pos_from_right = 0;
+    {
+        uint32_t s = step;
+        while (s > 1) { pos_from_right++; s /= 10; }
+    }
+    int pos_from_left = len - 1 - pos_from_right;
+
+    if (pos_from_left >= 0 && pos_from_left < len) {
+        /* 在目标位前后插入 recolor 标记: #RRGGBB digit# */
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%.*s#%06x %c#%s",
+                 pos_from_left, val_str,
+                 (unsigned int)COLOR_ACCENT,
+                 val_str[pos_from_left],
+                 &val_str[pos_from_left + 1]);
+        lv_label_set_text(g_edit_value_label, buf);
+    } else {
+        /* 步进位超出当前值位数，不高亮 */
+        lv_label_set_text(g_edit_value_label, val_str);
+    }
+}
+
+/**
+ * @brief  根据参数最大值生成步进列表
+ *
+ * 生成 1, 10, 100, 1000, 10000 中不超过 max_val 的步进值。
+ * 例如: max_val=20 → [1, 10], max_val=99999 → [1,10,100,1000,10000]
+ *
+ * @param  max_val: 参数最大值
+ * @retval 生成的步进级数 (1~5)
+ */
+static uint8_t generate_step_list(uint32_t max_val)
+{
+    g_step_count = 0;
+    uint32_t step = 1;
+    while (step <= max_val && g_step_count < 5) {
+        g_step_list[g_step_count++] = step;
+        step *= 10;
+    }
+    return g_step_count;
 }
 
 /**
@@ -933,8 +1003,8 @@ static void handle_edit_key(uint8_t button_id)
 
     switch (button_id) {
     case BUTTON_ID_UP:
-        if (g_set_nav.edit_value + item->step <= item->max_val) {
-            g_set_nav.edit_value += item->step;
+        if (g_set_nav.edit_value + g_step_list[g_step_index] <= item->max_val) {
+            g_set_nav.edit_value += g_step_list[g_step_index];
         } else {
             g_set_nav.edit_value = item->max_val;
         }
@@ -948,8 +1018,8 @@ static void handle_edit_key(uint8_t button_id)
         }
         break;
     case BUTTON_ID_DOWN:
-        if (g_set_nav.edit_value >= item->min_val + item->step) {
-            g_set_nav.edit_value -= item->step;
+        if (g_set_nav.edit_value >= item->min_val + g_step_list[g_step_index]) {
+            g_set_nav.edit_value -= g_step_list[g_step_index];
         } else {
             g_set_nav.edit_value = item->min_val;
         }
@@ -978,15 +1048,13 @@ static void handle_edit_key(uint8_t button_id)
         }
         break;
     case BUTTON_ID_SHIFT:
-        /* 取消: 放弃编辑值，不保存直接返回 */
-        g_edit_value_label = NULL;
-        {
-            set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+        /* 循环切换步进值 */
+        if (g_step_count > 1) {
+            g_step_index = (g_step_index + 1) % g_step_count;
+            set_step_context_t *ctx = lv_malloc(sizeof(set_step_context_t));
             if (ctx) {
-                ctx->category_idx = g_category_index;
-                ctx->item_idx = g_set_nav.selected_index;
-                g_set_busy = 1;
-                lv_async_call(async_enter_parameter_cb, ctx);
+                ctx->new_step_index = g_step_index;
+                lv_async_call(async_update_step_cb, ctx);
             }
         }
         break;
@@ -1160,5 +1228,19 @@ static void async_update_edit_val_cb(void *context)
     set_edit_val_context_t *ctx = (set_edit_val_context_t *)context;
     g_set_nav.edit_value = ctx->new_value;
     update_edit_value_display();
+    lv_free(ctx);
+}
+
+/**
+ * @brief  异步: 更新编辑页面的步进高亮
+ *
+ * 从上下文读取新的步进索引，重新渲染值标签以更新高亮位。
+ * 调用场景: 编辑页面中按 SHIFT 切换步进。
+ */
+static void async_update_step_cb(void *context)
+{
+    set_step_context_t *ctx = (set_step_context_t *)context;
+    g_step_index = ctx->new_step_index;
+    update_edit_value_display();  /* 重新渲染带新步进高亮的值 */
     lv_free(ctx);
 }
