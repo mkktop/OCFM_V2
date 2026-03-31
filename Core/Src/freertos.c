@@ -215,7 +215,6 @@ void log_task_func(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    app_sensor_set_height(100, NULL);
     printf("test_task_func running\r\n");
     osDelay(5000);
   }

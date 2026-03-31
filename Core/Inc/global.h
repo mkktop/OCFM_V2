@@ -294,11 +294,11 @@ typedef enum
  * 0: 正常从EEPROM加载配置
  * 注意：恢复完成后应改回0
  */
-#define CONFIG_FACTORY_RESET    1
+#define CONFIG_FACTORY_RESET    0
 
 // 基本参数默认值
-#define DEFAULT_RANGE_MAX        5000       /* 最大量程 10000mm */
-#define DEFAULT_HEIGHT           5000        /* 高度 1000mm */
+#define DEFAULT_RANGE_MAX        5000       /* 最大量程 5000mm */
+#define DEFAULT_HEIGHT           5000        /* 高度 5000mm */
 #define DEFAULT_CALIBRATION_4MA  313         /* 4mA校准值 */
 #define DEFAULT_CALIBRATION_20MA 1583       /* 20mA校准值 */
 #define DEFAULT_RANGE_4MA        0           /* 4mA量程 */
