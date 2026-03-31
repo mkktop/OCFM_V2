@@ -53,6 +53,7 @@ void app_config_set_default(void)
 
     // 其他参数
     g_config.factory_settings  = DEFAULT_FACTORY_SETTINGS;
+    g_config.factory_range     = DEFAULT_FACTORY_RANGE;
     g_config.dis_offset        = DEFAULT_DIS_OFFSET;
     g_config.canals_type       = DEFAULT_CANALS_TYPE;
     g_config.channel_id        = DEFAULT_CHANNEL_ID;
@@ -507,21 +508,21 @@ const SET_TABLE SET_Table[] = {
     /* 传感器数据区 (只读) */
     {REG_WUWEI,            0, 99999, 0},      /* 物位 */
     {REG_DISTANCE,         0, 99999, 0},      /* 距离 */
-    {REG_TEMPERATURE,      0,  9999, 0},      /* 温度 */
-    {REG_INSTANT_FLOW,     0, 99999, 0},      /* 瞬时流量 */
-    {REG_SUM_FLOW,         0, 99999, 0},      /* 累计流量 */
+    {REG_TEMPERATURE,      0, 99999, 0},      /* 温度 */
+    {REG_INSTANT_FLOW,     0, 9999999, 0},      /* 瞬时流量 */
+    {REG_SUM_FLOW,         0, 9999999, 0},      /* 累计流量 */
     {REG_RELAY1_STATUS,    0,     1, 0},      /* 继电器1状态 */
     {REG_RELAY2_STATUS,    0,     1, 0},      /* 继电器2状态 */
     {REG_RELAY3_STATUS,    0,     1, 0},      /* 继电器3状态 */
     {REG_RELAY4_STATUS,    0,     1, 0},      /* 继电器4状态 */
 
     /* 报警值寄存器 (读写) */
-    {REG_AH,               1, 99999, 0},      /* 上限报警值 */
-    {REG_DH,               1, 99999, 0},      /* 上限回差 */
-    {REG_AL,               1, 99999, 0},      /* 下限报警值 */
-    {REG_DL,               1, 99999, 0},      /* 下限回差 */
-    {REG_AAH,              1, 99999, 0},      /* 上上限报警值 */
-    {REG_AAL,              1, 99999, 0},      /* 下下限报警值 */
+    {REG_AH,               1, 9999999, 0},      /* 上限报警值 */
+    {REG_DH,               1, 9999999, 0},      /* 上限回差 */
+    {REG_AL,               1, 9999999, 0},      /* 下限报警值 */
+    {REG_DL,               1, 9999999, 0},      /* 下限回差 */
+    {REG_AAH,              1, 9999999, 0},      /* 上上限报警值 */
+    {REG_AAL,              1, 9999999, 0},      /* 下下限报警值 */
 
     /* 传感器参数设置寄存器 (读写) */
     {REG_RANGE_MAX,        1, 99999, 0},      /* 最大量程 */
@@ -538,15 +539,15 @@ const SET_TABLE SET_Table[] = {
 
     /* Modbus从机参数寄存器 (读写) */
     {REG_CANALS__TYPE,     1,     2, 0},      /* 渠道类型 */
-    {REG_CHANNEL_ID,       1,   255, 0},      /* 水槽编号 */
+    {REG_CHANNEL_ID,       1,    16, 0},      /* 水槽编号 */
     {REG_INSTANT_UNIT,     1,     7, 0},      /* 瞬时流量单位 */
     {REG_SUM_POINT,        1,     3, 0},      /* 累计流量小数位数 */
     {REG_RANGE_4MA,        1, 99999, 0},      /* 4mA量程 */
     {REG_RANGE_20MA,       1, 99999, 0},      /* 20mA量程 */
 
     /* 出厂校准寄存器 */
-    {REG_FACTORY_RANGE,    0, 99999, 0},      /* 出厂量程 (只读) */
-    {REG_DEAD_ZONE,        0,  1000, 0},      /* 盲区 (只读) */
+    {REG_FACTORY_RANGE,    0, 99999, 0},      /* 出厂量程 */
+    {REG_DEAD_ZONE,        0, 99999, 0},      /* 盲区 */
     {REG_DIS_OFFSET,       1, 99999, 0},      /* 距离偏移 */
     {REG_CALIBRATION_4MA,  1, 99999, 0},      /* 4mA校准值 */
     {REG_CALIBRATION_20MA, 1, 99999, 0},      /* 20mA校准值 */
@@ -676,6 +677,12 @@ uint8_t app_config_set_by_reg(uint16_t reg_addr, uint32_t value)
             break;
 
         /* 出厂校准寄存器 */
+        case REG_FACTORY_RANGE:
+            g_config.factory_range = value;
+            break;
+        case REG_DEAD_ZONE:
+            g_config.blind_area = value;
+            break;
         case REG_DIS_OFFSET:
             g_config.dis_offset = value;
             break;
@@ -815,9 +822,10 @@ uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value)
 
         /* 出厂校准寄存器 */
         case REG_FACTORY_RANGE:
+            *value = g_config.factory_range;
+            break;
         case REG_DEAD_ZONE:
-            /* 出厂参数只读，此处返回0 */
-            *value = 0;
+            *value = g_config.blind_area;
             break;
         case REG_DIS_OFFSET:
             *value = g_config.dis_offset;

@@ -202,6 +202,7 @@ typedef struct
     uint32_t alarm_aal;         /* 下下限报警 */
     // 其他参数
     uint32_t factory_settings;  /* 恢复出厂设置 */
+    uint32_t factory_range;     /* 出厂量程 */
     uint32_t dis_offset;        /* 偏移量 */
     uint32_t canals_type;       /* 水渠类型 */
     uint32_t channel_id;        /* 通道编号 */
@@ -329,6 +330,7 @@ typedef enum
 // 其他参数默认值
 #define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */
 #define DEFAULT_DIS_OFFSET       10           /* 偏移量 */
+#define DEFAULT_FACTORY_RANGE    20000         /* 出厂量程 */
 #define DEFAULT_CANALS_TYPE      1           /* 水渠类型 (巴歇尔槽) */
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
 #define DEFAULT_INSTANT_UNIT     1           /* 瞬时流量单位 (L/s) */
