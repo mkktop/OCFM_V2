@@ -1076,7 +1076,7 @@ void ui_create(void)
     create_flow_record_tile(ui_manager->tile3);
 
     /* 第八步：预留其他屏幕的内存空间（延迟创建） */
-    ui_manager->settings_screen = init_screen();
+    ui_manager->settings_screen = NULL;  /* 设置页面由set_page动态创建 */
     ui_manager->history_screen = init_screen();
 
     /* 第九步：创建UI更新定时器（每秒刷新一次） */

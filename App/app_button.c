@@ -7,6 +7,7 @@
 #include "button_driver.h"
 #include <stdio.h>
 #include "global.h"
+#include "ui/ui_set_page.h"
 /**
  * @brief 按键事件处理入口
  * @param button_id: 按键ID
@@ -27,6 +28,7 @@ void app_button_event_handler(ButtonId_e button_id, ButtonEvent_e event)
     {
         app_history_screen_button_handler(button_id, event);
     }
+    /* settings_screen在动态创建模式下由set_page模块更新指针 */
 }
 
 /**
@@ -56,7 +58,7 @@ void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
             case BUTTON_ID_OK:    printf("[Button] OK Long\r\n"); break;
             case BUTTON_ID_UP:    printf("[Button] UP Long\r\n"); break;
             case BUTTON_ID_DOWN:  printf("[Button] DOWN Long\r\n"); break;
-            case BUTTON_ID_SHIFT: printf("[Button] SHIFT Long\r\n"); break;
+            case BUTTON_ID_SHIFT: set_page_enter(); break;
             default: break;
         }
     }
@@ -67,26 +69,11 @@ void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
  * @param button_id: 按键ID
  * @param event: 按键事件类型
  * @retval None
+ * @note  委托给set_page_button_handler()处理导航逻辑
  */
 void app_set_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
 {
-    if (event == BUTTON_EVENT_SHORT) {
-        switch (button_id) {
-            case BUTTON_ID_OK:    printf("[SetPage] OK Short\r\n"); break;
-            case BUTTON_ID_UP:    printf("[SetPage] UP Short\r\n"); break;
-            case BUTTON_ID_DOWN:  printf("[SetPage] DOWN Short\r\n"); break;
-            case BUTTON_ID_SHIFT: printf("[SetPage] SHIFT Short\r\n"); break;
-            default: break;
-        }
-    } else if (event == BUTTON_EVENT_LONG) {
-        switch (button_id) {
-            case BUTTON_ID_OK:    printf("[SetPage] OK Long\r\n"); break;
-            case BUTTON_ID_UP:    printf("[SetPage] UP Long\r\n"); break;
-            case BUTTON_ID_DOWN:  printf("[SetPage] DOWN Long\r\n"); break;
-            case BUTTON_ID_SHIFT: printf("[SetPage] SHIFT Long\r\n"); break;
-            default: break;
-        }
-    }
+    set_page_button_handler((uint8_t)button_id, (uint8_t)event);
 }
 
 /**

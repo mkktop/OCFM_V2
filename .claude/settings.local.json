@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(iconv -f UTF-8 -t GBK \"App/ui/ui_set_page.c\")",
+      "Bash(\"App/ui/ui_set_page_gbk.tmp\")",
+      "Bash(iconv -f UTF-8 -t GBK \"App/ui/ui_set_page.h\")",
+      "Bash(\"App/ui/ui_set_page.h.tmp\")"
+    ]
+  }
+}
