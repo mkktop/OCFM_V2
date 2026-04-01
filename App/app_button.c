@@ -55,10 +55,10 @@ void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
     } else if (event == BUTTON_EVENT_LONG) {
         /* 长按事件 */
         switch (button_id) {
-            case BUTTON_ID_OK:    printf("[Button] OK Long\r\n"); break;
+            case BUTTON_ID_OK:    set_page_enter(); break;
             case BUTTON_ID_UP:    printf("[Button] UP Long\r\n"); break;
             case BUTTON_ID_DOWN:  printf("[Button] DOWN Long\r\n"); break;
-            case BUTTON_ID_SHIFT: set_page_enter(); break;
+            case BUTTON_ID_SHIFT: printf("[Button] SHIFT Long\r\n"); break;
             default: break;
         }
     }
