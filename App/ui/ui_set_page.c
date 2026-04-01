@@ -944,21 +944,39 @@ static void update_edit_value_display(void)
     uint32_t value = g_set_nav.edit_value;
     uint32_t step = g_step_list[g_step_index];
 
-    /* 将当前值转为字符串 */
-    char val_str[16];
-    snprintf(val_str, sizeof(val_str), "%lu", (unsigned long)value);
-    int len = (int)strlen(val_str);
-
     /* 根据步进值计算需要高亮的位: step=1→第0位(个位), step=10→第1位(十位), ... */
     int pos_from_right = 0;
     {
         uint32_t s = step;
         while (s > 1) { pos_from_right++; s /= 10; }
     }
+
+    /* 将当前值转为字符串 */
+    char val_str[16];
+    snprintf(val_str, sizeof(val_str), "%lu", (unsigned long)value);
+    int len = (int)strlen(val_str);
+
+    /*
+     * 统一按最大步进的位数前补零，保证切换步进时显示宽度不变。
+     * 例如: max_step=10000(5位), 值=50 → 显示 "00050"
+     */
+    int max_digits = 0;
+    {
+        uint32_t s = g_step_list[g_step_count - 1];
+        while (s > 0) { max_digits++; s /= 10; }
+    }
+    int min_len = max_digits;
+    if (len < min_len) {
+        int pad = min_len - len;
+        memmove(&val_str[pad], val_str, len + 1);
+        memset(val_str, '0', pad);
+        len = min_len;
+    }
+
     int pos_from_left = len - 1 - pos_from_right;
 
+    /* 在目标位前后插入 recolor 标记: #RRGGBB digit# */
     if (pos_from_left >= 0 && pos_from_left < len) {
-        /* 在目标位前后插入 recolor 标记: #RRGGBB digit# */
         char buf[32];
         snprintf(buf, sizeof(buf), "%.*s#%06x %c#%s",
                  pos_from_left, val_str,
@@ -967,7 +985,6 @@ static void update_edit_value_display(void)
                  &val_str[pos_from_left + 1]);
         lv_label_set_text(g_edit_value_label, buf);
     } else {
-        /* 步进位超出当前值位数，不高亮 */
         lv_label_set_text(g_edit_value_label, val_str);
     }
 }
