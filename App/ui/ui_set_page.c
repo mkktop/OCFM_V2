@@ -211,6 +211,11 @@ static const set_item_t *g_edit_item = NULL;   /* 当前编辑的参数项指针
 static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
 static uint8_t g_step_count;                  /* 当前参数的步进级数 */
 static uint8_t g_step_index;                  /* 当前选中的步进索引 */
+static uint32_t g_last_key_tick;              /* 最后一次按键操作的 tick */
+static lv_timer_t *g_idle_timer = NULL;       /* 空闲超时检测定时器 */
+
+#define IDLE_TIMEOUT_MS       15000            /* 15秒无操作自动返回主页 */
+#define IDLE_CHECK_PERIOD_MS  1000             /* 每秒检查一次 */
 
 /*============================================================================*/
 /*                          异步上下文结构体                                   */
@@ -273,6 +278,8 @@ static void async_update_step_cb(void *context);
 
 /* --- 屏幕切换辅助函数 --- */
 static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
+static void idle_timeout_cb(lv_timer_t *timer);
+static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
 
 /*============================================================================*/
 /*                          公共函数实现                                       */
@@ -287,6 +294,14 @@ static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, ui
 void set_page_enter(void)
 {
     g_set_busy = 0;                                   /* 先清零，防止上次异常退出后残留导致按键永久屏蔽 */
+    g_last_key_tick = lv_tick_get();                  /* 记录进入时间 */
+
+    /* 创建空闲超时定时器 */
+    if (g_idle_timer == NULL) {
+        g_idle_timer = lv_timer_create(idle_timeout_cb, IDLE_CHECK_PERIOD_MS, NULL);
+    }
+    lv_timer_set_period(g_idle_timer, IDLE_CHECK_PERIOD_MS);
+    lv_timer_ready(g_idle_timer);
     g_set_nav.level = SET_LEVEL_CATEGORY;             /* 导航层级重置为一级菜单(分类列表) */
     g_set_nav.selected_index = 0;                     /* 选中项归零，默认高亮第一个分类 */
     g_set_nav.current_screen = NULL;                  /* 清空屏幕指针，防止指向已释放的旧屏幕 */
@@ -308,6 +323,10 @@ void set_page_enter(void)
 void set_page_exit(void)
 {
     g_set_busy = 1;
+    if (g_idle_timer) {
+        lv_timer_del(g_idle_timer);
+        g_idle_timer = NULL;
+    }
     lv_async_call(async_exit_to_main_cb, NULL);
 }
 
@@ -323,6 +342,8 @@ void set_page_exit(void)
  */
 void set_page_button_handler(uint8_t button_id, uint8_t event)
 {
+    g_last_key_tick = lv_tick_get();  /* 刷新最后操作时间 */
+
     /* 编辑页长按 SHIFT 返回上级，放行此事件 */
     if (event != BUTTON_EVENT_SHORT) {
         if (g_set_nav.level == SET_LEVEL_EDITING &&
@@ -1146,6 +1167,28 @@ static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, ui
     uint8_t auto_del = (ui_manager->active_screen != ui_manager->main_screen);
     lv_screen_load_anim(new_screen, anim, time, 0, auto_del);
     ui_manager->active_screen = new_screen;
+}
+
+/**
+ * @brief  空闲超时回调 (LVGL定时器，运行在LVGL上下文)
+ *
+ * 每秒检查一次，若距上次按键超过 15 秒则自动返回主屏幕。
+ */
+static void idle_timeout_cb(lv_timer_t *timer)
+{
+    (void)timer;
+    if (lv_tick_get() - g_last_key_tick >= IDLE_TIMEOUT_MS) {
+        if (g_idle_timer) {
+            lv_timer_del(g_idle_timer);
+            g_idle_timer = NULL;
+        }
+        g_edit_value_label = NULL;
+        g_edit_item = NULL;
+        ui_manager->settings_screen = NULL;
+        g_set_nav.level = SET_LEVEL_CATEGORY;
+        set_screen_load(ui_manager->main_screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
+        g_set_busy = 0;
+    }
 }
 
 /*============================================================================*/
