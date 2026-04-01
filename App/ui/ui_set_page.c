@@ -78,6 +78,7 @@ typedef struct {
     uint32_t min_val;           /**< 允许的最小值                    */
     uint32_t max_val;           /**< 允许的最大值                    */
     uint32_t step;              /**< 每次UP/DOWN的调节步进            */
+    const char *(*format)(uint32_t); /**< 可选: 值的文本显示 (NULL则显示数字) */
 } set_item_t;
 
 /**
@@ -161,6 +162,13 @@ static const set_item_t alarm_items[] = {
     {"Alarm LoLo",      "",     app_config_get_alarm_aal,           app_config_set_alarm_aal,          0, 9999999, 1},
 };
 
+/* ---------- format 回调函数 ---------- */
+
+static const char *format_language(uint32_t val)
+{
+    return val == 0 ? "English" : "Chinese";
+}
+
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1},
@@ -168,7 +176,7 @@ static const set_item_t system_items[] = {
     {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1},
     {"Sum Decimal",     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
     {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,         0, 99999, 10},
-    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1},
+    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  format_language},
     {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
 };
 
@@ -199,6 +207,7 @@ static set_nav_state_t g_set_nav;
 static int8_t g_category_index;
 static volatile uint8_t g_set_busy;
 static lv_obj_t *g_edit_value_label = NULL;   /* 编辑页面大字值标签指针 */
+static const set_item_t *g_edit_item = NULL;   /* 当前编辑的参数项指针 */
 static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
 static uint8_t g_step_count;                  /* 当前参数的步进级数 */
 static uint8_t g_step_index;                  /* 当前选中的步进索引 */
@@ -445,10 +454,6 @@ static lv_obj_t *create_category_screen(void)
         lv_obj_set_style_margin_right(cnt, 5, 0);
     }
 
-    /* 应用初始选中高亮 */
-    g_set_nav.selected_index = 0;
-    update_category_selection();
-
     return screen;
 }
 
@@ -665,8 +670,12 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
 
         /* 显示当前配置值 (从 app_config 内存副本读取) */
         lv_obj_t *val_label = lv_label_create(row);
-        snprintf(val_buf, sizeof(val_buf), "%lu", (unsigned long)item->get());
-        lv_label_set_text(val_label, val_buf);
+        if (item->format) {
+            lv_label_set_text(val_label, item->format(item->get()));
+        } else {
+            snprintf(val_buf, sizeof(val_buf), "%lu", (unsigned long)item->get());
+            lv_label_set_text(val_label, val_buf);
+        }
         lv_obj_set_style_text_font(val_label, &lv_font_montserrat_16, 0);
         lv_obj_set_style_text_color(val_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
 
@@ -679,10 +688,6 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
             lv_obj_set_style_margin_left(unit_label, 5, 0);
         }
     }
-
-    /* 应用初始选中高亮 */
-    g_set_nav.selected_index = 0;
-    update_parameter_selection();
 
     return screen;
 }
@@ -823,6 +828,8 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 {
     const set_item_t *item = &categories[cat_idx].items[item_idx];
 
+    g_edit_item = item;
+
     /* 根据参数最大值生成步进列表，初始使用最小步进 */
     generate_step_list(item->max_val);
     g_step_index = 0;
@@ -881,9 +888,13 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_set_style_text_font(cur_label, &lv_font_montserrat_16, 0);
 
     lv_obj_t *cur_val_label = lv_label_create(content);
-    char cur_val_buf[16];
-    snprintf(cur_val_buf, sizeof(cur_val_buf), "%lu", (unsigned long)item->get());
-    lv_label_set_text(cur_val_label, cur_val_buf);
+    if (item->format) {
+        lv_label_set_text(cur_val_label, item->format(item->get()));
+    } else {
+        char cur_val_buf[16];
+        snprintf(cur_val_buf, sizeof(cur_val_buf), "%lu", (unsigned long)item->get());
+        lv_label_set_text(cur_val_label, cur_val_buf);
+    }
     lv_obj_set_style_text_color(cur_val_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
     lv_obj_set_style_text_font(cur_val_label, &lv_font_montserrat_18, 0);
     lv_obj_set_style_margin_bottom(cur_val_label, 20, 0);
@@ -893,7 +904,12 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     g_set_nav.edit_value = item->get();  /* 从当前值开始编辑 */
     lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
     lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
-    lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
+    /* format 回调显示文本时用较小字体，纯数字用大字体 */
+    if (item->format) {
+        lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_24, 0);
+    } else {
+        lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
+    }
     lv_obj_set_style_margin_bottom(g_edit_value_label, 5, 0);
     update_edit_value_display();  /* 初始显示带步进位高亮 */
 
@@ -940,6 +956,12 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 static void update_edit_value_display(void)
 {
     if (g_edit_value_label == NULL) return;
+
+    /* 有 format 回调时直接显示文本，不做数字高亮 */
+    if (g_edit_item && g_edit_item->format) {
+        lv_label_set_text(g_edit_value_label, g_edit_item->format(g_set_nav.edit_value));
+        return;
+    }
 
     uint32_t value = g_set_nav.edit_value;
     uint32_t step = g_step_list[g_step_index];
@@ -1058,6 +1080,7 @@ static void handle_edit_key(uint8_t button_id)
         item->set(g_set_nav.edit_value);
         app_config_save();
         g_edit_value_label = NULL;  /* 防止屏幕删除后的悬空指针 */
+        g_edit_item = NULL;
         /* 返回参数列表 (重新创建屏幕以显示更新后的值) */
         {
             set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
@@ -1132,6 +1155,7 @@ static void async_enter_category_cb(void *context)
     g_set_nav.selected_index = ctx->category_idx;
     g_set_nav.current_screen = screen;
     ui_manager->settings_screen = screen;
+    update_category_selection();
 
     set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
     g_set_busy = 0;
@@ -1160,6 +1184,7 @@ static void async_enter_parameter_cb(void *context)
     g_set_nav.selected_index = ctx->item_idx;
     g_set_nav.current_screen = screen;
     ui_manager->settings_screen = screen;
+    update_parameter_selection();
 
     set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
     g_set_busy = 0;
@@ -1205,6 +1230,7 @@ static void async_exit_to_main_cb(void *context)
 {
     (void)context;
     g_edit_value_label = NULL;
+    g_edit_item = NULL;
     ui_manager->settings_screen = NULL;
     g_set_nav.level = SET_LEVEL_CATEGORY;
     set_screen_load(ui_manager->main_screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
