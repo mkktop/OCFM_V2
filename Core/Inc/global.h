@@ -113,6 +113,15 @@
 #define REG_CALIBRATION_20MA    0x1005       /* 20mA校准值寄存器 占1个寄存器 */
 #define REG_FACTORY_SETTING     0x1006       /* 恢复出厂设置寄存器 占1个寄存器 */
 
+//RTC时间设置寄存器
+#define REG_RTC_YEAR            0x0200       /* 年 (2000-2099) 占1个寄存器 */
+#define REG_RTC_MONTH           0x0201       /* 月 (1-12)       占1个寄存器 */
+#define REG_RTC_DAY             0x0202       /* 日 (1-31)       占1个寄存器 */
+#define REG_RTC_HOUR            0x0203       /* 时 (0-23)       占1个寄存器 */
+#define REG_RTC_MINUTE          0x0204       /* 分 (0-59)       占1个寄存器 */
+#define REG_RTC_SECOND          0x0205       /* 秒 (0-59)       占1个寄存器 */
+#define REG_RTC_WEEKDAY         0x0206       /* 星期 (1-7)      占1个寄存器 */
+
 
 
 /*============================================================================*/

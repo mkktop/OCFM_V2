@@ -42,6 +42,7 @@
 #include "ui.h"
 #include "ui_conf.h"
 #include "app_config.h"
+#include "rtc_time.h"
 #include "../../Drivers/Button/button_driver.h"
 #include <stdio.h>
 #include <string.h>
@@ -169,6 +170,29 @@ static const char *format_language(uint32_t val)
     return val == 0 ? "English" : "Chinese";
 }
 
+static const char *format_weekday(uint32_t val)
+{
+    return RTC_Time_GetWeekDayString((uint8_t)val);
+}
+
+/* ---------- RTC时间 getter/setter ---------- */
+
+static uint32_t rtc_get_year(void)    { RTC_TimeData t; RTC_Time_Get(&t); return t.year; }
+static uint32_t rtc_get_month(void)   { RTC_TimeData t; RTC_Time_Get(&t); return t.month; }
+static uint32_t rtc_get_day(void)     { RTC_TimeData t; RTC_Time_Get(&t); return t.date; }
+static uint32_t rtc_get_hour(void)    { RTC_TimeData t; RTC_Time_Get(&t); return t.hour; }
+static uint32_t rtc_get_minute(void)  { RTC_TimeData t; RTC_Time_Get(&t); return t.minute; }
+static uint32_t rtc_get_second(void)  { RTC_TimeData t; RTC_Time_Get(&t); return t.second; }
+static uint32_t rtc_get_weekday(void) { RTC_TimeData t; RTC_Time_Get(&t); return t.weekDay; }
+
+static void rtc_set_year(uint32_t v)    { RTC_TimeData t; RTC_Time_Get(&t); t.year = (uint16_t)v; RTC_Time_Set(&t); }
+static void rtc_set_month(uint32_t v)   { RTC_TimeData t; RTC_Time_Get(&t); t.month = (uint8_t)v; RTC_Time_Set(&t); }
+static void rtc_set_day(uint32_t v)     { RTC_TimeData t; RTC_Time_Get(&t); t.date = (uint8_t)v; RTC_Time_Set(&t); }
+static void rtc_set_hour(uint32_t v)    { RTC_TimeData t; RTC_Time_Get(&t); t.hour = (uint8_t)v; RTC_Time_Set(&t); }
+static void rtc_set_minute(uint32_t v)  { RTC_TimeData t; RTC_Time_Get(&t); t.minute = (uint8_t)v; RTC_Time_Set(&t); }
+static void rtc_set_second(uint32_t v)  { RTC_TimeData t; RTC_Time_Get(&t); t.second = (uint8_t)v; RTC_Time_Set(&t); }
+static void rtc_set_weekday(uint32_t v) { RTC_TimeData t; RTC_Time_Get(&t); t.weekDay = (uint8_t)v; RTC_Time_Set(&t); }
+
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1},
@@ -180,6 +204,17 @@ static const set_item_t system_items[] = {
     {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
 };
 
+/* ---------- 时间设置 ---------- */
+static const set_item_t time_items[] = {
+    {"Year",       "",  rtc_get_year,    rtc_set_year,    2000, 2099, 1},
+    {"Month",      "",  rtc_get_month,   rtc_set_month,   1,    12,   1},
+    {"Day",        "",  rtc_get_day,     rtc_set_day,     1,    31,   1},
+    {"Hour",       "",  rtc_get_hour,    rtc_set_hour,    0,    23,   1},
+    {"Minute",     "",  rtc_get_minute,  rtc_set_minute,  0,    59,   1},
+    {"Second",     "",  rtc_get_second,  rtc_set_second,  0,    59,   1},
+    {"Weekday",    "",  rtc_get_weekday, rtc_set_weekday, 1,    7,   1,  format_weekday},
+};
+
 /* ---------- 一级菜单分类表 ---------- */
 static const set_category_t categories[] = {
     {"Basic",       basic_items,  sizeof(basic_items) / sizeof(basic_items[0])},
@@ -187,6 +222,7 @@ static const set_category_t categories[] = {
     {"Modbus",      modbus_items, sizeof(modbus_items) / sizeof(modbus_items[0])},
     {"Alarm",       alarm_items,  sizeof(alarm_items) / sizeof(alarm_items[0])},
     {"System",      system_items, sizeof(system_items) / sizeof(system_items[0])},
+    {"Time",        time_items,   sizeof(time_items) / sizeof(time_items[0])},
 };
 
 #define CATEGORY_COUNT (sizeof(categories) / sizeof(categories[0]))

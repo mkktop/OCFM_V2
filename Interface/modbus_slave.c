@@ -71,10 +71,18 @@ static const reg_map_t reg_map[] = {
     {REG_CALIBRATION_4MA,  47},
     {REG_CALIBRATION_20MA, 48},
     {REG_FACTORY_SETTING,  49},
+    /* RTC时间设置区 (0x0200-0x0206) */
+    {REG_RTC_YEAR,         50},
+    {REG_RTC_MONTH,        51},
+    {REG_RTC_DAY,          52},
+    {REG_RTC_HOUR,         53},
+    {REG_RTC_MINUTE,       54},
+    {REG_RTC_SECOND,       55},
+    {REG_RTC_WEEKDAY,      56},
 };
 
 #define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))
-#define REG_ARRAY_SIZE  50  /* 映射后的紧凑数组大小 */
+#define REG_ARRAY_SIZE  57  /* 映射后的紧凑数组大小 */
 
 /**
  * @brief 保持寄存器紧凑数组

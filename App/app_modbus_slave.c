@@ -11,6 +11,7 @@
 #include "app_config.h"
 #include "app_flow_calc.h"
 #include "app_sensor.h"
+#include "rtc_time.h"
 #include "global.h"
 #include <string.h>
 
@@ -81,6 +82,31 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
         if (value == 1)
         {
             app_config_factory_reset();
+        }
+        return;
+    }
+
+    /* RTC时间设置寄存器 (0x0200-0x0206): 任意一个写入后立即更新RTC */
+    if (start_addr >= REG_RTC_YEAR && start_addr <= REG_RTC_WEEKDAY)
+    {
+        uint16_t year    = modbus_slave_get_holding_register(REG_RTC_YEAR);
+        uint16_t month   = modbus_slave_get_holding_register(REG_RTC_MONTH);
+        uint16_t day     = modbus_slave_get_holding_register(REG_RTC_DAY);
+        uint16_t hour    = modbus_slave_get_holding_register(REG_RTC_HOUR);
+        uint16_t minute  = modbus_slave_get_holding_register(REG_RTC_MINUTE);
+        uint16_t second  = modbus_slave_get_holding_register(REG_RTC_SECOND);
+        uint16_t weekday = modbus_slave_get_holding_register(REG_RTC_WEEKDAY);
+
+        /* 校验范围 */
+        if (year >= 2000 && year <= 2099 &&
+            month >= 1 && month <= 12 &&
+            day >= 1 && day <= 31 &&
+            hour <= 23 && minute <= 59 && second <= 59 &&
+            weekday >= 1 && weekday <= 7)
+        {
+            RTC_Time_SetValues(year, (uint8_t)month, (uint8_t)day,
+                               (uint8_t)hour, (uint8_t)minute, (uint8_t)second,
+                               (uint8_t)weekday);
         }
         return;
     }
@@ -242,6 +268,19 @@ void app_modbus_slave_update(void)
         modbus_slave_set_holding_register(REG_CALIBRATION_4MA, (uint16_t)val);
     if (app_config_get_by_reg(REG_CALIBRATION_20MA, &val) == 0)
         modbus_slave_set_holding_register(REG_CALIBRATION_20MA, (uint16_t)val);
+
+    /* RTC时间寄存器 - 0x0200-0x0206 */
+    {
+        RTC_TimeData time;
+        RTC_Time_Get(&time);
+        modbus_slave_set_holding_register(REG_RTC_YEAR,   time.year);
+        modbus_slave_set_holding_register(REG_RTC_MONTH,  time.month);
+        modbus_slave_set_holding_register(REG_RTC_DAY,    time.date);
+        modbus_slave_set_holding_register(REG_RTC_HOUR,   time.hour);
+        modbus_slave_set_holding_register(REG_RTC_MINUTE, time.minute);
+        modbus_slave_set_holding_register(REG_RTC_SECOND, time.second);
+        modbus_slave_set_holding_register(REG_RTC_WEEKDAY,time.weekDay);
+    }
 }
 
 /*============================================================================*/
