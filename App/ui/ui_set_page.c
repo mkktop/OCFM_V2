@@ -55,6 +55,7 @@
 #define COLOR_TEXT_SEL      0xFFFFFF    /* 选中项文字 (白色)            */
 #define COLOR_TEXT_NORMAL   0xBDC3C7    /* 普通项文字 (浅灰)            */
 #define COLOR_ACCENT        0x2effde    /* 强调色 (青绿色)              */
+#define COLOR_STEP_HL       0xff3333    /* 步进位高亮 (红色)            */
 #define COLOR_BOTTOM_BG     0x253035    /* 底栏背景                    */
 
 #define ANIM_TIME           200         /* 屏幕切换动画时长 (ms)       */
@@ -957,7 +958,7 @@ static void update_edit_value_display(void)
         char buf[32];
         snprintf(buf, sizeof(buf), "%.*s#%06x %c#%s",
                  pos_from_left, val_str,
-                 (unsigned int)COLOR_ACCENT,
+                 (unsigned int)COLOR_STEP_HL,
                  val_str[pos_from_left],
                  &val_str[pos_from_left + 1]);
         lv_label_set_text(g_edit_value_label, buf);
