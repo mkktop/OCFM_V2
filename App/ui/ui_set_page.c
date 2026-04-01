@@ -259,7 +259,7 @@ static uint8_t generate_step_list(uint32_t max_val);
 /* --- 按键处理函数 (仅限按键任务上下文调用，不含LVGL操作) --- */
 static void handle_category_key(uint8_t button_id);
 static void handle_parameter_key(uint8_t button_id);
-static void handle_edit_key(uint8_t button_id);
+static void handle_edit_key(uint8_t button_id, uint8_t event);
 
 /* --- 异步回调函数 (在LVGL上下文中执行) --- */
 static void async_enter_category_cb(void *context);
@@ -323,7 +323,14 @@ void set_page_exit(void)
  */
 void set_page_button_handler(uint8_t button_id, uint8_t event)
 {
-    if (event != BUTTON_EVENT_SHORT) return;
+    /* 编辑页长按 SHIFT 返回上级，放行此事件 */
+    if (event != BUTTON_EVENT_SHORT) {
+        if (g_set_nav.level == SET_LEVEL_EDITING &&
+            button_id == BUTTON_ID_SHIFT && event == BUTTON_EVENT_LONG && !g_set_busy) {
+            handle_edit_key(button_id, event);
+        }
+        return;
+    }
     if (g_set_busy) return;   /* 过渡动画期间屏蔽按键 */
 
     switch (g_set_nav.level) {
@@ -334,7 +341,7 @@ void set_page_button_handler(uint8_t button_id, uint8_t event)
         handle_parameter_key(button_id);
         break;
     case SET_LEVEL_EDITING:
-        handle_edit_key(button_id);
+        handle_edit_key(button_id, event);
         break;
     default:
         break;
@@ -935,7 +942,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_set_style_pad_left(bottom_bar, 20, 0);
 
     lv_obj_t *hint_label = lv_label_create(bottom_bar);
-    lv_label_set_text(hint_label, "UP/DOWN:Adjust  OK:Save  SHIFT:Step");
+    lv_label_set_text(hint_label, "UP/DOWN:Adjust  OK:Save  LSHIFT:Back");
     lv_obj_set_style_text_color(hint_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
     lv_obj_set_style_text_font(hint_label, &lv_font_montserrat_14, 0);
 
@@ -1041,7 +1048,7 @@ static uint8_t generate_step_list(uint32_t max_val)
  *
  * OK 和 SHIFT 都导航回参数列表 (重新创建屏幕以刷新显示的值)。
  */
-static void handle_edit_key(uint8_t button_id)
+static void handle_edit_key(uint8_t button_id, uint8_t event)
 {
     const set_item_t *item = &categories[g_category_index].items[g_set_nav.selected_index];
 
@@ -1093,13 +1100,28 @@ static void handle_edit_key(uint8_t button_id)
         }
         break;
     case BUTTON_ID_SHIFT:
-        /* 循环切换步进值 */
-        if (g_step_count > 1) {
-            g_step_index = (g_step_index + 1) % g_step_count;
-            set_step_context_t *ctx = lv_malloc(sizeof(set_step_context_t));
-            if (ctx) {
-                ctx->new_step_index = g_step_index;
-                lv_async_call(async_update_step_cb, ctx);
+        if (event == BUTTON_EVENT_LONG) {
+            /* 长按: 放弃编辑，返回参数列表 */
+            g_edit_value_label = NULL;
+            g_edit_item = NULL;
+            {
+                set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+                if (ctx) {
+                    ctx->category_idx = g_category_index;
+                    ctx->item_idx = g_set_nav.selected_index;
+                    g_set_busy = 1;
+                    lv_async_call(async_enter_parameter_cb, ctx);
+                }
+            }
+        } else {
+            /* 短按: 循环切换步进值 */
+            if (g_step_count > 1) {
+                g_step_index = (g_step_index + 1) % g_step_count;
+                set_step_context_t *ctx = lv_malloc(sizeof(set_step_context_t));
+                if (ctx) {
+                    ctx->new_step_index = g_step_index;
+                    lv_async_call(async_update_step_cb, ctx);
+                }
             }
         }
         break;
