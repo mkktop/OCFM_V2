@@ -382,11 +382,18 @@ static lv_obj_t *create_category_screen(void)
     lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_ACCENT), 0);
     lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
 
+    lv_obj_t *spacer = lv_obj_create(top_bar);
+    ui_container_style_init(spacer);
+    lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_flex_grow(spacer, 1);
+    lv_obj_set_height(spacer, 1);
+
     lv_obj_t *back_label = lv_label_create(top_bar);
     lv_label_set_text(back_label, "SHIFT:Back");
     lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
     lv_obj_set_style_text_font(back_label, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_pad_left(back_label, 100, 0);
+    lv_obj_set_style_pad_right(back_label, 10, 0);
 
     /* --- 可滚动列表容器 --- */
     lv_obj_t *list = lv_obj_create(screen);
@@ -599,11 +606,18 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
     lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_ACCENT), 0);
     lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
 
+    lv_obj_t *spacer = lv_obj_create(top_bar);
+    ui_container_style_init(spacer);
+    lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_flex_grow(spacer, 1);
+    lv_obj_set_height(spacer, 1);
+
     lv_obj_t *back_label = lv_label_create(top_bar);
     lv_label_set_text(back_label, "SHIFT:Back");
     lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
     lv_obj_set_style_text_font(back_label, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_pad_left(back_label, 80, 0);
+    lv_obj_set_style_pad_right(back_label, 10, 0);
 
     /* --- 可滚动列表容器 --- */
     lv_obj_t *list = lv_obj_create(screen);
@@ -837,11 +851,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_ACCENT), 0);
     lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
 
-    lv_obj_t *back_label = lv_label_create(top_bar);
-    lv_label_set_text(back_label, "SHIFT:Back");
-    lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(back_label, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_pad_left(back_label, 80, 0);
+    /* 编辑页 SHIFT 用于切换步进，不显示 "SHIFT:Back"，底栏已有操作提示 */
 
     /* --- 居中内容区 (范围 + 数值) --- */
     lv_obj_t *content = lv_obj_create(screen);
@@ -916,12 +926,6 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     return screen;
 }
 
-/**
- * @brief  更新编辑页面的值显示
- *
- * 读取 g_set_nav.edit_value 并格式化到 g_edit_value_label。
- * 仅在LVGL上下文中调用 (通过 async_update_edit_val_cb)。
- */
 /**
  * @brief  更新编辑页面的值显示 (带步进位高亮)
  *
