@@ -2,7 +2,7 @@
  * @file button_driver.c
  * @brief 按键驱动源文件
  * @note 支持4个按键：确认、上、下、位移
- *       支持短按(<2秒)和长按(>=2秒)检测，松手时触发
+ *       支持短按(<2秒)和长按(>=2秒)检测，长按到达阈值立即触发
  */
 
 #include "button_driver.h"
@@ -115,10 +115,14 @@ void button_driver_scan(uint32_t interval_ms)
                     /* 持续按下，累加时间 */
                     g_buttons[i].press_time += interval_ms;
 
-                    /* 检查是否达到长按阈值 */
+                    /* 检查是否达到长按阈值，到达立即触发 */
                     if (g_buttons[i].press_time >= LONG_PRESS_THRESHOLD_MS) {
                         g_buttons[i].long_triggered = true;
                         g_buttons[i].state = BUTTON_STATE_LONG_PRESSED;
+
+                        if (g_button_callback != NULL) {
+                            g_button_callback(i, BUTTON_EVENT_LONG);
+                        }
                     }
                 } else {
                     /* 松手，判断短按 */
