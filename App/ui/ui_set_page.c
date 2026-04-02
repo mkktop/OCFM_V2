@@ -42,6 +42,7 @@
 #include "ui.h"
 #include "ui_conf.h"
 #include "app_config.h"
+#include "app_flow_calc.h"
 #include "rtc_time.h"
 #include "../../Drivers/Button/button_driver.h"
 #include <stdio.h>
@@ -193,6 +194,12 @@ static void rtc_set_minute(uint32_t v)  { RTC_TimeData t; RTC_Time_Get(&t); t.mi
 static void rtc_set_second(uint32_t v)  { RTC_TimeData t; RTC_Time_Get(&t); t.second = (uint8_t)v; RTC_Time_Set(&t); }
 static void rtc_set_weekday(uint32_t v) { RTC_TimeData t; RTC_Time_Get(&t); t.weekDay = (uint8_t)v; RTC_Time_Set(&t); }
 
+/* ---------- 清除累计流量 ---------- */
+
+static uint32_t clear_total_flow_get(void) { return 0; }
+static void clear_total_flow_set(uint32_t v) { if (v == 1) flow_calc_reset_total(); }
+static const char *format_yes_no(uint32_t val) { return val == 1 ? "Yes" : "No"; }
+
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1},
@@ -201,6 +208,7 @@ static const set_item_t system_items[] = {
     {"Sum Decimal",     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
     {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,         0, 99999, 10},
     {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  format_language},
+    {"Clear Total",    "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  format_yes_no},
     {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
 };
 

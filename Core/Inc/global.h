@@ -112,6 +112,7 @@
 #define REG_CALIBRATION_4MA     0x1004       /* 4mA校准值寄存器 占1个寄存器 */
 #define REG_CALIBRATION_20MA    0x1005       /* 20mA校准值寄存器 占1个寄存器 */
 #define REG_FACTORY_SETTING     0x1006       /* 恢复出厂设置寄存器 占1个寄存器 */
+#define REG_CLEAR_TOTAL         0x1007       /* 清除累计(流量+时间)寄存器 占1个寄存器 (写1触发) */
 
 //RTC时间设置寄存器
 #define REG_RTC_YEAR            0x0200       /* 年 (2000-2099) 占1个寄存器 */

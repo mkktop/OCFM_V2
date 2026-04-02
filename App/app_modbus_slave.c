@@ -86,6 +86,17 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
         return;
     }
 
+    /* 清除累计(流量+时间) (地址0x1007) */
+    if (start_addr == REG_CLEAR_TOTAL)
+    {
+        uint16_t value = modbus_slave_get_holding_register(REG_CLEAR_TOTAL);
+        if (value == 1)
+        {
+            flow_calc_reset_total();
+        }
+        return;
+    }
+
     /* RTC时间设置寄存器 (0x0200-0x0206): 任意一个写入后立即更新RTC */
     if (start_addr >= REG_RTC_YEAR && start_addr <= REG_RTC_WEEKDAY)
     {
