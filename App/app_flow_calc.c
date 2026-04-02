@@ -456,15 +456,15 @@ void flow_calc_update(void)
     SensorData_t *sensor;
     float water_level_m;
 
-    /* 累计时长加1秒 */
-    s_total_time_sec++;
-
     /* 获取传感器数据 */
     sensor = app_sensor_get_data();
     if (sensor == NULL || !sensor->is_online) {
         s_instant_flow = 0.0f;
         return;
     }
+
+    /* 传感器在线时，累计时长加1秒 */
+    s_total_time_sec++;
 
     water_level_m = sensor->water_level_m;
 
