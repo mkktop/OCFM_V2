@@ -722,161 +722,143 @@ static void create_trend_chart_tile(lv_obj_t *tile)
 
 /**
  * @brief  创建累计流量记录瓦片（历史记录页面）
- * @details 构建历史流量记录展示页面，显示当前时间、累计运行时长和累计总流量
- *          该页面采用绝对定位布局，元素垂直居中分布
- * 
+ * @details 构建历史流量记录展示页面，显示当前日期时间、累计运行时长和累计总流量
+ *          采用卡片式布局，所有元素严格在 320x240 屏幕内，无需滚动
+ *
  * @param tile  瓦片对象指针，即记录页的根容器
- * 
- * @par 页面布局结构（垂直居中排列）
- *        ┌────────────────────────────────┐
- *        │                                │
- *        │      2026/03/02 12:30:45      │  ← 顶部：当前时间（24px）
- *        │           (青绿色)              │
- *        │                                │
- *        │         total time             │  ← 中部上：标签（14px灰色）
- *        │       125 day 08:30:15        │  ← 中部下：累计时长（20px蓝色）
- *        │         (蓝色)                  │
- *        │                                │
- *        │          sum flow              │  ← 中部下：标签（14px灰色）
- *        │         1250.8 m³/h           │  ← 底部：累计流量（24px绿色）
- *        │          (绿色)                 │
- *        │                                │
- *        └────────────────────────────────┘
- * 
- * @par 数据绑定
- *        - time_str         →  顶部时间Label（每秒更新）
- *        - total_time_str   →  中部累计时长Label（每秒更新）
- *        - total_flow_str   →  底部累计流量Label（每秒更新）
- * 
- * @par 样式配置
- *        - 当前时间:  Montserrat 24px, 青绿色(#2effde)
- *        - 标签文字:  Montserrat 14px, 灰色(#BDC3C7)
- *        - 累计时长:  Montserrat 20px, 蓝色(#3498DB)
- *        - 累计流量:  Montserrat 24px, 绿色(#2ECC71)
- * 
- * @note  该页面主要用于展示累计统计数据
- *        布局使用绝对定位，元素间保持固定间距
- * 
+ *
+ * @par 页面布局 (320x240)
+ *        ┌────────────────────────────────┐ y=0
+ *        │      2026/03/02 12:30:45      │ 0~30  顶部时间
+ *        ├────────────────────────────────┤ y=38
+ *        │  ■ RUN TIME                   │ 38~122  卡片1
+ *        │    125 day 08:30:15           │        (84px)
+ *        ├────────────────────────────────┤ y=126
+ *        │  ■ SUM FLOW                   │ 126~210 卡片2
+ *        │    1250.8 m3                  │        (84px)
+ *        └────────────────────────────────┘ y=210
+ *
  * @see lv_label_create()
  * @see lv_subject_add_observer_obj()
- * @see LV_ALIGN_TOP_MID
- * @see LV_ALIGN_CENTER
  */
 static void create_flow_record_tile(lv_obj_t *tile)
 {
     /*--------------------------------------------------------------------*/
-    /* 第一部分：瓦片基础配置                                              */
+    /* 瓦片基础配置 - 禁用滚动，禁用布局，纯绝对定位                        */
     /*--------------------------------------------------------------------*/
-    
-    /* 设置瓦片背景颜色 */
+
     lv_obj_set_style_bg_color(tile, lv_color_hex(0x1E272E), 0);
-    
-    /* 设置背景完全不透明 */
     lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
+    ui_container_style_init(tile);
 
     /*--------------------------------------------------------------------*/
-    /* 第二部分：顶部区域 - 显示当前日期时间                                */
+    /* 顶部：日期时间 (y=0, h=30)                                         */
     /*--------------------------------------------------------------------*/
-    
-    /* 创建时间标签 */
+
     lv_obj_t *time_label = lv_label_create(tile);
     lv_label_set_text(time_label, "2026/03/02 12:30:45");
-    
-    /* 设置文字颜色为青绿色 */
     lv_obj_set_style_text_color(time_label, lv_color_hex(0x2effde), 0);
-    
-    /* 设置字体大小为24px */
-    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
-    
-    /* 设置文字水平居中对齐 */
+    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_18, 0);
     lv_obj_set_style_text_align(time_label, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 定位到顶部中间位置 */
-    lv_obj_align(time_label, LV_ALIGN_TOP_MID, 0, 10);
-    
-    /* 绑定时间Subject，实现每秒自动更新 */
-    lv_subject_add_observer_obj(&ui_manager->subjects.time_str, 
-                                string_label_observer_cb, 
-                                time_label, 
+    lv_obj_align(time_label, LV_ALIGN_TOP_MID, 0, 5);
+
+    lv_subject_add_observer_obj(&ui_manager->subjects.time_str,
+                                string_label_observer_cb,
+                                time_label,
                                 NULL);
 
     /*--------------------------------------------------------------------*/
-    /* 第三部分：中部区域 - 显示累计运行时长                                */
+    /* 卡片1：累计运行时长 (y=38, h=84)                                   */
     /*--------------------------------------------------------------------*/
-    
-    /* 创建累计时长标签（单位说明） */
-    lv_obj_t *record_time_label = lv_label_create(tile);
-    lv_label_set_text(record_time_label, "total time");
-    
-    /* 设置文字颜色为灰色 */
-    lv_obj_set_style_text_color(record_time_label, lv_color_hex(0xBDC3C7), 0);
-    
-    /* 设置字体大小为14px */
-    lv_obj_set_style_text_font(record_time_label, &lv_font_montserrat_14, 0);
-    
-    /* 设置文字水平居中对齐 */
-    lv_obj_set_style_text_align(record_time_label, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 定位到垂直居中位置，向上偏移30px */
-    lv_obj_align(record_time_label, LV_ALIGN_CENTER, 0, -30);
 
-    /* 创建累计时长数值标签 */
-    lv_obj_t *record_time_value = lv_label_create(tile);
-    lv_label_set_text(record_time_value, "125 day 08:30:15");
-    
-    /* 设置文字颜色为蓝色 */
+    lv_obj_t *card1 = lv_obj_create(tile);
+    lv_obj_set_size(card1, 296, 84);
+    lv_obj_align(card1, LV_ALIGN_TOP_LEFT, 12, 38);
+    ui_container_style_init(card1);
+    lv_obj_set_style_bg_color(card1, lv_color_hex(0x363636), 0);
+    lv_obj_set_style_bg_opa(card1, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(card1, 0, 0);
+    lv_obj_set_style_radius(card1, 8, 0);
+    lv_obj_set_style_pad_all(card1, 10, 0);
+    lv_obj_set_style_pad_left(card1, 18, 0);
+    lv_obj_clear_flag(card1, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* 标签 */
+    lv_obj_t *record_time_label = lv_label_create(card1);
+    lv_label_set_text(record_time_label, "RUN TIME");
+    lv_obj_set_style_text_color(record_time_label, lv_color_hex(0x95A5A6), 0);
+    lv_obj_set_style_text_font(record_time_label, &lv_font_montserrat_12, 0);
+    lv_obj_align(record_time_label, LV_ALIGN_TOP_LEFT, 14, 10);
+
+    /* 左侧蓝色指示条 */
+    lv_obj_t *bar1 = lv_obj_create(card1);
+    lv_obj_set_size(bar1, 4, 60);
+    lv_obj_align(bar1, LV_ALIGN_LEFT_MID, 0, 0);
+    ui_container_style_init(bar1);
+    lv_obj_set_style_bg_color(bar1, lv_color_hex(0x3498DB), 0);
+    lv_obj_set_style_bg_opa(bar1, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(bar1, 0, 0);
+    lv_obj_set_style_radius(bar1, 2, 0);
+    lv_obj_clear_flag(bar1, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* 数值 */
+    lv_obj_t *record_time_value = lv_label_create(card1);
+    lv_label_set_text(record_time_value, "0 day 00:00:00");
     lv_obj_set_style_text_color(record_time_value, lv_color_hex(0x3498DB), 0);
-    
-    /* 设置字体大小为20px */
-    lv_obj_set_style_text_font(record_time_value, &lv_font_montserrat_20, 0);
-    
-    /* 设置文字水平居中对齐 */
-    lv_obj_set_style_text_align(record_time_value, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 定位到垂直居中位置 */
-    lv_obj_align(record_time_value, LV_ALIGN_CENTER, 0, 0);
-    
-    /* 绑定累计时长Subject，实现每秒自动更新 */
-    lv_subject_add_observer_obj(&ui_manager->subjects.total_time_str, 
-                                string_label_observer_cb, 
-                                record_time_value, 
+    lv_obj_set_style_text_font(record_time_value, &lv_font_montserrat_24, 0);
+    lv_obj_align(record_time_value, LV_ALIGN_TOP_LEFT, 14, 42);
+
+    lv_subject_add_observer_obj(&ui_manager->subjects.total_time_str,
+                                string_label_observer_cb,
+                                record_time_value,
                                 NULL);
 
     /*--------------------------------------------------------------------*/
-    /* 第四部分：底部区域 - 显示累计总流量                                  */
+    /* 卡片2：累计总流量 (y=126, h=84)                                    */
     /*--------------------------------------------------------------------*/
-    
-    /* 创建累计流量标签（单位说明） */
-    lv_obj_t *total_flow_label = lv_label_create(tile);
-    lv_label_set_text(total_flow_label, "sum flow");
-    
-    /* 设置文字颜色为灰色 */
-    lv_obj_set_style_text_color(total_flow_label, lv_color_hex(0xBDC3C7), 0);
-    
-    /* 设置字体大小为14px */
-    lv_obj_set_style_text_font(total_flow_label, &lv_font_montserrat_14, 0);
-    
-    /* 设置文字水平居中对齐 */
-    lv_obj_set_style_text_align(total_flow_label, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 定位到垂直居中位置，向下偏移40px */
-    lv_obj_align(total_flow_label, LV_ALIGN_CENTER, 0, 40);
 
-    /* 创建累计流量数值标签 */
-    lv_obj_t *total_flow_value = lv_label_create(tile);
-    lv_label_set_text(total_flow_value, "1250.8 m3/h");
-    
-    /* 设置文字颜色为绿色 */
+    lv_obj_t *card2 = lv_obj_create(tile);
+    lv_obj_set_size(card2, 296, 84);
+    lv_obj_align(card2, LV_ALIGN_TOP_LEFT, 12, 126);
+    ui_container_style_init(card2);
+    lv_obj_set_style_bg_color(card2, lv_color_hex(0x363636), 0);
+    lv_obj_set_style_bg_opa(card2, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(card2, 0, 0);
+    lv_obj_set_style_radius(card2, 8, 0);
+    lv_obj_set_style_pad_all(card2, 10, 0);
+    lv_obj_set_style_pad_left(card2, 18, 0);
+    lv_obj_clear_flag(card2, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* 标签 */
+    lv_obj_t *total_flow_label = lv_label_create(card2);
+    lv_label_set_text(total_flow_label, "SUM FLOW");
+    lv_obj_set_style_text_color(total_flow_label, lv_color_hex(0x95A5A6), 0);
+    lv_obj_set_style_text_font(total_flow_label, &lv_font_montserrat_12, 0);
+    lv_obj_align(total_flow_label, LV_ALIGN_TOP_LEFT, 14, 10);
+
+    /* 左侧绿色指示条 */
+    lv_obj_t *bar2 = lv_obj_create(card2);
+    lv_obj_set_size(bar2, 4, 60);
+    lv_obj_align(bar2, LV_ALIGN_LEFT_MID, 0, 0);
+    ui_container_style_init(bar2);
+    lv_obj_set_style_bg_color(bar2, lv_color_hex(0x2ECC71), 0);
+    lv_obj_set_style_bg_opa(bar2, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(bar2, 0, 0);
+    lv_obj_set_style_radius(bar2, 2, 0);
+    lv_obj_clear_flag(bar2, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* 数值 */
+    lv_obj_t *total_flow_value = lv_label_create(card2);
+    lv_label_set_text(total_flow_value, "0.000 m3");
     lv_obj_set_style_text_color(total_flow_value, lv_color_hex(0x2ECC71), 0);
-    
-    /* 设置字体大小为24px */
     lv_obj_set_style_text_font(total_flow_value, &lv_font_montserrat_24, 0);
-    
-    /* 设置文字水平居中对齐 */
-    lv_obj_set_style_text_align(total_flow_value, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 定位到垂直居中位置，向下偏移70px */
-    lv_obj_align(total_flow_value, LV_ALIGN_CENTER, 0, 70);
+    lv_obj_align(total_flow_value, LV_ALIGN_TOP_LEFT, 14, 42);
+
+    lv_subject_add_observer_obj(&ui_manager->subjects.total_flow_str,
+                                string_label_observer_cb,
+                                total_flow_value,
+                                NULL);
 }
 
 /*============================================================================*/
