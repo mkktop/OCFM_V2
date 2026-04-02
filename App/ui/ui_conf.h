@@ -41,6 +41,8 @@ typedef struct{
         // 流量相关
         lv_subject_t instant_flow_str;
         char instant_flow_buf[16], instant_flow_prev_buf[16];
+        lv_subject_t current_ma_str;
+        char current_ma_buf[16], current_ma_prev_buf[16];
         lv_subject_t total_flow_str;
         char total_flow_buf[24], total_flow_prev_buf[24];
 

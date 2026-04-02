@@ -4927,6 +4927,16 @@
               <FileType>5</FileType>
               <FilePath>..\App\app_modbus_slave.h</FilePath>
             </File>
+            <File>
+              <FileName>app_current.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_current.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_current.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\App\app_current.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

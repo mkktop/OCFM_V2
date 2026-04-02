@@ -6,6 +6,7 @@
 
 #include "app_model.h"
 #include "app_flow_calc.h"
+#include "app_current.h"
 #include "app_sensor.h"
 #include "global.h"
 #include "rtc_time.h"
@@ -87,6 +88,11 @@ void app_model_update(void)
              "%.2f", g_app_model.instant_flow);
     snprintf(g_app_model.total_flow_str, sizeof(g_app_model.total_flow_str),
              "%.2f", g_app_model.total_flow);
+
+    /* 计算4-20mA输出电流 (instant_flow单位L/s，校准值单位m³/h，需×3.6转换) */
+    app_current_format_ma(g_app_model.instant_flow * 3.6f,
+                          g_app_model.current_ma_str,
+                          sizeof(g_app_model.current_ma_str));
 
     /* 同步传感器状态 */
     sensor = app_sensor_get_data();

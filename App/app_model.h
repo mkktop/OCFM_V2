@@ -26,6 +26,7 @@ typedef struct {
     char total_time_str[32];    ///< 累计时长字符串，格式：N day HH:MM:SS
     char water_level_str[16];   ///< 水位字符串，格式：L:x.xxxm
     char instant_flow_str[16];  ///< 瞬时流量字符串
+    char current_ma_str[16];    ///< 4-20mA输出电流字符串，格式：xx.xxmA
     char total_flow_str[24];    ///< 累计流量字符串
     double total_flow;          ///< 累计流量 (m³)
     float instant_flow;         ///< 瞬时流量 (L/s)

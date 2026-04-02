@@ -92,6 +92,7 @@ static void ui_update_timer_cb(lv_timer_t *timer)
 
     /* 第四步：将流量数据同步到Subject */
     lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, g_app_model.instant_flow_str);
+    lv_subject_copy_string(&ui_manager->subjects.current_ma_str, g_app_model.current_ma_str);
     lv_subject_copy_string(&ui_manager->subjects.total_flow_str, g_app_model.total_flow_str);
 
     /* 第五步：更新趋势图数据 */
@@ -557,11 +558,16 @@ static void create_details_tile(lv_obj_t *tile)
     lv_obj_set_flex_align(bottom_child1, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t *bottom_child1_label = lv_label_create(bottom_child1);
-    lv_label_set_text(bottom_child1_label, "16.2ma");
+    lv_label_set_text(bottom_child1_label, "4.00mA");
     lv_obj_set_style_text_font(bottom_child1_label, &lv_font_montserrat_26, 0);
     lv_obj_set_style_text_color(bottom_child1_label, lv_color_hex(0x2effde), 0);
     lv_obj_set_style_text_align(bottom_child1_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_bg_color(bottom_child1_label, lv_color_hex(0x8B8B7A), 0);
+
+    lv_subject_add_observer_obj(&ui_manager->subjects.current_ma_str,
+                                string_label_observer_cb,
+                                bottom_child1_label,
+                                NULL);
 
     lv_obj_t *bottom_child2 = lv_obj_create(bottom_obj);
     lv_obj_set_size(bottom_child2, LV_PCT(50), LV_PCT(100));
@@ -1038,6 +1044,12 @@ static void ui_init_subjects(void)
                            ui_manager->subjects.instant_flow_buf,
                            ui_manager->subjects.instant_flow_prev_buf,
                            sizeof(ui_manager->subjects.instant_flow_buf), "");
+
+    /* 初始化4-20mA电流Subject */
+    lv_subject_init_string(&ui_manager->subjects.current_ma_str,
+                           ui_manager->subjects.current_ma_buf,
+                           ui_manager->subjects.current_ma_prev_buf,
+                           sizeof(ui_manager->subjects.current_ma_buf), "4.00mA");
 }
 
 /**
