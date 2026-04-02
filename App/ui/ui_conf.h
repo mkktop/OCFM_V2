@@ -19,6 +19,15 @@ typedef struct{
     // 当前激活的屏幕
     lv_obj_t *active_screen;//当前激活的屏幕指针
     
+    // 趋势图相关
+    lv_obj_t *trend_chart;               ///< 趋势图控件
+    lv_chart_series_t *trend_series_5s;  ///< 5秒采样序列 (60点=5分钟历史)
+    lv_chart_series_t *trend_series_60s; ///< 1分钟采样序列 (60点=60分钟历史)
+    lv_obj_t *trend_max_label;           ///< 底部最大值标签
+    uint32_t trend_tick_counter;         ///< 秒计数器
+    int32_t trend_y_max;                 ///< 当前Y轴最大值
+    float trend_max_flow;                ///< 历史最大瞬时流量 (m³/h)
+
     // Subjects 层 - LVGL Observer 主题
     struct {
         // 时间相关

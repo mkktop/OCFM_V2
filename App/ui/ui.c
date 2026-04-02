@@ -86,13 +86,66 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     lv_subject_copy_string(&ui_manager->subjects.time_str, g_app_model.time_str);
     lv_subject_copy_string(&ui_manager->subjects.time_short_str, g_app_model.time_short_str);
     lv_subject_copy_string(&ui_manager->subjects.total_time_str, g_app_model.total_time_str);
-    
+
     /* 第三步：将水位数据同步到Subject */
     lv_subject_copy_string(&ui_manager->subjects.water_level_str, g_app_model.water_level_str);
-    
+
     /* 第四步：将流量数据同步到Subject */
     lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, g_app_model.instant_flow_str);
     lv_subject_copy_string(&ui_manager->subjects.total_flow_str, g_app_model.total_flow_str);
+
+    /* 第五步：更新趋势图数据 */
+    if (ui_manager->trend_chart != NULL) {
+        /* 将瞬时流量从 L/s 转换为 m³/h，精度×100存入图表 */
+        float flow_m3h = g_app_model.instant_flow * 3.6f;
+        int32_t flow_val = (int32_t)(flow_m3h * 100);
+        ui_manager->trend_tick_counter++;
+        bool pushed = false;
+
+        /* 更新历史最大值 */
+        if (flow_m3h > ui_manager->trend_max_flow) {
+            ui_manager->trend_max_flow = flow_m3h;
+            lv_label_set_text_fmt(ui_manager->trend_max_label,
+                                  "MAX: %.2f m³/h", ui_manager->trend_max_flow);
+        }
+
+        /* 每5秒推入5秒采样序列 */
+        if (ui_manager->trend_tick_counter % 5 == 0) {
+            lv_chart_set_next_value(ui_manager->trend_chart,
+                                    ui_manager->trend_series_5s, flow_val);
+            pushed = true;
+        }
+
+        /* 每60秒推入1分钟采样序列 */
+        if (ui_manager->trend_tick_counter % 60 == 0) {
+            lv_chart_set_next_value(ui_manager->trend_chart,
+                                    ui_manager->trend_series_60s, flow_val);
+            pushed = true;
+        }
+
+        /* 仅在当前可见且推入新数据后执行Y轴缩放 */
+        if (pushed && ui_manager->current_page == 1) {
+            int32_t *arr_5s = lv_chart_get_series_y_array(ui_manager->trend_chart,
+                                                           ui_manager->trend_series_5s);
+            int32_t *arr_60s = lv_chart_get_series_y_array(ui_manager->trend_chart,
+                                                            ui_manager->trend_series_60s);
+            int32_t data_max = 0;
+            for (int i = 0; i < 60; i++) {
+                if (arr_5s[i] > data_max) data_max = arr_5s[i];
+                if (arr_60s[i] > data_max) data_max = arr_60s[i];
+            }
+
+            /* 超过当前上限×1.1或低于×0.5时才调整，避免频繁重绘 */
+            if (data_max > ui_manager->trend_y_max * 11 / 10 ||
+                (ui_manager->trend_y_max > 100 && data_max < ui_manager->trend_y_max / 2)) {
+                ui_manager->trend_y_max = (data_max > 0) ? (int32_t)(data_max * 12 / 10) : 100;
+                if (ui_manager->trend_y_max < 100) ui_manager->trend_y_max = 100;
+                lv_chart_set_axis_range(ui_manager->trend_chart,
+                                        LV_CHART_AXIS_PRIMARY_Y, 0,
+                                        ui_manager->trend_y_max);
+            }
+        }
+    }
 }
 
 /**
@@ -527,37 +580,25 @@ static void create_details_tile(lv_obj_t *tile)
 }
 
 /**
- * @brief  创建趋势图瓦片（流量趋势页面）
- * @details 构建流量历史趋势展示页面，使用折线图显示流量变化趋势
- *          该页面最多显示2条数据序列，每条序列10个数据点
- * 
+ * @brief  创建趋势图瓦片（瞬时流量趋势页面）
+ * @details 构建实时瞬时流量趋势图，使用折线图显示流量变化趋势
+ *          两条数据序列：5秒采样（短趋势）+ 1分钟采样（长趋势）
+ *          底部显示图例和历史最大值
+ *
  * @param tile  瓦片对象指针，即趋势图的根容器
- * 
+ *
  * @par 图表配置
  *        - 图表类型:  折线图（LV_CHART_TYPE_LINE）
- *        - 数据点数:  10个点
- *        - X轴范围:   0-9（索引）
- *        - Y轴范围:   0-100（百分比或相对值）
- *        - 数据序列1: 蓝色（#3498DB）
- *        - 数据序列2: 绿色（#2ECC71）
- * 
- * @par 数据流向
- *        当前为演示数据，实际使用时需要：
- *        1. 在定时器中定时更新数据数组
- *        2. 调用lv_chart_set_array_cnt()更新数据
- *        3. 调用lv_chart_refresh()刷新图表显示
- * 
+ *        - 数据点数:  60个点
+ *        - 数据序列1: 蓝色 #3498DB（5秒采样，5分钟历史）
+ *        - 数据序列2: 橙色 #F39C12（1分钟采样，60分钟历史）
+ *        - Y轴:       动态自适应缩放
+ *        - 单位:      m³/h（1 L/s = 3.6 m³/h）
+ *
  * @par 布局说明
- *        - 图表占满整个瓦片区域
- *        - 居中显示，无边距
- *        - 背景色与整体界面一致（深灰蓝）
- * 
- * @note  这是基础版本的趋势图，后续可扩展：
- *        - 添加实时数据更新
- *        - 支持触摸屏缩放
- *        - 添加坐标轴标签
- *        - 支持多条曲线切换显示
- * 
+ *        - 上部: 图表区域（自动填充剩余空间）
+ *        - 下部: 图例 + 最大值信息栏（固定高度40px）
+ *
  * @see lv_chart_create()
  * @see lv_chart_set_type()
  * @see lv_chart_add_series()
@@ -567,93 +608,116 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     /*--------------------------------------------------------------------*/
     /* 第一部分：瓦片基础配置                                              */
     /*--------------------------------------------------------------------*/
-    
-    /* 设置瓦片背景颜色 */
+
     lv_obj_set_style_bg_color(tile, lv_color_hex(0x1E272E), 0);
-    
-    /* 设置背景完全不透明 */
     lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
 
     /*--------------------------------------------------------------------*/
-    /* 第二部分：创建图表并设置基础参数                                    */
+    /* 第二部分：创建图表控件                                              */
     /*--------------------------------------------------------------------*/
-    
-    /* 创建图表控件 */
+
     lv_obj_t *chart = lv_chart_create(tile);
-    
-    /* 设置图表尺寸为100%填充父容器 */
-    lv_obj_set_size(chart, LV_PCT(100), LV_PCT(100));
-    
-    /* 将图表居中放置 */
-    lv_obj_center(chart);
+
+    /* 图表位于顶部，底部留40px给信息栏 */
+    lv_obj_set_size(chart, LV_PCT(100), lv_pct(83));
+    lv_obj_align(chart, LV_ALIGN_TOP_LEFT, 0, 0);
 
     /* 设置图表类型为折线图 */
     lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
-    
-    /* 设置数据点数量为10个 */
-    lv_chart_set_point_count(chart, 10);
-    
-    /* 设置X轴范围（数据点索引0-9） */
-    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, 9);
-    
-    /* 设置Y轴范围（数值0-100） */
+
+    /* 每条序列最多60个数据点 */
+    lv_chart_set_point_count(chart, 60);
+
+    /* X轴范围（数据点索引 0~59） */
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, 59);
+
+    /* Y轴范围初始值（×100缩放，100 = 1.00 m³/h） */
     lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+
+    /* 仅保留3条水平参考线，去除垂直参考线 */
+    lv_chart_set_div_line_count(chart, 3, 0);
 
     /*--------------------------------------------------------------------*/
     /* 第三部分：添加数据序列                                              */
     /*--------------------------------------------------------------------*/
-    
-    /* 添加第一条数据序列（蓝色），用于显示瞬时流量 */
-    lv_chart_series_t *ser1 = lv_chart_add_series(chart, 
-                                                   lv_color_hex(0x3498DB), 
-                                                   LV_CHART_AXIS_PRIMARY_Y);
-    
-    /* 添加第二条数据序列（绿色），用于显示累计流量 */
-    lv_chart_series_t *ser2 = lv_chart_add_series(chart, 
-                                                   lv_color_hex(0x2ECC71), 
-                                                   LV_CHART_AXIS_PRIMARY_Y);
+
+    /* 5秒采样序列（蓝色，5分钟历史） */
+    lv_chart_series_t *ser_5s = lv_chart_add_series(chart,
+                                                     lv_color_hex(0x3498DB),
+                                                     LV_CHART_AXIS_PRIMARY_Y);
+
+    /* 1分钟采样序列（橙色，60分钟历史） */
+    lv_chart_series_t *ser_60s = lv_chart_add_series(chart,
+                                                      lv_color_hex(0xF39C12),
+                                                      LV_CHART_AXIS_PRIMARY_Y);
 
     /*--------------------------------------------------------------------*/
-    /* 第四部分：填充演示数据（实际使用时替换为真实数据）                  */
+    /* 第四部分：图表样式配置                                              */
     /*--------------------------------------------------------------------*/
-    
-    /* 为第一条序列填充10个数据点 */
-    lv_chart_set_next_value(chart, ser1, 30);
-    lv_chart_set_next_value(chart, ser1, 45);
-    lv_chart_set_next_value(chart, ser1, 35);
-    lv_chart_set_next_value(chart, ser1, 50);
-    lv_chart_set_next_value(chart, ser1, 40);
-    lv_chart_set_next_value(chart, ser1, 60);
-    lv_chart_set_next_value(chart, ser1, 55);
-    lv_chart_set_next_value(chart, ser1, 55);
-    lv_chart_set_next_value(chart, ser1, 50);
-    lv_chart_set_next_value(chart, ser1, 40);
 
-    /* 为第二条序列填充10个数据点 */
-    lv_chart_set_next_value(chart, ser2, 20);
-    lv_chart_set_next_value(chart, ser2, 35);
-    lv_chart_set_next_value(chart, ser2, 25);
-    lv_chart_set_next_value(chart, ser2, 40);
-    lv_chart_set_next_value(chart, ser2, 30);
-    lv_chart_set_next_value(chart, ser2, 50);
-    lv_chart_set_next_value(chart, ser2, 45);
-    lv_chart_set_next_value(chart, ser2, 60);
-    lv_chart_set_next_value(chart, ser2, 55);
-    lv_chart_set_next_value(chart, ser2, 70);
-
-    /*--------------------------------------------------------------------*/
-    /* 第五部分：图表样式配置                                              */
-    /*--------------------------------------------------------------------*/
-    
-    /* 设置图表背景色 */
     lv_obj_set_style_bg_color(chart, lv_color_hex(0x1E272E), 0);
     lv_obj_set_style_bg_opa(chart, LV_OPA_COVER, 0);
-    
-    /* 移除图表边框 */
     lv_obj_set_style_border_width(chart, 0, 0);
-    
-    /* 设置图表内边距为5px */
     lv_obj_set_style_pad_all(chart, 5, 0);
+
+    /*--------------------------------------------------------------------*/
+    /* 第五部分：底部信息栏（图例 + 最大值）                               */
+    /*--------------------------------------------------------------------*/
+
+    lv_obj_t *info_bar = lv_obj_create(tile);
+    lv_obj_set_size(info_bar, LV_PCT(100), 40);
+    lv_obj_align(info_bar, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_set_style_bg_opa(info_bar, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(info_bar, 0, 0);
+    lv_obj_set_style_pad_all(info_bar, 5, 0);
+    lv_obj_set_flex_flow(info_bar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(info_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    /* 图例1: 蓝色圆点 + "5s" */
+    lv_obj_t *dot_5s = lv_obj_create(info_bar);
+    lv_obj_set_size(dot_5s, 10, 10);
+    lv_obj_set_style_bg_color(dot_5s, lv_color_hex(0x3498DB), 0);
+    lv_obj_set_style_bg_opa(dot_5s, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(dot_5s, 0, 0);
+    lv_obj_set_style_radius(dot_5s, LV_RADIUS_CIRCLE, 0);
+    lv_obj_t *label_5s = lv_label_create(info_bar);
+    lv_label_set_text(label_5s, " 5s");
+    lv_obj_set_style_text_color(label_5s, lv_color_hex(0xFFFFFF), 0);
+
+    /* 图例2: 橙色圆点 + "1min" */
+    lv_obj_t *dot_60s = lv_obj_create(info_bar);
+    lv_obj_set_size(dot_60s, 10, 10);
+    lv_obj_set_style_bg_color(dot_60s, lv_color_hex(0xF39C12), 0);
+    lv_obj_set_style_bg_opa(dot_60s, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(dot_60s, 0, 0);
+    lv_obj_set_style_radius(dot_60s, LV_RADIUS_CIRCLE, 0);
+    lv_obj_t *label_60s = lv_label_create(info_bar);
+    lv_label_set_text(label_60s, " 1min");
+    lv_obj_set_style_text_color(label_60s, lv_color_hex(0xFFFFFF), 0);
+
+    /* 最大值标签（右侧对齐，使用flex grow推到右侧） */
+    lv_obj_t *spacer = lv_obj_create(info_bar);
+    lv_obj_set_size(spacer, 1, 1);
+    lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(spacer, 0, 0);
+    lv_obj_set_style_pad_all(spacer, 0, 0);
+    lv_obj_set_flex_grow(spacer, 1);
+
+    lv_obj_t *max_label = lv_label_create(info_bar);
+    lv_label_set_text(max_label, "MAX: 0.00 m³/h");
+    lv_obj_set_style_text_color(max_label, lv_color_hex(0xFFFFFF), 0);
+
+    /*--------------------------------------------------------------------*/
+    /* 第六部分：保存引用到 ui_manager                                     */
+    /*--------------------------------------------------------------------*/
+
+    ui_manager->trend_chart = chart;
+    ui_manager->trend_series_5s = ser_5s;
+    ui_manager->trend_series_60s = ser_60s;
+    ui_manager->trend_max_label = max_label;
+    ui_manager->trend_tick_counter = 0;
+    ui_manager->trend_y_max = 100;
+    ui_manager->trend_max_flow = 0.0f;
 }
 
 /**

@@ -26,6 +26,7 @@
  */
 
 #include "modbus_master.h"
+#include "modbus_slave.h"
 #include "modbus.h"
 #include <string.h>
 
@@ -682,27 +683,6 @@ uint16_t modbus_master_get_register_value(uint8_t sensor_index, uint8_t register
 /*============================================================================*/
 /*                           命令队列函数                                       */
 /*============================================================================*/
-
-/**
- * @brief  从命令队列取出一个命令
- * @param  master: 主机结构体指针
- * @param  cmd: 输出命令结构体指针
- * @retval 1: 成功取出
- * @retval 0: 队列为空
- */
-static uint8_t modbus_master_pop_cmd(modbus_master_t *master, modbus_cmd_t *cmd)
-{
-    if (master->cmd_count == 0)
-    {
-        return 0;
-    }
-
-    *cmd = master->cmd_queue[master->cmd_head];
-    master->cmd_head = (master->cmd_head + 1) % MODBUS_CMD_QUEUE_SIZE;
-    master->cmd_count--;
-
-    return 1;
-}
 
 /**
  * @brief  完成当前命令

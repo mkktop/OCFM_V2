@@ -1,22 +1,22 @@
 #include "app_log.h"
 
 /**
- * @brief 初始化数据记录器
+ * @brief 锟斤拷始锟斤拷锟斤拷锟捷硷拷录锟斤拷
  * 
- * 该函数初始化数据记录器与日志管理模块
+ * 锟矫猴拷锟斤拷锟斤拷始锟斤拷锟斤拷锟捷硷拷录锟斤拷锟斤拷锟斤拷志锟斤拷锟斤拷模锟斤拷
  * 
  */
 void app_log_data_init(void)
 {
-    // 初始化数据记录器
+    // 锟斤拷始锟斤拷锟斤拷锟捷硷拷录锟斤拷
     data_recorder_init(NULL);
-    // 初始化日志管理模块
+    // 锟斤拷始锟斤拷锟斤拷志锟斤拷锟斤拷模锟斤拷
     log_manager_init(NULL);
-    // 写入系统初始化日志
+    // 写锟斤拷系统锟斤拷始锟斤拷锟斤拷志
     log_write(LOG_TYPE_SYSTEM, "SYSTEM_INIT");
-    // 写入用户登录日志
+    // 写锟斤拷锟矫伙拷锟斤拷录锟斤拷志
     log_write(LOG_TYPE_USER, "admin is online");
-    // 写入报警系统初始化日志
+    // 写锟诫报锟斤拷系统锟斤拷始锟斤拷锟斤拷志
     log_write(LOG_TYPE_ALARM, "ALARM_SYSTEM_INIT");
 
 }
