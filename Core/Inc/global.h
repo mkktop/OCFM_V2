@@ -52,7 +52,7 @@
  */
 #define MODBUS_MASTER_TIMEOUT_MS    500     /* 超时时间 (毫秒) */
 #define MODBUS_MAX_SLAVE_COUNT      2       /* 最大传感器数量(目前接两路雷达探头)） */
-#define MODBUS_MAX_RETRY            3       /* 最大重试次数 */
+#define MODBUS_MAX_RETRY            10      /* 最大重试次数 */
 
 
 

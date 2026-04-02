@@ -109,30 +109,30 @@ static void ui_update_timer_cb(lv_timer_t *timer)
                                   "MAX: %.2f m³/h", ui_manager->trend_max_flow);
         }
 
-        /* 每5秒推入5秒采样序列 */
-        if (ui_manager->trend_tick_counter % 5 == 0) {
+        /* 每10秒推入10秒采样序列 */
+        if (ui_manager->trend_tick_counter % 10 == 0) {
             lv_chart_set_next_value(ui_manager->trend_chart,
-                                    ui_manager->trend_series_5s, flow_val);
+                                    ui_manager->trend_series_10s, flow_val);
             pushed = true;
         }
 
-        /* 每60秒推入1分钟采样序列 */
-        if (ui_manager->trend_tick_counter % 60 == 0) {
+        /* 每300秒(5分钟)推入5分钟采样序列 */
+        if (ui_manager->trend_tick_counter % 300 == 0) {
             lv_chart_set_next_value(ui_manager->trend_chart,
-                                    ui_manager->trend_series_60s, flow_val);
+                                    ui_manager->trend_series_5min, flow_val);
             pushed = true;
         }
 
         /* 仅在当前可见且推入新数据后执行Y轴缩放 */
         if (pushed && ui_manager->current_page == 1) {
-            int32_t *arr_5s = lv_chart_get_series_y_array(ui_manager->trend_chart,
-                                                           ui_manager->trend_series_5s);
-            int32_t *arr_60s = lv_chart_get_series_y_array(ui_manager->trend_chart,
-                                                            ui_manager->trend_series_60s);
+            int32_t *arr_10s = lv_chart_get_series_y_array(ui_manager->trend_chart,
+                                                            ui_manager->trend_series_10s);
+            int32_t *arr_5min = lv_chart_get_series_y_array(ui_manager->trend_chart,
+                                                             ui_manager->trend_series_5min);
             int32_t data_max = 0;
-            for (int i = 0; i < 60; i++) {
-                if (arr_5s[i] > data_max) data_max = arr_5s[i];
-                if (arr_60s[i] > data_max) data_max = arr_60s[i];
+            for (int i = 0; i < 30; i++) {
+                if (arr_10s[i] > data_max) data_max = arr_10s[i];
+                if (arr_5min[i] > data_max) data_max = arr_5min[i];
             }
 
             /* 超过当前上限×1.1或低于×0.5时才调整，避免频繁重绘 */
@@ -582,16 +582,16 @@ static void create_details_tile(lv_obj_t *tile)
 /**
  * @brief  创建趋势图瓦片（瞬时流量趋势页面）
  * @details 构建实时瞬时流量趋势图，使用折线图显示流量变化趋势
- *          两条数据序列：5秒采样（短趋势）+ 1分钟采样（长趋势）
+ *          两条数据序列：10秒采样（短趋势）+ 5分钟采样（长趋势）
  *          底部显示图例和历史最大值
  *
  * @param tile  瓦片对象指针，即趋势图的根容器
  *
  * @par 图表配置
  *        - 图表类型:  折线图（LV_CHART_TYPE_LINE）
- *        - 数据点数:  60个点
- *        - 数据序列1: 蓝色 #3498DB（5秒采样，5分钟历史）
- *        - 数据序列2: 橙色 #F39C12（1分钟采样，60分钟历史）
+ *        - 数据点数:  30个点
+ *        - 数据序列1: 蓝色 #3498DB（10秒采样，5分钟历史）
+ *        - 数据序列2: 橙色 #F39C12（5分钟采样，150分钟历史）
  *        - Y轴:       动态自适应缩放
  *        - 单位:      m³/h（1 L/s = 3.6 m³/h）
  *
@@ -625,11 +625,11 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     /* 设置图表类型为折线图 */
     lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
 
-    /* 每条序列最多60个数据点 */
-    lv_chart_set_point_count(chart, 60);
+    /* 每条序列最多30个数据点 */
+    lv_chart_set_point_count(chart, 30);
 
-    /* X轴范围（数据点索引 0~59） */
-    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, 59);
+    /* X轴范围（数据点索引 0~29） */
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, 29);
 
     /* Y轴范围初始值（×100缩放，100 = 1.00 m³/h） */
     lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
@@ -641,15 +641,15 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     /* 第三部分：添加数据序列                                              */
     /*--------------------------------------------------------------------*/
 
-    /* 5秒采样序列（蓝色，5分钟历史） */
-    lv_chart_series_t *ser_5s = lv_chart_add_series(chart,
-                                                     lv_color_hex(0x3498DB),
-                                                     LV_CHART_AXIS_PRIMARY_Y);
-
-    /* 1分钟采样序列（橙色，60分钟历史） */
-    lv_chart_series_t *ser_60s = lv_chart_add_series(chart,
-                                                      lv_color_hex(0xF39C12),
+    /* 10秒采样序列（蓝色，5分钟历史） */
+    lv_chart_series_t *ser_10s = lv_chart_add_series(chart,
+                                                      lv_color_hex(0x3498DB),
                                                       LV_CHART_AXIS_PRIMARY_Y);
+
+    /* 5分钟采样序列（橙色，150分钟历史） */
+    lv_chart_series_t *ser_5min = lv_chart_add_series(chart,
+                                                       lv_color_hex(0xF39C12),
+                                                       LV_CHART_AXIS_PRIMARY_Y);
 
     /*--------------------------------------------------------------------*/
     /* 第四部分：图表样式配置                                              */
@@ -681,7 +681,7 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     lv_obj_set_style_border_width(dot_5s, 0, 0);
     lv_obj_set_style_radius(dot_5s, LV_RADIUS_CIRCLE, 0);
     lv_obj_t *label_5s = lv_label_create(info_bar);
-    lv_label_set_text(label_5s, " 5s");
+    lv_label_set_text(label_5s, " 10s");
     lv_obj_set_style_text_color(label_5s, lv_color_hex(0xFFFFFF), 0);
 
     /* 图例2: 橙色圆点 + "1min" */
@@ -692,7 +692,7 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     lv_obj_set_style_border_width(dot_60s, 0, 0);
     lv_obj_set_style_radius(dot_60s, LV_RADIUS_CIRCLE, 0);
     lv_obj_t *label_60s = lv_label_create(info_bar);
-    lv_label_set_text(label_60s, " 1min");
+    lv_label_set_text(label_60s, " 5min");
     lv_obj_set_style_text_color(label_60s, lv_color_hex(0xFFFFFF), 0);
 
     /* 最大值标签（右侧对齐，使用flex grow推到右侧） */
@@ -712,8 +712,8 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     /*--------------------------------------------------------------------*/
 
     ui_manager->trend_chart = chart;
-    ui_manager->trend_series_5s = ser_5s;
-    ui_manager->trend_series_60s = ser_60s;
+    ui_manager->trend_series_10s = ser_10s;
+    ui_manager->trend_series_5min = ser_5min;
     ui_manager->trend_max_label = max_label;
     ui_manager->trend_tick_counter = 0;
     ui_manager->trend_y_max = 100;

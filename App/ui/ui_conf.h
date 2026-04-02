@@ -21,8 +21,8 @@ typedef struct{
     
     // 趋势图相关
     lv_obj_t *trend_chart;               ///< 趋势图控件
-    lv_chart_series_t *trend_series_5s;  ///< 5秒采样序列 (60点=5分钟历史)
-    lv_chart_series_t *trend_series_60s; ///< 1分钟采样序列 (60点=60分钟历史)
+    lv_chart_series_t *trend_series_10s;  ///< 10秒采样序列 (30点=5分钟历史)
+    lv_chart_series_t *trend_series_5min; ///< 5分钟采样序列 (30点=150分钟历史)
     lv_obj_t *trend_max_label;           ///< 底部最大值标签
     uint32_t trend_tick_counter;         ///< 秒计数器
     int32_t trend_y_max;                 ///< 当前Y轴最大值
