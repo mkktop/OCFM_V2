@@ -1003,13 +1003,29 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_set_style_bg_color(bottom_bar, lv_color_hex(COLOR_BOTTOM_BG), 0);
     lv_obj_set_style_bg_opa(bottom_bar, LV_OPA_COVER, 0);
     lv_obj_set_flex_flow(bottom_bar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(bottom_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_left(bottom_bar, 20, 0);
+    lv_obj_set_flex_align(bottom_bar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(bottom_bar, 10, 0);
+    lv_obj_set_style_pad_right(bottom_bar, 10, 0);
 
-    lv_obj_t *hint_label = lv_label_create(bottom_bar);
-    lv_label_set_text(hint_label, "UP/DOWN:Adjust  OK:Save  LSHIFT:Back");
-    lv_obj_set_style_text_color(hint_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(hint_label, &lv_font_montserrat_14, 0);
+    lv_obj_t *h_ok = lv_label_create(bottom_bar);
+    lv_label_set_text(h_ok, "OK:Save");
+    lv_obj_set_style_text_color(h_ok, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    lv_obj_set_style_text_font(h_ok, &lv_font_montserrat_14, 0);
+
+    lv_obj_t *h_up = lv_label_create(bottom_bar);
+    lv_label_set_text(h_up, "UP");
+    lv_obj_set_style_text_color(h_up, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    lv_obj_set_style_text_font(h_up, &lv_font_montserrat_14, 0);
+
+    lv_obj_t *h_down = lv_label_create(bottom_bar);
+    lv_label_set_text(h_down, "DOWN");
+    lv_obj_set_style_text_color(h_down, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    lv_obj_set_style_text_font(h_down, &lv_font_montserrat_14, 0);
+
+    lv_obj_t *h_shift = lv_label_create(bottom_bar);
+    lv_label_set_text(h_shift, "SHIFT:Step");
+    lv_obj_set_style_text_color(h_shift, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    lv_obj_set_style_text_font(h_shift, &lv_font_montserrat_14, 0);
 
     return screen;
 }
