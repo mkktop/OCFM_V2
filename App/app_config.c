@@ -346,68 +346,68 @@ void app_config_set_modbus_stopbits(uint32_t value)
 /*============================================================================*/
 /*                           报警参数 Getter/Setter                             */
 /*============================================================================*/
-// 上限报警
-uint32_t app_config_get_alarm_ah(void)
+// 上限报警 (m³/h)
+float app_config_get_alarm_ah(void)
 {
     return g_config.alarm_ah;
 }
 
-void app_config_set_alarm_ah(uint32_t value)
+void app_config_set_alarm_ah(float value)
 {
     g_config.alarm_ah = value;
 }
 
-// 下限报警
-uint32_t app_config_get_alarm_al(void)
+// 下限报警 (m³/h)
+float app_config_get_alarm_al(void)
 {
     return g_config.alarm_al;
 }
 
-void app_config_set_alarm_al(uint32_t value)
+void app_config_set_alarm_al(float value)
 {
     g_config.alarm_al = value;
 }
 
-// 上限报警回差
-uint32_t app_config_get_alarm_dh(void)
+// 上限报警回差 (m³/h)
+float app_config_get_alarm_dh(void)
 {
     return g_config.alarm_dh;
 }
 
-void app_config_set_alarm_dh(uint32_t value)
+void app_config_set_alarm_dh(float value)
 {
     g_config.alarm_dh = value;
 }
 
-// 下限报警回差
-uint32_t app_config_get_alarm_dl(void)
+// 下限报警回差 (m³/h)
+float app_config_get_alarm_dl(void)
 {
     return g_config.alarm_dl;
 }
 
-void app_config_set_alarm_dl(uint32_t value)
+void app_config_set_alarm_dl(float value)
 {
     g_config.alarm_dl = value;
 }
 
-// 上上限报警
-uint32_t app_config_get_alarm_aah(void)
+// 上上限报警 (m³/h)
+float app_config_get_alarm_aah(void)
 {
     return g_config.alarm_aah;
 }
 
-void app_config_set_alarm_aah(uint32_t value)
+void app_config_set_alarm_aah(float value)
 {
     g_config.alarm_aah = value;
 }
 
-// 下下限报警
-uint32_t app_config_get_alarm_aal(void)
+// 下下限报警 (m³/h)
+float app_config_get_alarm_aal(void)
 {
     return g_config.alarm_aal;
 }
 
-void app_config_set_alarm_aal(uint32_t value)
+void app_config_set_alarm_aal(float value)
 {
     g_config.alarm_aal = value;
 }
@@ -603,22 +603,22 @@ uint8_t app_config_set_by_reg(uint16_t reg_addr, uint32_t value)
     switch (reg_addr) {
         /* 报警值寄存器 */
         case REG_AH:
-            g_config.alarm_ah = value;
+            g_config.alarm_ah = *(float *)&value;
             break;
         case REG_DH:
-            g_config.alarm_dh = value;
+            g_config.alarm_dh = *(float *)&value;
             break;
         case REG_AL:
-            g_config.alarm_al = value;
+            g_config.alarm_al = *(float *)&value;
             break;
         case REG_DL:
-            g_config.alarm_dl = value;
+            g_config.alarm_dl = *(float *)&value;
             break;
         case REG_AAH:
-            g_config.alarm_aah = value;
+            g_config.alarm_aah = *(float *)&value;
             break;
         case REG_AAL:
-            g_config.alarm_aal = value;
+            g_config.alarm_aal = *(float *)&value;
             break;
 
         /* 传感器参数设置寄存器 */
@@ -747,22 +747,22 @@ uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value)
 
         /* 报警值寄存器 */
         case REG_AH:
-            *value = g_config.alarm_ah;
+            *(float *)value = g_config.alarm_ah;
             break;
         case REG_DH:
-            *value = g_config.alarm_dh;
+            *(float *)value = g_config.alarm_dh;
             break;
         case REG_AL:
-            *value = g_config.alarm_al;
+            *(float *)value = g_config.alarm_al;
             break;
         case REG_DL:
-            *value = g_config.alarm_dl;
+            *(float *)value = g_config.alarm_dl;
             break;
         case REG_AAH:
-            *value = g_config.alarm_aah;
+            *(float *)value = g_config.alarm_aah;
             break;
         case REG_AAL:
-            *value = g_config.alarm_aal;
+            *(float *)value = g_config.alarm_aal;
             break;
 
         /* 传感器参数设置寄存器 */

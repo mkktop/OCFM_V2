@@ -204,12 +204,12 @@ typedef struct
     uint32_t modbusBaudRate;    /* Modbus从机波特率 */
     uint32_t modbusStopBits;    /* Modbus从机停止位 */
     // 报警参数
-    uint32_t alarm_ah;          /* 上限报警 */
-    uint32_t alarm_al;          /* 下限报警 */
-    uint32_t alarm_dh;          /* 上限报警回差 */
-    uint32_t alarm_dl;          /* 下限报警回差 */
-    uint32_t alarm_aah;         /* 上上限报警 */
-    uint32_t alarm_aal;         /* 下下限报警 */
+    float alarm_ah;             /* 上限报警 (m³/h) */
+    float alarm_al;             /* 下限报警 (m³/h) */
+    float alarm_dh;             /* 上限报警回差 (m³/h) */
+    float alarm_dl;             /* 下限报警回差 (m³/h) */
+    float alarm_aah;            /* 上上限报警 (m³/h) */
+    float alarm_aal;            /* 下下限报警 (m³/h) */
     // 其他参数
     uint32_t factory_settings;  /* 恢复出厂设置 */
     uint32_t factory_range;     /* 出厂量程 */
@@ -330,12 +330,12 @@ typedef enum
 #define DEFAULT_MODBUS_STOP      1           /* 停止位索引 */
 
 // 报警参数默认值
-#define DEFAULT_ALARM_AH         8000        /* 上限报警 */
-#define DEFAULT_ALARM_AL         500         /* 下限报警 */
-#define DEFAULT_ALARM_DH         100         /* 上限回差 */
-#define DEFAULT_ALARM_DL         50          /* 下限回差 */
-#define DEFAULT_ALARM_AAH        9000        /* 上上限报警 */
-#define DEFAULT_ALARM_AAL        200         /* 下下限报警 */
+#define DEFAULT_ALARM_AH         8000.0f     /* 上限报警 (m³/h) */
+#define DEFAULT_ALARM_AL         500.0f      /* 下限报警 (m³/h) */
+#define DEFAULT_ALARM_DH         100.0f      /* 上限回差 (m³/h) */
+#define DEFAULT_ALARM_DL         50.0f       /* 下限回差 (m³/h) */
+#define DEFAULT_ALARM_AAH        9000.0f     /* 上上限报警 (m³/h) */
+#define DEFAULT_ALARM_AAL        200.0f      /* 下下限报警 (m³/h) */
 
 // 其他参数默认值
 #define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */

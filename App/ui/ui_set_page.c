@@ -170,21 +170,55 @@ static const set_item_t measure_items[] = {
     {"Measure Coeff",   "",     app_config_get_m_coeff,            app_config_set_m_coeff,           0, 10,    1},
 };
 
+/* ---------- format 回调前向声明 ---------- */
+
+static const char *format_baudrate(uint32_t val)
+{
+    switch (val) {
+        case 1:  return "4800";
+        case 2:  return "9600";
+        case 3:  return "14400";
+        case 4:  return "19200";
+        case 5:  return "38400";
+        case 6:  return "56000";
+        case 7:  return "57600";
+        case 8:  return "115200";
+        default: return "9600";
+    }
+}
+
+static const char *format_stopbits(uint32_t val)
+{
+    switch (val) {
+        case 1:  return "None1StopBits";
+        case 2:  return "Odd1StopBits";
+        case 3:  return "None2StopBits";
+        case 4:  return "Even1StopBits";
+        default: return "None1StopBits";
+    }
+}
+
 /* ---------- Modbus从机参数 ---------- */
 static const set_item_t modbus_items[] = {
     {"Slave Addr",      "",     app_config_get_modbus_addr,         app_config_set_modbus_addr,       0, 247,   1},
-    {"Baud Rate",       "",     app_config_get_modbus_baudrate,     app_config_set_modbus_baudrate,   0, 16,    1},
-    {"Stop Bits",       "",     app_config_get_modbus_stopbits,     app_config_set_modbus_stopbits,   0, 7,     1},
+    {"Baud Rate",       "",     app_config_get_modbus_baudrate,     app_config_set_modbus_baudrate,   1, 8,     1,  0,  format_baudrate},
+    {"Stop Bits",       "",     app_config_get_modbus_stopbits,     app_config_set_modbus_stopbits,   1, 4,     1,  0,  format_stopbits},
 };
 
 /* ---------- 报警参数 ---------- */
 static const set_item_t alarm_items[] = {
-    {"Alarm High",      "",     app_config_get_alarm_ah,            app_config_set_alarm_ah,           0, 9999999, 1},
-    {"Alarm Low",       "",     app_config_get_alarm_al,            app_config_set_alarm_al,           0, 9999999, 1},
-    {"Alarm High DB",   "",     app_config_get_alarm_dh,            app_config_set_alarm_dh,           0, 9999999, 1},
-    {"Alarm Low DB",    "",     app_config_get_alarm_dl,            app_config_set_alarm_dl,           0, 9999999, 1},
-    {"Alarm HiHi",      "",     app_config_get_alarm_aah,           app_config_set_alarm_aah,          0, 9999999, 1},
-    {"Alarm LoLo",      "",     app_config_get_alarm_aal,           app_config_set_alarm_aal,          0, 9999999, 1},
+    {"Alarm High",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_ah,  app_config_set_alarm_ah,           0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm Low",       "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_al,  app_config_set_alarm_al,           0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm High DB",   "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_dh,  app_config_set_alarm_dh,           0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm Low DB",    "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_dl,  app_config_set_alarm_dl,           0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm HiHi",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_aah, app_config_set_alarm_aah,          0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm LoLo",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_aal, app_config_set_alarm_aal,          0.0f, 99999.0f, 0.001f, 3},
 };
 
 /* ---------- format 回调函数 ---------- */
@@ -192,6 +226,31 @@ static const set_item_t alarm_items[] = {
 static const char *format_language(uint32_t val)
 {
     return val == 0 ? "English" : "Chinese";
+}
+
+static const char *format_flow_unit(uint32_t val)
+{
+    switch (val) {
+        case FLOW_UNIT_L_S:   return "L/s";      /* 升/秒 */
+        case FLOW_UNIT_L_MIN: return "L/min";    /* 升/分钟 */
+        case FLOW_UNIT_L_H:   return "L/h";      /* 升/小时 */
+        case FLOW_UNIT_M3_H:  return "m³/h";     /* 立方米/小时 */
+        case FLOW_UNIT_M3_S:  return "m³/s";     /* 立方米/秒 */
+        case FLOW_UNIT_M3_MIN:return "m³/min";   /* 立方米/分钟 */
+        case FLOW_UNIT_T_H:   return "T/h";      /* 吨/小时 */
+        case FLOW_UNIT_G_H:   return "G/h";      /* 美制加仑/小时 */
+        default: return "L/s";
+    }
+}
+
+static const char *format_canals_type(uint32_t val)
+{
+    switch (val) {
+        case 1:  return "ParshallFlume";
+        case 2:  return "TriangularWeir";
+        case 3:  return "RectangularWeir";
+        default: return "ParshallFlume";
+    }
 }
 
 static const char *format_weekday(uint32_t val)
@@ -225,7 +284,7 @@ static const char *format_yes_no(uint32_t val) { return val == 1 ? "Yes" : "No";
 
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
-    {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1},
+    {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
     {"Channel ID",      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,    1},
     {"Sum Decimal",     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
     {"Clear Total",    "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
@@ -244,7 +303,7 @@ static const set_item_t time_items[] = {
 static const set_item_t display_items[] = {
     {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
     {"Decimal",         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1},
-    {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1},
+    {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1,  0,  format_flow_unit},
 };
 
 /* ---------- 高级设置 ---------- */
@@ -254,7 +313,7 @@ static const set_item_t advanced_items[] = {
     {"4mA Cal",         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 0, 9999, 1},
     {"20mA Cal",        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma,0, 9999, 1},
     {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
-    {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
+    {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1,  0,  format_yes_no},
 };
 
 /* ---------- 一级菜单分类表 ---------- */

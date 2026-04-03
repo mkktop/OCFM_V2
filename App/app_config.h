@@ -116,23 +116,23 @@ void app_config_set_modbus_stopbits(uint32_t value);
 /*============================================================================*/
 /*                           报警参数 Getter/Setter                             */
 /*============================================================================*/
-uint32_t app_config_get_alarm_ah(void);
-void app_config_set_alarm_ah(uint32_t value);
+float app_config_get_alarm_ah(void);
+void app_config_set_alarm_ah(float value);
 
-uint32_t app_config_get_alarm_al(void);
-void app_config_set_alarm_al(uint32_t value);
+float app_config_get_alarm_al(void);
+void app_config_set_alarm_al(float value);
 
-uint32_t app_config_get_alarm_dh(void);
-void app_config_set_alarm_dh(uint32_t value);
+float app_config_get_alarm_dh(void);
+void app_config_set_alarm_dh(float value);
 
-uint32_t app_config_get_alarm_dl(void);
-void app_config_set_alarm_dl(uint32_t value);
+float app_config_get_alarm_dl(void);
+void app_config_set_alarm_dl(float value);
 
-uint32_t app_config_get_alarm_aah(void);
-void app_config_set_alarm_aah(uint32_t value);
+float app_config_get_alarm_aah(void);
+void app_config_set_alarm_aah(float value);
 
-uint32_t app_config_get_alarm_aal(void);
-void app_config_set_alarm_aal(uint32_t value);
+float app_config_get_alarm_aal(void);
+void app_config_set_alarm_aal(float value);
 
 /*============================================================================*/
 /*                           其他参数 Getter/Setter                             */

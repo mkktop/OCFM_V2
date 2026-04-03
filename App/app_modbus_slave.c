@@ -44,18 +44,7 @@ static const struct {
  */
 static uint8_t is_uint32_register(uint16_t addr)
 {
-    switch (addr)
-    {
-        case REG_AH:
-        case REG_DH:
-        case REG_AL:
-        case REG_DL:
-        case REG_AAH:
-        case REG_AAL:
-            return 1;
-        default:
-            return 0;
-    }
+    return 0;  /* 所有 uint32 寄存器已迁移为 float */
 }
 
 /**
@@ -66,6 +55,12 @@ static uint8_t is_float_register(uint16_t addr)
     switch (addr)
     {
         case REG_INSTANT_FLOW:
+        case REG_AH:
+        case REG_DH:
+        case REG_AL:
+        case REG_DL:
+        case REG_AAH:
+        case REG_AAL:
         case REG_RANGE_4MA:
         case REG_RANGE_20MA:
             return 1;
@@ -244,20 +239,16 @@ void app_modbus_slave_update(void)
                                          (state == GPIO_PIN_SET) ? 1 : 0);
     }
 
-    /* 报警值寄存器 (uint32, 从配置读取) - 0x000E-0x0017 */
+    /* 报警值寄存器 (float, IEEE 754) - 0x000E-0x0019 */
+    modbus_slave_set_float(REG_AH, app_config_get_alarm_ah());
+    modbus_slave_set_float(REG_DH, app_config_get_alarm_dh());
+    modbus_slave_set_float(REG_AL, app_config_get_alarm_al());
+    modbus_slave_set_float(REG_DL, app_config_get_alarm_dl());
+    modbus_slave_set_float(REG_AAH, app_config_get_alarm_aah());
+    modbus_slave_set_float(REG_AAL, app_config_get_alarm_aal());
+
+    /* 传感器参数寄存器 (uint16) - 0x0065-0x006F */
     uint32_t val;
-    if (app_config_get_by_reg(REG_AH, &val) == 0)
-        modbus_slave_set_uint32(REG_AH, val);
-    if (app_config_get_by_reg(REG_DH, &val) == 0)
-        modbus_slave_set_uint32(REG_DH, val);
-    if (app_config_get_by_reg(REG_AL, &val) == 0)
-        modbus_slave_set_uint32(REG_AL, val);
-    if (app_config_get_by_reg(REG_DL, &val) == 0)
-        modbus_slave_set_uint32(REG_DL, val);
-    if (app_config_get_by_reg(REG_AAH, &val) == 0)
-        modbus_slave_set_uint32(REG_AAH, val);
-    if (app_config_get_by_reg(REG_AAL, &val) == 0)
-        modbus_slave_set_uint32(REG_AAL, val);
 
     /* 传感器参数寄存器 (uint16) - 0x0065-0x006F */
     if (app_config_get_by_reg(REG_RANGE_MAX, &val) == 0)
