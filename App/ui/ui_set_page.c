@@ -80,7 +80,8 @@ typedef struct {
     uint32_t min_val;           /**< 允许的最小值                    */
     uint32_t max_val;           /**< 允许的最大值                    */
     uint32_t step;              /**< 每次UP/DOWN的调节步进            */
-    const char *(*format)(uint32_t); /**< 可选: 值的文本显示 (NULL则显示数字) */
+    uint8_t decimal_places;     /**< 小数位数 (0=整数, 3=mm显示为m)  */
+    const char *(*format)(uint32_t); /**< 可选: 自定义格式化 (优先于decimal_places) */
 } set_item_t;
 
 /**
@@ -125,10 +126,35 @@ typedef struct {
 /*   3. 设置合理的 min/max/step 值                                            */
 /*============================================================================*/
 
+/**
+ * @brief  将整数值格式化为带小数点的字符串
+ *
+ * @param  value:          原始整数值 (如 mm)
+ * @param  decimal_places: 小数位数 (如 3 表示值 5000 显示为 "5.000")
+ * @param  buf:            输出缓冲区
+ * @param  buf_size:       缓冲区大小
+ * @retval buf 指针
+ */
+static char *format_with_decimal(uint32_t value, uint8_t decimal_places,
+                                 char *buf, size_t buf_size)
+{
+    if (decimal_places == 0) {
+        snprintf(buf, buf_size, "%lu", (unsigned long)value);
+        return buf;
+    }
+    uint32_t divisor = 1;
+    for (uint8_t i = 0; i < decimal_places; i++) divisor *= 10;
+    snprintf(buf, buf_size, "%lu.%0*lu",
+             (unsigned long)(value / divisor),
+             (int)decimal_places,
+             (unsigned long)(value % divisor));
+    return buf;
+}
+
 /* ---------- 基本参数 ---------- */
 static const set_item_t basic_items[] = {
-    {"Range Max",       "mm",  app_config_get_range_max,        app_config_set_range_max,        0, 99999, 100},
-    {"Height",          "mm",  app_config_get_height,            app_config_set_height,           0, 99999, 100},
+    {"Range Max",       "m",   app_config_get_range_max,        app_config_set_range_max,        0, 99999, 1,   3},
+    {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 99999, 1,   3},
     {"4mA Cal",         "",    app_config_get_calibration_4ma,    app_config_set_calibration_4ma, 0, 99999, 1},
     {"20mA Cal",        "",    app_config_get_calibration_20ma,   app_config_set_calibration_20ma,0, 99999, 1},
     {"4mA Range",       "",    app_config_get_range_4ma,          app_config_set_range_4ma,        0, 99999, 1},
@@ -207,8 +233,8 @@ static const set_item_t system_items[] = {
     {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1},
     {"Sum Decimal",     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
     {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,         0, 99999, 10},
-    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  format_language},
-    {"Clear Total",    "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  format_yes_no},
+    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
+    {"Clear Total",    "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
     {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
 };
 
@@ -220,7 +246,7 @@ static const set_item_t time_items[] = {
     {"Hour",       "",  rtc_get_hour,    rtc_set_hour,    0,    23,   1},
     {"Minute",     "",  rtc_get_minute,  rtc_set_minute,  0,    59,   1},
     {"Second",     "",  rtc_get_second,  rtc_set_second,  0,    59,   1},
-    {"Weekday",    "",  rtc_get_weekday, rtc_set_weekday, 1,    7,   1,  format_weekday},
+    {"Weekday",    "",  rtc_get_weekday, rtc_set_weekday, 1,    7,   1,  0,  format_weekday},
 };
 
 /* ---------- 一级菜单分类表 ---------- */
@@ -744,6 +770,10 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
         lv_obj_t *val_label = lv_label_create(row);
         if (item->format) {
             lv_label_set_text(val_label, item->format(item->get()));
+        } else if (item->decimal_places > 0) {
+            format_with_decimal(item->get(), item->decimal_places,
+                               val_buf, sizeof(val_buf));
+            lv_label_set_text(val_label, val_buf);
         } else {
             snprintf(val_buf, sizeof(val_buf), "%lu", (unsigned long)item->get());
             lv_label_set_text(val_label, val_buf);
@@ -946,8 +976,15 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     /* 范围提示 (显示允许的最小值 ~ 最大值) */
     lv_obj_t *range_label = lv_label_create(content);
     char range_buf[32];
-    snprintf(range_buf, sizeof(range_buf), "Range: %lu ~ %lu",
-             (unsigned long)item->min_val, (unsigned long)item->max_val);
+    char min_buf[16], max_buf[16];
+    if (item->decimal_places > 0 && !item->format) {
+        format_with_decimal(item->min_val, item->decimal_places, min_buf, sizeof(min_buf));
+        format_with_decimal(item->max_val, item->decimal_places, max_buf, sizeof(max_buf));
+        snprintf(range_buf, sizeof(range_buf), "Range: %s ~ %s", min_buf, max_buf);
+    } else {
+        snprintf(range_buf, sizeof(range_buf), "Range: %lu ~ %lu",
+                 (unsigned long)item->min_val, (unsigned long)item->max_val);
+    }
     lv_label_set_text(range_label, range_buf);
     lv_obj_set_style_text_color(range_label, lv_color_hex(COLOR_ACCENT), 0);
     lv_obj_set_style_text_font(range_label, &lv_font_montserrat_16, 0);
@@ -962,6 +999,11 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_t *cur_val_label = lv_label_create(content);
     if (item->format) {
         lv_label_set_text(cur_val_label, item->format(item->get()));
+    } else if (item->decimal_places > 0) {
+        char cur_val_buf[16];
+        format_with_decimal(item->get(), item->decimal_places,
+                           cur_val_buf, sizeof(cur_val_buf));
+        lv_label_set_text(cur_val_label, cur_val_buf);
     } else {
         char cur_val_buf[16];
         snprintf(cur_val_buf, sizeof(cur_val_buf), "%lu", (unsigned long)item->get());
@@ -976,7 +1018,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     g_set_nav.edit_value = item->get();  /* 从当前值开始编辑 */
     lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
     lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
-    /* format 回调显示文本时用较小字体，纯数字用大字体 */
+    /* format 回调显示文本时用较小字体，纯数字(含decimal)用大字体 */
     if (item->format) {
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_24, 0);
     } else {
@@ -1038,6 +1080,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
  *
  * 例如: 值=5000, 步进=10 → "50#2effde 0#0" (十位高亮)
  *       值=123, 步进=100 → "1#2effde 2#3" (百位高亮)
+ *       值=5000, 步进=1, decimal=3 → "5.00#2effde 0#" (0.001位高亮)
  *
  * @note  必须在 g_edit_value_label 上先调用 lv_label_set_recolor(true)
  */
@@ -1053,6 +1096,7 @@ static void update_edit_value_display(void)
 
     uint32_t value = g_set_nav.edit_value;
     uint32_t step = g_step_list[g_step_index];
+    uint8_t dp = (g_edit_item && !g_edit_item->format) ? g_edit_item->decimal_places : 0;
 
     /* 根据步进值计算需要高亮的位: step=1→第0位(个位), step=10→第1位(十位), ... */
     int pos_from_right = 0;
@@ -1061,7 +1105,7 @@ static void update_edit_value_display(void)
         while (s > 1) { pos_from_right++; s /= 10; }
     }
 
-    /* 将当前值转为字符串 */
+    /* 将当前值转为纯数字字符串 */
     char val_str[16];
     snprintf(val_str, sizeof(val_str), "%lu", (unsigned long)value);
     int len = (int)strlen(val_str);
@@ -1083,19 +1127,68 @@ static void update_edit_value_display(void)
         len = min_len;
     }
 
-    int pos_from_left = len - 1 - pos_from_right;
+    /* 纯数字中的高亮位 (从左起, 0-indexed) */
+    int digit_pos = len - 1 - pos_from_right;
 
-    /* 在目标位前后插入 recolor 标记: #RRGGBB digit# */
-    if (pos_from_left >= 0 && pos_from_left < len) {
+    if (dp > 0) {
+        /* ---------- 有小数: 在数字串中插入小数点 ---------- */
+        int int_digits = len - dp;
+        if (int_digits < 1) int_digits = 1;
+        /* 保证整数部分至少1位: 在前面补零 */
+        while (int_digits + dp > len) {
+            memmove(&val_str[1], val_str, len + 1);
+            val_str[0] = '0';
+            len++;
+        }
+        int_digits = len - dp;
+        /* digit_pos 超出范围则不插入小数 */
+        if (digit_pos < 0 || digit_pos >= len) {
+            lv_label_set_text(g_edit_value_label, val_str);
+            return;
+        }
+        /*
+         * 计算高亮位在插入小数点后的字符串中的索引。
+         * 小数点插在 int_digits 之后。
+         * digit_pos < int_digits → 不跨过小数点, str_idx = digit_pos
+         * digit_pos >= int_digits → 跨过小数点, str_idx = digit_pos + 1
+         */
+        int str_idx = digit_pos + (digit_pos >= int_digits ? 1 : 0);
+        int display_len = len + 1; /* 数字 + 一个小数点 */
+
+        /* 构建带小数点和高亮的字符串 */
         char buf[32];
-        snprintf(buf, sizeof(buf), "%.*s#%06x %c#%s",
-                 pos_from_left, val_str,
-                 (unsigned int)COLOR_STEP_HL,
-                 val_str[pos_from_left],
-                 &val_str[pos_from_left + 1]);
+        int bi = 0;
+        for (int i = 0; i < len; i++) {
+            if (i == int_digits) {
+                buf[bi++] = '.';
+            }
+            if (i == digit_pos) {
+                bi += snprintf(buf + bi, sizeof(buf) - bi, "#%06x %c#",
+                               (unsigned int)COLOR_STEP_HL, val_str[i]);
+            } else {
+                buf[bi++] = val_str[i];
+            }
+        }
+        /* 如果 int_digits == len，小数点追加在末尾 */
+        if (int_digits == len) {
+            buf[bi++] = '.';
+        }
+        buf[bi] = '\0';
         lv_label_set_text(g_edit_value_label, buf);
     } else {
-        lv_label_set_text(g_edit_value_label, val_str);
+        /* ---------- 无小数: 原有逻辑 ---------- */
+        int pos_from_left = len - 1 - pos_from_right;
+        if (pos_from_left >= 0 && pos_from_left < len) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "%.*s#%06x %c#%s",
+                     pos_from_left, val_str,
+                     (unsigned int)COLOR_STEP_HL,
+                     val_str[pos_from_left],
+                     &val_str[pos_from_left + 1]);
+            lv_label_set_text(g_edit_value_label, buf);
+        } else {
+            lv_label_set_text(g_edit_value_label, val_str);
+        }
     }
 }
 
