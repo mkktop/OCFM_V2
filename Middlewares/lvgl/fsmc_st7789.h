@@ -17,4 +17,8 @@ void fsmc_st7789_set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 /* ���Ժ��� */
 void fsmc_st7789_test_pattern(void);
 
+
+/* 背光控制 */
+void fsmc_st7789_backlight_on(void);
+void fsmc_st7789_backlight_off(void);
 #endif /* __FSMC_ST7789_H__ */

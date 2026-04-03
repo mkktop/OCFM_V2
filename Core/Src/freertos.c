@@ -189,6 +189,12 @@ void main_task_func(void *argument)
   lv_port_disp_init();  // 初始化显示端口
   // lv_demo_benchmark();  // 初始化演示基准测试
   ui_create();
+  /* 背光关闭状态下运行几个渲染周期，让LVGL自然完成首帧渲染 */
+  for (int i = 0; i < 10; i++) {
+      lv_timer_handler();
+      osDelay(5);
+  }
+  fsmc_st7789_backlight_on();
   /* Infinite loop */
   for(;;)
   {

@@ -63,13 +63,13 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LORA_NSS_GPIO_Port, LORA_NSS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, LORA_RESET_Pin|LCD_BLK_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LORA_RESET_GPIO_Port, LORA_RESET_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, LCD_BLK_Pin|UART2_CTRL_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(ML307_EN_GPIO_Port, ML307_EN_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(UART2_CTRL_GPIO_Port, UART2_CTRL_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : RELAY1_CTRL_Pin RELAY2_CTRL_Pin RELAY3_CTRL_Pin RELAY4_CTRL_Pin */
   GPIO_InitStruct.Pin = RELAY1_CTRL_Pin|RELAY2_CTRL_Pin|RELAY3_CTRL_Pin|RELAY4_CTRL_Pin;

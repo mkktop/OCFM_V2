@@ -2,35 +2,35 @@
 #include "main.h"
 #include <stdint.h>
 
-/* Ë½ÓÐº¯ÊýÉùÃ÷ */
+/* ç§æœ‰å‡½æ•°å£°æ˜Ž */
 static void lcd_write_cmd(uint8_t cmd);
 static void lcd_write_data(uint8_t data);
 static void lcd_write_data_16bit(uint16_t data);
 static void lcd_reset(void);
 
-/* Ð´ÃüÁîµ½LCD */
+/* å†™å‘½ä»¤åˆ°LCD */
 static void lcd_write_cmd(uint8_t cmd)
 {
-    /* ·ÃÎÊÃüÁîµØÖ·£¨RS=0£© */
+    /* è®¿é—®å‘½ä»¤åœ°å€ï¼ˆRS=0ï¼‰ */
     *(volatile uint8_t *)LCD_CMD_ADDR = cmd;
 }
 
-/* Ð´8Î»Êý¾Ýµ½LCD */
+/* å†™8ä½æ•°æ®åˆ°LCD */
 static void lcd_write_data(uint8_t data)
 {
-    /* ·ÃÎÊÊý¾ÝµØÖ·£¨RS=1£© */
+    /* è®¿é—®æ•°æ®åœ°å€ï¼ˆRS=1ï¼‰ */
     *(volatile uint8_t *)LCD_DATA_ADDR = data;
 }
 
-/* Ð´16Î»Êý¾Ýµ½LCD£¨ÓÃÓÚÏñËØÊý¾Ý£© */
+/* å†™16ä½æ•°æ®åˆ°LCDï¼ˆç”¨äºŽåƒç´ æ•°æ®ï¼‰ */
 static void lcd_write_data_16bit(uint16_t data)
 {
-    /* ÓÉÓÚÊÇ8Î»½Ó¿Ú£¬ÐèÒª·ÖÁ½´ÎÐ´Èë */
-    *(volatile uint8_t *)LCD_DATA_ADDR = data >> 8;    /* ¸ß8Î» */
-    *(volatile uint8_t *)LCD_DATA_ADDR = data & 0xFF;  /* µÍ8Î» */
+    /* ç”±äºŽæ˜¯8ä½æŽ¥å£ï¼Œéœ€è¦åˆ†ä¸¤æ¬¡å†™å…¥ */
+    *(volatile uint8_t *)LCD_DATA_ADDR = data >> 8;    /* é«˜8ä½ */
+    *(volatile uint8_t *)LCD_DATA_ADDR = data & 0xFF;  /* ä½Ž8ä½ */
 }
 
-/* Ó²¼þ¸´Î»LCD */
+/* ç¡¬ä»¶å¤ä½LCD */
 static void lcd_reset(void)
 {
     HAL_GPIO_WritePin(LCD_RESET_GPIO_Port, LCD_RESET_Pin, GPIO_PIN_RESET);
@@ -39,65 +39,65 @@ static void lcd_reset(void)
     HAL_Delay(100);
 }
 
-/* ÉèÖÃÏÔÊ¾ÇøÓò */
+/* è®¾ç½®æ˜¾ç¤ºåŒºåŸŸ */
 void fsmc_st7789_set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
-    /* ÉèÖÃÁÐµØÖ· */
+    /* è®¾ç½®åˆ—åœ°å€ */
     lcd_write_cmd(0x2A);  
     lcd_write_data(x1 >> 8);
     lcd_write_data(x1 & 0xFF);
     lcd_write_data(x2 >> 8);
     lcd_write_data(x2 & 0xFF);
     
-    /* ÉèÖÃÐÐµØÖ· */
+    /* è®¾ç½®è¡Œåœ°å€ */
     lcd_write_cmd(0x2B);  
     lcd_write_data(y1 >> 8);
     lcd_write_data(y1 & 0xFF);
     lcd_write_data(y2 >> 8);
     lcd_write_data(y2 & 0xFF);
     
-    /* ¿ªÊ¼Ð´ÈëGRAMÊý¾Ý */
+    /* å¼€å§‹å†™å…¥GRAMæ•°æ® */
     lcd_write_cmd(0x2C); 
 }
 
 /**
- * @brief ST7789 LCD³õÊ¼»¯º¯Êý
- * @details ³õÊ¼»¯ST7789ÏÔÊ¾¿ØÖÆÆ÷£¬°üÀ¨Ó²¼þ¸´Î»¡¢µçÔ´ÅäÖÃ¡¢Ù¤ÂíÐ£ÕýµÈ
+ * @brief ST7789 LCDåˆå§‹åŒ–å‡½æ•°
+ * @details åˆå§‹åŒ–ST7789æ˜¾ç¤ºæŽ§åˆ¶å™¨ï¼ŒåŒ…æ‹¬ç¡¬ä»¶å¤ä½ã€ç”µæºé…ç½®ã€ä¼½é©¬æ ¡æ­£ç­‰
  * @note 
  */
 void fsmc_st7789_init(void)
 {
-    /* 1. Ó²¼þ¸´Î» */
-    /* Í¨¹ýÀ­µÍRESETÒý½Å²¢ÑÓ³Ù£¬Ê¹LCD½øÈë¸´Î»×´Ì¬ */
+    /* 1. ç¡¬ä»¶å¤ä½ */
+    /* é€šè¿‡æ‹‰ä½ŽRESETå¼•è„šå¹¶å»¶è¿Ÿï¼Œä½¿LCDè¿›å…¥å¤ä½çŠ¶æ€ */
     lcd_reset();
     
-    /* 2. ¿ªÆô±³¹â */
-    /* LCD_BLKÒý½Å¿ØÖÆ±³¹â */
-    HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_SET);
+    /* 2. èƒŒå…‰ */
+    /* LCD_BLKå¼•è„šæŽ§åˆ¶èƒŒå…‰ */
+    HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_RESET);
     
-    /* 3. ST7789³õÊ¼»¯ÃüÁîÐòÁÐ */
-    /* 0x01: Èí¼þ¸´Î»ÃüÁî */
-    /* Ö´ÐÐÈí¼þ¸´Î»£¬Ê¹LCDÄÚ²¿¼Ä´æÆ÷»Ö¸´µ½Ä¬ÈÏ×´Ì¬ */
+    /* 3. ST7789åˆå§‹åŒ–å‘½ä»¤åºåˆ— */
+    /* 0x01: è½¯ä»¶å¤ä½å‘½ä»¤ */
+    /* æ‰§è¡Œè½¯ä»¶å¤ä½ï¼Œä½¿LCDå†…éƒ¨å¯„å­˜å™¨æ¢å¤åˆ°é»˜è®¤çŠ¶æ€ */
     lcd_write_cmd(0x01);
-    HAL_Delay(150);  // µÈ´ý150msÈÃ¸´Î»Íê³É
+    HAL_Delay(150);  // ç­‰å¾…150msè®©å¤ä½å®Œæˆ
     
-    /* 0x11: ÍË³öË¯ÃßÄ£Ê½ */
-    /* ÍË³öË¯ÃßÄ£Ê½£¬LCD¿ªÊ¼Õý³£¹¤×÷ */
+    /* 0x11: é€€å‡ºç¡çœ æ¨¡å¼ */
+    /* é€€å‡ºç¡çœ æ¨¡å¼ï¼ŒLCDå¼€å§‹æ­£å¸¸å·¥ä½œ */
     lcd_write_cmd(0x11);
-    HAL_Delay(120);  // µÈ´ý120msÈÃLCDÎÈ¶¨
+    HAL_Delay(120);  // ç­‰å¾…120msè®©LCDç¨³å®š
     
-    /* 0x3A: ÉèÖÃ½Ó¿ÚÏñËØ¸ñÊ½ */
-    /* ²ÎÊý0x55±íÊ¾Ê¹ÓÃ16Î»/ÏñËØ£¬RGB565¸ñÊ½£¨5Î»ºì+6Î»ÂÌ+5Î»À¶£© */
+    /* 0x3A: è®¾ç½®æŽ¥å£åƒç´ æ ¼å¼ */
+    /* å‚æ•°0x55è¡¨ç¤ºä½¿ç”¨16ä½/åƒç´ ï¼ŒRGB565æ ¼å¼ï¼ˆ5ä½çº¢+6ä½ç»¿+5ä½è“ï¼‰ */
     lcd_write_cmd(0x3A);
     lcd_write_data(0x55);
     
-    /* 0x36: ÄÚ´æÊý¾Ý·ÃÎÊ¿ØÖÆ */
-    /* ÉèÖÃÏÔÊ¾·½ÏòºÍÉ¨ÃèË³Ðò£¬0x00ÎªÕý³£·½Ïò */
+    /* 0x36: å†…å­˜æ•°æ®è®¿é—®æŽ§åˆ¶ */
+    /* è®¾ç½®æ˜¾ç¤ºæ–¹å‘å’Œæ‰«æé¡ºåºï¼Œ0x00ä¸ºæ­£å¸¸æ–¹å‘ */
     lcd_write_cmd(0x36);
     lcd_write_data(0x60);
     
-    /* 0xB2:  porchÉèÖÃ */
-    /* ÅäÖÃÏÔÊ¾ÇøÓòµÄ porch²ÎÊý£¬ÓÃÓÚ¸ÄÉÆÏÔÊ¾Ð§¹û */
+    /* 0xB2:  porchè®¾ç½® */
+    /* é…ç½®æ˜¾ç¤ºåŒºåŸŸçš„ porchå‚æ•°ï¼Œç”¨äºŽæ”¹å–„æ˜¾ç¤ºæ•ˆæžœ */
     lcd_write_cmd(0xB2);
     lcd_write_data(0x0C);
     lcd_write_data(0x0C);
@@ -105,49 +105,49 @@ void fsmc_st7789_init(void)
     lcd_write_data(0x33);
     lcd_write_data(0x33);
     
-    /* 0xB7: ÃÅ¿Ø¿ØÖÆ */
-    /* ÉèÖÃÃÅ¿ØµçÑ¹²ÎÊý */
+    /* 0xB7: é—¨æŽ§æŽ§åˆ¶ */
+    /* è®¾ç½®é—¨æŽ§ç”µåŽ‹å‚æ•° */
     lcd_write_cmd(0xB7);
     lcd_write_data(0x35);
     
-    /* 0xBB: VCOMÉèÖÃ */
-    /* ÅäÖÃVcomµçÑ¹£¬Ó°ÏìÏÔÊ¾¶Ô±È¶È */
+    /* 0xBB: VCOMè®¾ç½® */
+    /* é…ç½®Vcomç”µåŽ‹ï¼Œå½±å“æ˜¾ç¤ºå¯¹æ¯”åº¦ */
     lcd_write_cmd(0xBB);
     lcd_write_data(0x2B);
     
-    /* 0xC0: LCM¿ØÖÆ */
-    /* ÉèÖÃLCM£¨Òº¾§Ä£¿é£©¹¤×÷²ÎÊý */
+    /* 0xC0: LCMæŽ§åˆ¶ */
+    /* è®¾ç½®LCMï¼ˆæ¶²æ™¶æ¨¡å—ï¼‰å·¥ä½œå‚æ•° */
     lcd_write_cmd(0xC0);
     lcd_write_data(0x2C);
     
-    /* 0xC2: VDVºÍVRHÃüÁîÊ¹ÄÜ */
-    /* Ê¹ÄÜVDVºÍVRHµçÑ¹ÉèÖÃÃüÁî */
+    /* 0xC2: VDVå’ŒVRHå‘½ä»¤ä½¿èƒ½ */
+    /* ä½¿èƒ½VDVå’ŒVRHç”µåŽ‹è®¾ç½®å‘½ä»¤ */
     lcd_write_cmd(0xC2);
     lcd_write_data(0x01);
     
-    /* 0xC3: VRHÉèÖÃ */
-    /* ÉèÖÃVRHÊä³öµçÑ¹ */
+    /* 0xC3: VRHè®¾ç½® */
+    /* è®¾ç½®VRHè¾“å‡ºç”µåŽ‹ */
     lcd_write_cmd(0xC3);
     lcd_write_data(0x0B);
     
-    /* 0xC4: VDVÉèÖÃ */
-    /* ÉèÖÃVDVµçÑ¹ */
+    /* 0xC4: VDVè®¾ç½® */
+    /* è®¾ç½®VDVç”µåŽ‹ */
     lcd_write_cmd(0xC4);
     lcd_write_data(0x20);
     
-    /* 0xC6: Ö¡ÂÊ¿ØÖÆ */
-    /* ÅäÖÃÕý³£Ä£Ê½ÏÂµÄÖ¡ÂÊ£¬0x0FÔ¼Îª60Hz */
+    /* 0xC6: å¸§çŽ‡æŽ§åˆ¶ */
+    /* é…ç½®æ­£å¸¸æ¨¡å¼ä¸‹çš„å¸§çŽ‡ï¼Œ0x0Fçº¦ä¸º60Hz */
     lcd_write_cmd(0xC6);
     lcd_write_data(0x0F);
     
-    /* 0xD0: µçÔ´¿ØÖÆ1 */
-    /* ÉèÖÃµçÔ´¿ØÖÆ²ÎÊý */
+    /* 0xD0: ç”µæºæŽ§åˆ¶1 */
+    /* è®¾ç½®ç”µæºæŽ§åˆ¶å‚æ•° */
     lcd_write_cmd(0xD0);
     lcd_write_data(0xA4);
     lcd_write_data(0xA1);
     
-    /* 0xE0: ÕýÏòµçÑ¹Ù¤ÂíÐ£Õý */
-    /* ÅäÖÃÙ¤ÂíÇúÏß£¬ÓÅ»¯»Ò¶ÈÏÔÊ¾Ð§¹û */
+    /* 0xE0: æ­£å‘ç”µåŽ‹ä¼½é©¬æ ¡æ­£ */
+    /* é…ç½®ä¼½é©¬æ›²çº¿ï¼Œä¼˜åŒ–ç°åº¦æ˜¾ç¤ºæ•ˆæžœ */
     lcd_write_cmd(0xE0);
     lcd_write_data(0xD0);
     lcd_write_data(0x00);
@@ -164,8 +164,8 @@ void fsmc_st7789_init(void)
     lcd_write_data(0x14);
     lcd_write_data(0x17);
     
-    /* 0xE1: ¸ºÏòµçÑ¹Ù¤ÂíÐ£Õý */
-    /* ÅäÖÃ·´ÏòÙ¤ÂíÇúÏß */
+    /* 0xE1: è´Ÿå‘ç”µåŽ‹ä¼½é©¬æ ¡æ­£ */
+    /* é…ç½®åå‘ä¼½é©¬æ›²çº¿ */
     lcd_write_cmd(0xE1);
     lcd_write_data(0xD0);
     lcd_write_data(0x00);
@@ -182,25 +182,36 @@ void fsmc_st7789_init(void)
     lcd_write_data(0x1B);
     lcd_write_data(0x1E);
     
-    /* 0x20: ÏÔÊ¾·´ÏÔ¹Ø±Õ */
-    /* ¹Ø±ÕÏÔÊ¾·´ÏÔ¹¦ÄÜ£¬Õý³£ÏÔÊ¾ÑÕÉ« */
+    /* 0x20: æ˜¾ç¤ºåæ˜¾å…³é—­ */
+    /* å…³é—­æ˜¾ç¤ºåæ˜¾åŠŸèƒ½ï¼Œæ­£å¸¸æ˜¾ç¤ºé¢œè‰² */
     lcd_write_cmd(0x20);
     
-    /* 0x29: ÏÔÊ¾¿ªÆô */
-    /* ¿ªÆôÏÔÊ¾£¬LCD¿ªÊ¼ÏÔÊ¾ÄÚÈÝ */
+    /* 0x29: æ˜¾ç¤ºå¼€å¯ */
+    /* å¼€å¯æ˜¾ç¤ºï¼ŒLCDå¼€å§‹æ˜¾ç¤ºå†…å®¹ */
     lcd_write_cmd(0x29);
-    HAL_Delay(120);  // µÈ´ý120msÈÃÏÔÊ¾ÎÈ¶¨
+    HAL_Delay(120);  // ç­‰å¾…120msè®©æ˜¾ç¤ºç¨³å®š
 }
 
-/* Ìî³ä¾ØÐÎÇøÓò */
+/* å¡«å……çŸ©å½¢åŒºåŸŸ */
+/* èƒŒå…‰æŽ§åˆ¶ */
+void fsmc_st7789_backlight_on(void)
+{
+    HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_SET);
+}
+
+void fsmc_st7789_backlight_off(void)
+{
+    HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_RESET);
+}
+
 void fsmc_st7789_fill_rect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
     uint32_t pixel_count = (x2 - x1 + 1) * (y2 - y1 + 1);
     
-    /* ÉèÖÃÏÔÊ¾ÇøÓò */
+    /* è®¾ç½®æ˜¾ç¤ºåŒºåŸŸ */
     fsmc_st7789_set_window(x1, y1, x2, y2);
     
-    /* ÐÔÄÜÓÅ»¯£º¼õÉÙº¯Êýµ÷ÓÃºÍÄÚ´æ·ÃÎÊ */
+    /* æ€§èƒ½ä¼˜åŒ–ï¼šå‡å°‘å‡½æ•°è°ƒç”¨å’Œå†…å­˜è®¿é—® */
     volatile uint8_t *data_addr = (volatile uint8_t *)LCD_DATA_ADDR;
     uint8_t high_byte = color >> 8;
     uint8_t low_byte = color & 0xFF;
