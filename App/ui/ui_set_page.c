@@ -153,15 +153,11 @@ static char *format_with_decimal(uint32_t value, uint8_t decimal_places,
 
 /* ---------- 基本参数 ---------- */
 static const set_item_t basic_items[] = {
-    {"Range Max",       "m",   app_config_get_range_max,        app_config_set_range_max,        0, 20000, 1,   3},
     {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 20000, 1,   3},
-    {"4mA Cal",         "",    app_config_get_calibration_4ma,    app_config_set_calibration_4ma, 0, 9999, 1},
-    {"20mA Cal",        "",    app_config_get_calibration_20ma,   app_config_set_calibration_20ma,0, 9999, 1},
     {"4mA Range",       "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_range_4ma,  app_config_set_range_4ma,        0.0f, 99999.0f, 0.001f, 3},
     {"20mA Range",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_range_20ma, app_config_set_range_20ma,       0.0f, 99999.0f, 0.001f, 3},
-    {"Decimal",         "",    app_config_get_point_num,          app_config_set_point_num,        0, 3,     1},
 };
 
 /* ---------- 测量参数 ---------- */
@@ -169,7 +165,6 @@ static const set_item_t measure_items[] = {
     {"Window Width",    "",     app_config_get_window_width,       app_config_set_window_width,      0, 1000,  1},
     {"Filter Count",    "",     app_config_get_filter_count,       app_config_set_filter_count,      0, 50,    1},
     {"Sample Delay",    "ms",   app_config_get_delay_time,         app_config_set_delay_time,        0, 1000,  10},
-    {"Antenna Type",    "",     app_config_get_antenna_type,       app_config_set_antenna_type,      0, 10,    1},
     {"Blind Area",      "mm",   app_config_get_blind_area,         app_config_set_blind_area,        0, 1000,  10},
     {"Window Coeff",    "",     app_config_get_w_coeff,            app_config_set_w_coeff,           0, 10,    1},
     {"Measure Coeff",   "",     app_config_get_m_coeff,            app_config_set_m_coeff,           0, 10,    1},
@@ -232,15 +227,9 @@ static const char *format_yes_no(uint32_t val) { return val == 1 ? "Yes" : "No";
 static const set_item_t system_items[] = {
     {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1},
     {"Channel ID",      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,    1},
-    {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1},
     {"Sum Decimal",     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
-    {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,         0, 99999, 10},
-    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
     {"Clear Total",    "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
-    {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
 };
-
-/* ---------- 时间设置 ---------- */
 static const set_item_t time_items[] = {
     {"Year",       "",  rtc_get_year,    rtc_set_year,    2000, 2099, 1},
     {"Month",      "",  rtc_get_month,   rtc_set_month,   1,    12,   1},
@@ -251,14 +240,33 @@ static const set_item_t time_items[] = {
     {"Weekday",    "",  rtc_get_weekday, rtc_set_weekday, 1,    7,   1,  0,  format_weekday},
 };
 
+/* ---------- 显示设置 ---------- */
+static const set_item_t display_items[] = {
+    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
+    {"Decimal",         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1},
+    {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1},
+};
+
+/* ---------- 高级设置 ---------- */
+static const set_item_t advanced_items[] = {
+    {"Range Max",       "m",   app_config_get_range_max,            app_config_set_range_max,        0, 20000, 1,   3},
+    {"Antenna Type",    "",     app_config_get_antenna_type,        app_config_set_antenna_type,     0, 10,    1},
+    {"4mA Cal",         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 0, 9999, 1},
+    {"20mA Cal",        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma,0, 9999, 1},
+    {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
+    {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1},
+};
+
 /* ---------- 一级菜单分类表 ---------- */
 static const set_category_t categories[] = {
-    {"Basic",       basic_items,  sizeof(basic_items) / sizeof(basic_items[0])},
-    {"Measure",     measure_items, sizeof(measure_items) / sizeof(measure_items[0])},
-    {"Modbus",      modbus_items, sizeof(modbus_items) / sizeof(modbus_items[0])},
-    {"Alarm",       alarm_items,  sizeof(alarm_items) / sizeof(alarm_items[0])},
-    {"System",      system_items, sizeof(system_items) / sizeof(system_items[0])},
-    {"Time",        time_items,   sizeof(time_items) / sizeof(time_items[0])},
+    {"Basic",        basic_items,    sizeof(basic_items) / sizeof(basic_items[0])},
+    {"Modbus",       modbus_items,   sizeof(modbus_items) / sizeof(modbus_items[0])},
+    {"Alarm",        alarm_items,    sizeof(alarm_items) / sizeof(alarm_items[0])},
+    {"Canal",        system_items,   sizeof(system_items) / sizeof(system_items[0])},
+    {"Professional", measure_items,  sizeof(measure_items) / sizeof(measure_items[0])},
+    {"Display",      display_items,  sizeof(display_items) / sizeof(display_items[0])},
+    {"Advanced",     advanced_items, sizeof(advanced_items) / sizeof(advanced_items[0])},
+    {"Time",         time_items,     sizeof(time_items) / sizeof(time_items[0])},
 };
 
 #define CATEGORY_COUNT (sizeof(categories) / sizeof(categories[0]))
@@ -281,7 +289,7 @@ static volatile uint8_t g_set_busy;
 static lv_obj_t *g_edit_value_label = NULL;   /* 编辑页面大字值标签指针 */
 static const set_item_t *g_edit_item = NULL;   /* 当前编辑的参数项指针 */
 static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
-static float g_stepf_list[5];                 /* float步进值列表 */
+static float g_stepf_list[8];                 /* float步进值列表 */
 static uint8_t g_step_count;                  /* 当前参数的步进级数 */
 static uint8_t g_step_index;                  /* 当前选中的步进索引 */
 static uint32_t g_last_key_tick;              /* 最后一次按键操作的 tick */
@@ -942,13 +950,13 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 
     /* 根据参数最大值生成步进列表，初始使用最小步进 */
     if (item->getf) {
-        /* float 路径: 步进 0.001, 0.01, 0.1, 1, 10 */
-        g_stepf_list[0] = 0.001f;
-        g_stepf_list[1] = 0.01f;
-        g_stepf_list[2] = 0.1f;
-        g_stepf_list[3] = 1.0f;
-        g_stepf_list[4] = 10.0f;
-        g_step_count = 5;
+        /* float 路径: 根据 max_valf 动态生成步进列表 */
+        g_step_count = 0;
+        float s = 0.001f;
+        while (s <= item->max_valf && g_step_count < 8) {
+            g_stepf_list[g_step_count++] = s;
+            s *= 10.0f;
+        }
     } else {
         generate_step_list(item->max_val);
     }
@@ -1048,11 +1056,12 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
         g_set_nav.edit_value = item->get();    /* uint32 路径 */
     }
     lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
-    lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
-    /* format 回调显示文本时用较小字体，纯数字(含decimal)用大字体 */
+    /* format 回调(文字类型)用强调色，纯数字(含decimal/float)用白色 */
     if (item->format) {
+        lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_STEP_HL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_24, 0);
     } else {
+        lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
     }
     lv_obj_set_style_margin_bottom(g_edit_value_label, 5, 0);
@@ -1148,8 +1157,17 @@ static void update_edit_value_display(void)
         snprintf(val_str, sizeof(val_str), "%ld", (long)ivalue);
         int len = (int)strlen(val_str);
 
-        /* 前补零保证宽度: 整数部分至少1位 + dp位小数 */
-        int min_len = 1 + dp;
+        /*
+         * 前补零保证宽度: 根据 max_valf 的整数位数 + dp位小数。
+         * 例如 max_valf=99999, dp=3 → 整数最大5位 → 最少 5+3=8 位
+         */
+        int max_int_digits = 0;
+        {
+            int32_t imax = (int32_t)(g_edit_item->max_valf);
+            while (imax > 0) { max_int_digits++; imax /= 10; }
+        }
+        if (max_int_digits < 1) max_int_digits = 1;
+        int min_len = max_int_digits + dp;
         if (len < min_len) {
             int pad = min_len - len;
             memmove(&val_str[pad], val_str, len + 1);
