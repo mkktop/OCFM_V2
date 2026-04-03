@@ -67,13 +67,20 @@
 typedef struct {
     const char *name;           /**< 显示名称 (如 "Range Max")      */
     const char *unit;           /**< 单位字符串 (如 "mm"), 或 ""     */
-    uint32_t (*get)(void);      /**< 从配置读取当前值                */
-    void (*set)(uint32_t);      /**< 写入新值到配置                  */
-    uint32_t min_val;           /**< 允许的最小值                    */
-    uint32_t max_val;           /**< 允许的最大值                    */
-    uint32_t step;              /**< 每次UP/DOWN的调节步进            */
+    uint32_t (*get)(void);      /**< 从配置读取当前值 (uint32路径)   */
+    void (*set)(uint32_t);      /**< 写入新值到配置 (uint32路径)     */
+    uint32_t min_val;           /**< 允许的最小值 (uint32路径)       */
+    uint32_t max_val;           /**< 允许的最大值 (uint32路径)       */
+    uint32_t step;              /**< 每次UP/DOWN的调节步进 (uint32)  */
     uint8_t decimal_places;     /**< 小数位数 (0=整数, 3=mm显示为m)  */
     const char *(*format)(uint32_t); /**< 可选: 自定义格式化 (优先于decimal_places) */
+    /* --- float 路径 (getf非空时使用) --- */
+    float (*getf)(void);        /**< 从配置读取当前值 (float路径)    */
+    void (*setf)(float);        /**< 写入新值到配置 (float路径)      */
+    float min_valf;             /**< 允许的最小值 (float路径)        */
+    float max_valf;             /**< 允许的最大值 (float路径)        */
+    float stepf;                /**< 每次UP/DOWN的调节步进 (float)   */
+    uint8_t f_decimals;         /**< float 显示的小数位数            */
 } set_item_t;
 
 /**
@@ -105,7 +112,8 @@ typedef enum {
 typedef struct {
     set_level_t level;          /**< 当前导航层级                    */
     int8_t selected_index;      /**< 当前高亮项索引                  */
-    uint32_t edit_value;        /**< 编辑中的临时值                  */
+    uint32_t edit_value;        /**< 编辑中的临时值 (uint32路径)     */
+    float edit_valuef;          /**< 编辑中的临时值 (float路径)      */
     lv_obj_t *current_screen;   /**< 当前显示的屏幕                  */
 } set_nav_state_t;
 
@@ -149,8 +157,10 @@ static const set_item_t basic_items[] = {
     {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 20000, 1,   3},
     {"4mA Cal",         "",    app_config_get_calibration_4ma,    app_config_set_calibration_4ma, 0, 9999, 1},
     {"20mA Cal",        "",    app_config_get_calibration_20ma,   app_config_set_calibration_20ma,0, 9999, 1},
-    {"4mA Range",       "",    app_config_get_range_4ma,          app_config_set_range_4ma,        0, 99999, 1},
-    {"20mA Range",      "",    app_config_get_range_20ma,         app_config_set_range_20ma,       0, 99999, 1},
+    {"4mA Range",       "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_range_4ma,  app_config_set_range_4ma,        0.0f, 99999.0f, 0.001f, 3},
+    {"20mA Range",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_range_20ma, app_config_set_range_20ma,       0.0f, 99999.0f, 0.001f, 3},
     {"Decimal",         "",    app_config_get_point_num,          app_config_set_point_num,        0, 3,     1},
 };
 
@@ -271,6 +281,7 @@ static volatile uint8_t g_set_busy;
 static lv_obj_t *g_edit_value_label = NULL;   /* 编辑页面大字值标签指针 */
 static const set_item_t *g_edit_item = NULL;   /* 当前编辑的参数项指针 */
 static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
+static float g_stepf_list[5];                 /* float步进值列表 */
 static uint8_t g_step_count;                  /* 当前参数的步进级数 */
 static uint8_t g_step_index;                  /* 当前选中的步进索引 */
 static uint32_t g_last_key_tick;              /* 最后一次按键操作的 tick */
@@ -300,7 +311,8 @@ typedef struct {
 
 /** 编辑值更新上下文 */
 typedef struct {
-    uint32_t new_value;         /**< 新的编辑值                      */
+    uint32_t new_value;         /**< 新的编辑值 (uint32路径)         */
+    float new_valuef;           /**< 新的编辑值 (float路径)          */
 } set_edit_val_context_t;
 
 /** 步进切换上下文 */
@@ -762,6 +774,10 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
         lv_obj_t *val_label = lv_label_create(row);
         if (item->format) {
             lv_label_set_text(val_label, item->format(item->get()));
+        } else if (item->getf) {
+            snprintf(val_buf, sizeof(val_buf), "%.*f",
+                     (int)item->f_decimals, item->getf());
+            lv_label_set_text(val_label, val_buf);
         } else if (item->decimal_places > 0) {
             format_with_decimal(item->get(), item->decimal_places,
                                val_buf, sizeof(val_buf));
@@ -925,7 +941,17 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     g_edit_item = item;
 
     /* 根据参数最大值生成步进列表，初始使用最小步进 */
-    generate_step_list(item->max_val);
+    if (item->getf) {
+        /* float 路径: 步进 0.001, 0.01, 0.1, 1, 10 */
+        g_stepf_list[0] = 0.001f;
+        g_stepf_list[1] = 0.01f;
+        g_stepf_list[2] = 0.1f;
+        g_stepf_list[3] = 1.0f;
+        g_stepf_list[4] = 10.0f;
+        g_step_count = 5;
+    } else {
+        generate_step_list(item->max_val);
+    }
     g_step_index = 0;
 
     lv_obj_t *screen = lv_obj_create(NULL);
@@ -969,7 +995,11 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_t *range_label = lv_label_create(content);
     char range_buf[32];
     char min_buf[16], max_buf[16];
-    if (item->decimal_places > 0 && !item->format) {
+    if (item->getf) {
+        snprintf(min_buf, sizeof(min_buf), "%.*f", (int)item->f_decimals, item->min_valf);
+        snprintf(max_buf, sizeof(max_buf), "%.*f", (int)item->f_decimals, item->max_valf);
+        snprintf(range_buf, sizeof(range_buf), "Range: %s ~ %s", min_buf, max_buf);
+    } else if (item->decimal_places > 0 && !item->format) {
         format_with_decimal(item->min_val, item->decimal_places, min_buf, sizeof(min_buf));
         format_with_decimal(item->max_val, item->decimal_places, max_buf, sizeof(max_buf));
         snprintf(range_buf, sizeof(range_buf), "Range: %s ~ %s", min_buf, max_buf);
@@ -991,6 +1021,11 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_t *cur_val_label = lv_label_create(content);
     if (item->format) {
         lv_label_set_text(cur_val_label, item->format(item->get()));
+    } else if (item->getf) {
+        char cur_val_buf[16];
+        snprintf(cur_val_buf, sizeof(cur_val_buf), "%.*f",
+                 (int)item->f_decimals, item->getf());
+        lv_label_set_text(cur_val_label, cur_val_buf);
     } else if (item->decimal_places > 0) {
         char cur_val_buf[16];
         format_with_decimal(item->get(), item->decimal_places,
@@ -1007,7 +1042,11 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 
     /* 可编辑的值 (大字体，通过 UP/DOWN 经异步回调更新) */
     g_edit_value_label = lv_label_create(content);
-    g_set_nav.edit_value = item->get();  /* 从当前值开始编辑 */
+    if (item->getf) {
+        g_set_nav.edit_valuef = item->getf();  /* float 路径 */
+    } else {
+        g_set_nav.edit_value = item->get();    /* uint32 路径 */
+    }
     lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
     lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
     /* format 回调显示文本时用较小字体，纯数字(含decimal)用大字体 */
@@ -1067,7 +1106,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 /**
  * @brief  更新编辑页面的值显示 (带步进位高亮)
  *
- * 读取 g_set_nav.edit_value 并格式化到 g_edit_value_label。
+ * 读取 g_set_nav.edit_value(f) 并格式化到 g_edit_value_label。
  * 使用 LVGL recolor 功能在步进对应的位插入高亮颜色标记。
  *
  * 例如: 值=5000, 步进=10 → "50#2effde 0#0" (十位高亮)
@@ -1086,6 +1125,72 @@ static void update_edit_value_display(void)
         return;
     }
 
+    /* ---------- float 路径: 将 float 转为整数字符串 + 小数点 ---------- */
+    if (g_edit_item && g_edit_item->getf) {
+        float fval = g_set_nav.edit_valuef;
+        uint8_t dp = g_edit_item->f_decimals;
+        float multiplier = 1.0f;
+        for (uint8_t i = 0; i < dp; i++) multiplier *= 10.0f;
+        int32_t ivalue = (int32_t)(fval * multiplier + (fval >= 0 ? 0.5f : -0.5f));
+        if (ivalue < 0) ivalue = 0;
+
+        /* 步进位: stepf * multiplier 得到整数的步进位 */
+        float fstep = g_stepf_list[g_step_index];
+        int32_t istep = (int32_t)(fstep * multiplier + 0.5f);
+
+        int pos_from_right = 0;
+        {
+            int32_t s = istep;
+            while (s > 1) { pos_from_right++; s /= 10; }
+        }
+
+        char val_str[16];
+        snprintf(val_str, sizeof(val_str), "%ld", (long)ivalue);
+        int len = (int)strlen(val_str);
+
+        /* 前补零保证宽度: 整数部分至少1位 + dp位小数 */
+        int min_len = 1 + dp;
+        if (len < min_len) {
+            int pad = min_len - len;
+            memmove(&val_str[pad], val_str, len + 1);
+            memset(val_str, '0', pad);
+            len = min_len;
+        }
+
+        int int_digits = len - dp;
+        int digit_pos = len - 1 - pos_from_right;
+        if (digit_pos < 0 || digit_pos >= len) {
+            /* 超范围直接显示 */
+            char buf[32];
+            int bi = 0;
+            for (int i = 0; i < len; i++) {
+                if (i == int_digits) buf[bi++] = '.';
+                buf[bi++] = val_str[i];
+            }
+            if (int_digits == len) buf[bi++] = '.';
+            buf[bi] = '\0';
+            lv_label_set_text(g_edit_value_label, buf);
+            return;
+        }
+
+        char buf[32];
+        int bi = 0;
+        for (int i = 0; i < len; i++) {
+            if (i == int_digits) buf[bi++] = '.';
+            if (i == digit_pos) {
+                bi += snprintf(buf + bi, sizeof(buf) - bi, "#%06x %c#",
+                               (unsigned int)COLOR_STEP_HL, val_str[i]);
+            } else {
+                buf[bi++] = val_str[i];
+            }
+        }
+        if (int_digits == len) buf[bi++] = '.';
+        buf[bi] = '\0';
+        lv_label_set_text(g_edit_value_label, buf);
+        return;
+    }
+
+    /* ---------- uint32 路径 (原有逻辑) ---------- */
     uint32_t value = g_set_nav.edit_value;
     uint32_t step = g_step_list[g_step_index];
     uint8_t dp = (g_edit_item && !g_edit_item->format) ? g_edit_item->decimal_places : 0;
@@ -1141,11 +1246,9 @@ static void update_edit_value_display(void)
         /*
          * 计算高亮位在插入小数点后的字符串中的索引。
          * 小数点插在 int_digits 之后。
-         * digit_pos < int_digits → 不跨过小数点, str_idx = digit_pos
-         * digit_pos >= int_digits → 跨过小数点, str_idx = digit_pos + 1
+         * digit_pos < int_digits → 不跨过小数点
+         * digit_pos >= int_digits → 跨过小数点
          */
-        int str_idx = digit_pos + (digit_pos >= int_digits ? 1 : 0);
-        int display_len = len + 1; /* 数字 + 一个小数点 */
 
         /* 构建带小数点和高亮的字符串 */
         char buf[32];
@@ -1220,37 +1323,48 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
 
     switch (button_id) {
     case BUTTON_ID_UP:
-        if (g_set_nav.edit_value + g_step_list[g_step_index] <= item->max_val) {
-            g_set_nav.edit_value += g_step_list[g_step_index];
+        if (item->getf) {
+            float step = g_stepf_list[g_step_index];
+            float new_val = g_set_nav.edit_valuef + step;
+            if (new_val > item->max_valf) new_val = item->max_valf;
+            g_set_nav.edit_valuef = new_val;
+            set_edit_val_context_t *ctxf = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
         } else {
-            g_set_nav.edit_value = item->max_val;
-        }
-        /* 队列显示更新到LVGL上下文 */
-        {
-            set_edit_val_context_t *ctx = lv_malloc(sizeof(set_edit_val_context_t));
-            if (ctx) {
-                ctx->new_value = g_set_nav.edit_value;
-                lv_async_call(async_update_edit_val_cb, ctx);
+            if (g_set_nav.edit_value + g_step_list[g_step_index] <= item->max_val) {
+                g_set_nav.edit_value += g_step_list[g_step_index];
+            } else {
+                g_set_nav.edit_value = item->max_val;
             }
+            set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         }
         break;
     case BUTTON_ID_DOWN:
-        if (g_set_nav.edit_value >= item->min_val + g_step_list[g_step_index]) {
-            g_set_nav.edit_value -= g_step_list[g_step_index];
+        if (item->getf) {
+            float step = g_stepf_list[g_step_index];
+            float new_val = g_set_nav.edit_valuef - step;
+            if (new_val < item->min_valf) new_val = item->min_valf;
+            g_set_nav.edit_valuef = new_val;
+            set_edit_val_context_t *ctxf = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
         } else {
-            g_set_nav.edit_value = item->min_val;
-        }
-        {
-            set_edit_val_context_t *ctx = lv_malloc(sizeof(set_edit_val_context_t));
-            if (ctx) {
-                ctx->new_value = g_set_nav.edit_value;
-                lv_async_call(async_update_edit_val_cb, ctx);
+            if (g_set_nav.edit_value >= item->min_val + g_step_list[g_step_index]) {
+                g_set_nav.edit_value -= g_step_list[g_step_index];
+            } else {
+                g_set_nav.edit_value = item->min_val;
             }
+            set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         }
         break;
     case BUTTON_ID_OK:
         /* 保存: 写入配置结构体 + 持久化到 EEPROM */
-        item->set(g_set_nav.edit_value);
+        if (item->setf) {
+            item->setf(g_set_nav.edit_valuef);
+        } else {
+            item->set(g_set_nav.edit_value);
+        }
         app_config_save();
         g_edit_value_label = NULL;  /* 防止屏幕删除后的悬空指针 */
         g_edit_item = NULL;
@@ -1484,7 +1598,11 @@ static void async_select_parameter_cb(void *context)
 static void async_update_edit_val_cb(void *context)
 {
     set_edit_val_context_t *ctx = (set_edit_val_context_t *)context;
-    g_set_nav.edit_value = ctx->new_value;
+    if (g_edit_item && g_edit_item->getf) {
+        g_set_nav.edit_valuef = ctx->new_valuef;
+    } else {
+        g_set_nav.edit_value = ctx->new_value;
+    }
     update_edit_value_display();
     lv_free(ctx);
 }

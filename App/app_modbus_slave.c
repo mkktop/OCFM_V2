@@ -52,6 +52,20 @@ static uint8_t is_uint32_register(uint16_t addr)
         case REG_DL:
         case REG_AAH:
         case REG_AAL:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+/**
+ * @brief 判断寄存器是否为 float 类型 (占2个寄存器, IEEE 754)
+ */
+static uint8_t is_float_register(uint16_t addr)
+{
+    switch (addr)
+    {
+        case REG_INSTANT_FLOW:
         case REG_RANGE_4MA:
         case REG_RANGE_20MA:
             return 1;
@@ -126,6 +140,21 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
     if (is_uint32_register(start_addr) && quantity >= 2)
     {
         uint32_t value = modbus_slave_get_uint32(start_addr);
+        uint8_t result = app_config_set_by_reg(start_addr, value);
+        if (result == 0)
+        {
+            config_dirty = 1;
+            last_write_time = HAL_GetTick();
+        }
+        return;
+    }
+
+    /* float 寄存器值 (IEEE 754, 占2个寄存器) */
+    if (is_float_register(start_addr) && quantity >= 2)
+    {
+        float fval = modbus_slave_get_float(start_addr);
+        uint32_t value;
+        memcpy(&value, &fval, sizeof(float));
         uint8_t result = app_config_set_by_reg(start_addr, value);
         if (result == 0)
         {
@@ -263,10 +292,15 @@ void app_modbus_slave_update(void)
         modbus_slave_set_holding_register(REG_INSTANT_UNIT, (uint16_t)val);
     if (app_config_get_by_reg(REG_SUM_POINT, &val) == 0)
         modbus_slave_set_holding_register(REG_SUM_POINT, (uint16_t)val);
-    if (app_config_get_by_reg(REG_RANGE_4MA, &val) == 0)
-        modbus_slave_set_uint32(REG_RANGE_4MA, val);
-    if (app_config_get_by_reg(REG_RANGE_20MA, &val) == 0)
-        modbus_slave_set_uint32(REG_RANGE_20MA, val);
+    /* float 寄存器 - 0x0105-0x0108 */
+    {
+        float fval = app_config_get_range_4ma();
+        modbus_slave_set_float(REG_RANGE_4MA, fval);
+    }
+    {
+        float fval = app_config_get_range_20ma();
+        modbus_slave_set_float(REG_RANGE_20MA, fval);
+    }
 
     /* 出厂校准寄存器 - 0x1001-0x1006 */
     if (app_config_get_by_reg(REG_FACTORY_RANGE, &val) == 0)

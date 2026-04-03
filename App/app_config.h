@@ -68,11 +68,11 @@ void app_config_set_calibration_4ma(uint32_t value);
 uint32_t app_config_get_calibration_20ma(void);
 void app_config_set_calibration_20ma(uint32_t value);
 
-uint32_t app_config_get_range_4ma(void);
-void app_config_set_range_4ma(uint32_t value);
+float app_config_get_range_4ma(void);
+void app_config_set_range_4ma(float value);
 
-uint32_t app_config_get_range_20ma(void);
-void app_config_set_range_20ma(uint32_t value);
+float app_config_get_range_20ma(void);
+void app_config_set_range_20ma(float value);
 
 uint32_t app_config_get_point_num(void);
 void app_config_set_point_num(uint32_t value);

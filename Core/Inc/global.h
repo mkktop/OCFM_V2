@@ -188,8 +188,8 @@ typedef struct
     uint32_t height;            /* 高度 */
     uint32_t calibration_4ma;   /* 4mA校准值 */
     uint32_t calibration_20ma;  /* 20mA校准值 */
-    uint32_t range_4ma;         /* 4mA量程 */
-    uint32_t range_20ma;        /* 20mA量程 */
+    float range_4ma;            /* 4mA量程 (m³/h) */
+    float range_20ma;           /* 20mA量程 (m³/h) */
     uint32_t point_num;         /* 小数点数量 */
     // 测量参数
     uint32_t window_width;      /* 窗口宽度 */
@@ -311,8 +311,8 @@ typedef enum
 #define DEFAULT_HEIGHT           5000        /* 高度 5000mm */
 #define DEFAULT_CALIBRATION_4MA  313         /* 4mA校准值 */
 #define DEFAULT_CALIBRATION_20MA 1583       /* 20mA校准值 */
-#define DEFAULT_RANGE_4MA        0           /* 4mA量程 */
-#define DEFAULT_RANGE_20MA       1935       /* 20mA量程 */
+#define DEFAULT_RANGE_4MA        0.0f        /* 4mA量程 (m³/h) */
+#define DEFAULT_RANGE_20MA       1935.0f     /* 20mA量程 (m³/h) */
 #define DEFAULT_POINT_NUM        3           /* 小数点数量 */
 
 // 测量参数默认值

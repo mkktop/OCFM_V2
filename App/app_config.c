@@ -194,24 +194,24 @@ void app_config_set_calibration_20ma(uint32_t value)
     g_config.calibration_20ma = value;
 }
 
-// 4mA量程
-uint32_t app_config_get_range_4ma(void)
+// 4mA量程 (m³/h)
+float app_config_get_range_4ma(void)
 {
     return g_config.range_4ma;
 }
 
-void app_config_set_range_4ma(uint32_t value)
+void app_config_set_range_4ma(float value)
 {
     g_config.range_4ma = value;
 }
 
-// 20mA量程
-uint32_t app_config_get_range_20ma(void)
+// 20mA量程 (m³/h)
+float app_config_get_range_20ma(void)
 {
     return g_config.range_20ma;
 }
 
-void app_config_set_range_20ma(uint32_t value)
+void app_config_set_range_20ma(float value)
 {
     g_config.range_20ma = value;
 }
@@ -670,10 +670,10 @@ uint8_t app_config_set_by_reg(uint16_t reg_addr, uint32_t value)
             g_config.sum_point = value;
             break;
         case REG_RANGE_4MA:
-            g_config.range_4ma = value;
+            g_config.range_4ma = *(float *)&value;
             break;
         case REG_RANGE_20MA:
-            g_config.range_20ma = value;
+            g_config.range_20ma = *(float *)&value;
             break;
 
         /* 出厂校准寄存器 */
@@ -814,10 +814,10 @@ uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value)
             *value = g_config.sum_point;
             break;
         case REG_RANGE_4MA:
-            *value = g_config.range_4ma;
+            *(float *)value = g_config.range_4ma;
             break;
         case REG_RANGE_20MA:
-            *value = g_config.range_20ma;
+            *(float *)value = g_config.range_20ma;
             break;
 
         /* 出厂校准寄存器 */
