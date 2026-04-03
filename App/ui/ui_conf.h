@@ -54,4 +54,16 @@ typedef struct{
 
 extern ui_manager_t *ui_manager;//ui管理器指针,所有页面均可调用
 
+/*============================================================================*/
+/*                               UI 颜色常量                                   */
+/*============================================================================*/
+
+#define COLOR_BG            0x1E272E    /* 屏幕背景 (深色)              */
+#define COLOR_ROW_SEL       0x363636    /* 选中行高亮背景              */
+#define COLOR_TEXT_SEL      0xFFFFFF    /* 选中项文字 (白色)            */
+#define COLOR_TEXT_NORMAL   0xBDC3C7    /* 普通项文字 (浅灰)            */
+#define COLOR_ACCENT        0x2effde    /* 强调色 (青绿色)              */
+#define COLOR_STEP_HL       0xff3333    /* 步进位高亮 (红色)            */
+#define COLOR_BOTTOM_BG     0x253035    /* 底栏背景                    */
+
 #endif /* __UI_CONF_H__ */

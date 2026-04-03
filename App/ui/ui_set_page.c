@@ -49,16 +49,8 @@
 #include <string.h>
 
 /*============================================================================*/
-/*                              颜色定义                                       */
-/*    沿用主屏幕的暗色主题                                                       */
+/*                            动画配置                                          */
 /*============================================================================*/
-#define COLOR_BG            0x1E272E    /* 屏幕背景 (深色)              */
-#define COLOR_ROW_SEL       0x363636    /* 选中行高亮背景              */
-#define COLOR_TEXT_SEL      0xFFFFFF    /* 选中项文字 (白色)            */
-#define COLOR_TEXT_NORMAL   0xBDC3C7    /* 普通项文字 (浅灰)            */
-#define COLOR_ACCENT        0x2effde    /* 强调色 (青绿色)              */
-#define COLOR_STEP_HL       0xff3333    /* 步进位高亮 (红色)            */
-#define COLOR_BOTTOM_BG     0x253035    /* 底栏背景                    */
 
 #define ANIM_TIME           200         /* 屏幕切换动画时长 (ms)       */
 
@@ -153,10 +145,10 @@ static char *format_with_decimal(uint32_t value, uint8_t decimal_places,
 
 /* ---------- 基本参数 ---------- */
 static const set_item_t basic_items[] = {
-    {"Range Max",       "m",   app_config_get_range_max,        app_config_set_range_max,        0, 99999, 1,   3},
-    {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 99999, 1,   3},
-    {"4mA Cal",         "",    app_config_get_calibration_4ma,    app_config_set_calibration_4ma, 0, 99999, 1},
-    {"20mA Cal",        "",    app_config_get_calibration_20ma,   app_config_set_calibration_20ma,0, 99999, 1},
+    {"Range Max",       "m",   app_config_get_range_max,        app_config_set_range_max,        0, 20000, 1,   3},
+    {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 20000, 1,   3},
+    {"4mA Cal",         "",    app_config_get_calibration_4ma,    app_config_set_calibration_4ma, 0, 9999, 1},
+    {"20mA Cal",        "",    app_config_get_calibration_20ma,   app_config_set_calibration_20ma,0, 9999, 1},
     {"4mA Range",       "",    app_config_get_range_4ma,          app_config_set_range_4ma,        0, 99999, 1},
     {"20mA Range",      "",    app_config_get_range_20ma,         app_config_set_range_20ma,       0, 99999, 1},
     {"Decimal",         "",    app_config_get_point_num,          app_config_set_point_num,        0, 3,     1},
