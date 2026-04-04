@@ -199,6 +199,7 @@ void main_task_func(void *argument)
   for(;;)
   {
     /* 处理EEPROM保存请求 (在任务上下文执行，避免阻塞定时器) */
+    app_config_process();
     flow_calc_process();
 
     uint32_t tick = lv_timer_handler();
@@ -296,9 +297,6 @@ void modbus_slave_task_func(void *argument)
   {
     /* 非阻塞处理Modbus请求 */
     modbus_slave_task(&sensor_slave);
-
-    /* 处理延迟EEPROM保存 */
-    app_modbus_slave_process();
 
     /* 每1秒更新一次寄存器数据 */
     if (++update_counter >= 100)

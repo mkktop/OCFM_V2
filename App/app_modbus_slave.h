@@ -28,13 +28,6 @@ void app_modbus_slave_init(void);
 void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity);
 
 /**
- * @brief 处理延迟保存请求
- * @note 需要在任务中周期性调用(建议与update同周期)
- *       当有脏数据且超过延迟时间后，执行EEPROM写入
- */
-void app_modbus_slave_process(void);
-
-/**
  * @brief 更新Modbus从机寄存器数据
  * @note 需要周期性调用（建议1秒），将实时数据同步到保持寄存器：
  *       - 水位、距离、温度（传感器数据）

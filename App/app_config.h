@@ -2,6 +2,7 @@
  * @file app_config.h
  * @brief 系统配置管理头文件
  * @note 管理SystemConfig_t的EEPROM存储和默认值初始化
+ *       统一配置参数访问入口，UI/Modbus/4G/LoRa等模块均通过此API读写配置
  */
 
 #ifndef __APP_CONFIG_H
@@ -9,6 +10,64 @@
 
 #include "global.h"
 #include <stdint.h>
+
+/**
+ * @brief 配置参数ID (协议无关)
+ * @note 所有模块通过此枚举访问配置参数
+ */
+typedef enum {
+    /* 基本参数 */
+    CONFIG_ID_RANGE_MAX       = 0,
+    CONFIG_ID_HEIGHT,
+    CONFIG_ID_CALIBRATION_4MA,
+    CONFIG_ID_CALIBRATION_20MA,
+    CONFIG_ID_RANGE_4MA,       /* float */
+    CONFIG_ID_RANGE_20MA,      /* float */
+    CONFIG_ID_POINT_NUM,
+    /* 测量参数 */
+    CONFIG_ID_WINDOW_WIDTH,
+    CONFIG_ID_FILTER_COUNT,
+    CONFIG_ID_DELAY_TIME,
+    CONFIG_ID_ANTENNA_TYPE,
+    CONFIG_ID_BLIND_AREA,
+    CONFIG_ID_W_COEFF,
+    CONFIG_ID_M_COEFF,
+    /* Modbus参数 */
+    CONFIG_ID_MODBUS_ADDR,
+    CONFIG_ID_MODBUS_BAUDRATE,
+    CONFIG_ID_MODBUS_STOPBITS,
+    /* 报警参数 (float) */
+    CONFIG_ID_ALARM_AH,
+    CONFIG_ID_ALARM_AL,
+    CONFIG_ID_ALARM_DH,
+    CONFIG_ID_ALARM_DL,
+    CONFIG_ID_ALARM_AAH,
+    CONFIG_ID_ALARM_AAL,
+    /* 其他参数 */
+    CONFIG_ID_DIS_OFFSET,
+    CONFIG_ID_CANALS_TYPE,
+    CONFIG_ID_CHANNEL_ID,
+    CONFIG_ID_INSTANT_UNIT,
+    CONFIG_ID_SUM_POINT,
+    CONFIG_ID_LANGUAGE,
+    /* 特殊动作 */
+    CONFIG_ID_FACTORY_RESET,
+    CONFIG_ID_CLEAR_TOTAL,
+
+    CONFIG_ID_COUNT   /* 参数总数 */
+} config_id_t;
+
+/**
+ * @brief 统一API返回码
+ */
+#define CONFIG_OK           0   /* 成功 */
+#define CONFIG_ERR_ID       1   /* 无效的config_id */
+#define CONFIG_ERR_READONLY 2   /* 只读参数 */
+#define CONFIG_ERR_RANGE    3   /* 值超出范围 */
+
+/*============================================================================*/
+/*                           系统配置管理                                       */
+/*============================================================================*/
 
 /**
  * @brief 初始化系统配置
@@ -52,6 +111,57 @@ uint8_t app_config_is_valid(void);
  * @retval 1: 成功 0: 失败
  */
 uint8_t app_config_factory_reset(void);
+
+/*============================================================================*/
+/*                           统一配置参数API                                    */
+/*============================================================================*/
+
+/**
+ * @brief 设置uint32配置参数
+ * @param id:    配置参数ID
+ * @param value: 新值
+ * @retval CONFIG_OK 成功, 其他见错误码定义
+ * @note 设置成功后标记dirty，由app_config_process()延迟保存到EEPROM
+ */
+uint8_t app_config_set(config_id_t id, uint32_t value);
+
+/**
+ * @brief 设置float配置参数
+ * @param id:    配置参数ID (必须是float类型参数)
+ * @param value: 新值
+ * @retval CONFIG_OK 成功, 其他见错误码定义
+ */
+uint8_t app_config_setf(config_id_t id, float value);
+
+/**
+ * @brief 获取uint32配置参数
+ * @param id:    配置参数ID
+ * @param value: 输出值指针
+ * @retval CONFIG_OK 成功, CONFIG_ERR_ID 无效ID
+ */
+uint8_t app_config_get_val(config_id_t id, uint32_t *value);
+
+/**
+ * @brief 获取float配置参数
+ * @param id:    配置参数ID
+ * @param value: 输出值指针
+ * @retval CONFIG_OK 成功, CONFIG_ERR_ID 无效ID
+ */
+uint8_t app_config_getf(config_id_t id, float *value);
+
+/**
+ * @brief 判断配置参数是否为float类型
+ * @param id: 配置参数ID
+ * @retval 1: float类型  0: uint32类型
+ */
+uint8_t app_config_is_float(config_id_t id);
+
+/**
+ * @brief 处理延迟保存请求
+ * @note 需要在主循环中周期性调用
+ *       当有脏数据且超过延迟时间后，执行EEPROM写入
+ */
+void app_config_process(void);
 
 /*============================================================================*/
 /*                           基本参数 Getter/Setter                             */

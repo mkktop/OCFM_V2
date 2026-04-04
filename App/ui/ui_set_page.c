@@ -1442,7 +1442,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
         } else {
             item->set(g_set_nav.edit_value);
         }
-        app_config_save();
+        /* 保存由 app_config_set/setf 内部标记 dirty, app_config_process() 延迟写入 EEPROM */
         g_edit_value_label = NULL;  /* 防止屏幕删除后的悬空指针 */
         g_edit_item = NULL;
         /* 返回参数列表 (重新创建屏幕以显示更新后的值) */

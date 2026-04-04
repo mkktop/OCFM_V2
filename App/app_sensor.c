@@ -167,9 +167,7 @@ uint8_t app_sensor_set_register(uint16_t reg_addr, uint16_t value,
 uint8_t app_sensor_set_height(uint32_t height_mm, void (*callback)(uint8_t result))
 {
     /* 更新本地配置 */
-    SystemConfig_t *config = app_config_get();
-    config->height = height_mm;
-    app_config_save();
+    app_config_set(CONFIG_ID_HEIGHT, height_mm);
 
     /* 下发到传感器 (寄存器地址 REG_HEIGHT = 0x0066) */
     return app_sensor_set_register(REG_HEIGHT, (uint16_t)height_mm, callback);
@@ -184,9 +182,7 @@ uint8_t app_sensor_set_height(uint32_t height_mm, void (*callback)(uint8_t resul
 uint8_t app_sensor_set_range(uint32_t range_mm, void (*callback)(uint8_t result))
 {
     /* 更新本地配置 */
-    SystemConfig_t *config = app_config_get();
-    config->range_max = range_mm;
-    app_config_save();
+    app_config_set(CONFIG_ID_RANGE_MAX, range_mm);
 
     /* 下发到传感器 (寄存器地址 REG_RANGE_MAX = 0x0065) */
     return app_sensor_set_register(REG_RANGE_MAX, (uint16_t)range_mm, callback);
@@ -201,9 +197,7 @@ uint8_t app_sensor_set_range(uint32_t range_mm, void (*callback)(uint8_t result)
 uint8_t app_sensor_set_blind_area(uint32_t blind_area_mm, void (*callback)(uint8_t result))
 {
     /* 更新本地配置 */
-    SystemConfig_t *config = app_config_get();
-    config->blind_area = blind_area_mm;
-    app_config_save();
+    app_config_set(CONFIG_ID_BLIND_AREA, blind_area_mm);
 
     /* 下发到传感器 (寄存器地址 REG_L4 = 0x006A) */
     return app_sensor_set_register(REG_L4, (uint16_t)blind_area_mm, callback);
