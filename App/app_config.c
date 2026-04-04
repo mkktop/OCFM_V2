@@ -53,7 +53,6 @@ void app_config_set_default(void)
 
     // 其他参数
     g_config.factory_settings  = DEFAULT_FACTORY_SETTINGS;
-    g_config.factory_range     = DEFAULT_FACTORY_RANGE;
     g_config.dis_offset        = DEFAULT_DIS_OFFSET;
     g_config.canals_type       = DEFAULT_CANALS_TYPE;
     g_config.channel_id        = DEFAULT_CHANNEL_ID;
@@ -546,7 +545,6 @@ const SET_TABLE SET_Table[] = {
     {REG_RANGE_20MA,       1, 99999, 0},      /* 20mA量程 */
 
     /* 出厂校准寄存器 */
-    {REG_FACTORY_RANGE,    0, 99999, 0},      /* 出厂量程 */
     {REG_DEAD_ZONE,        0, 99999, 0},      /* 盲区 */
     {REG_DIS_OFFSET,       1, 99999, 0},      /* 距离偏移 */
     {REG_CALIBRATION_4MA,  1, 99999, 0},      /* 4mA校准值 */
@@ -677,9 +675,6 @@ uint8_t app_config_set_by_reg(uint16_t reg_addr, uint32_t value)
             break;
 
         /* 出厂校准寄存器 */
-        case REG_FACTORY_RANGE:
-            g_config.factory_range = value;
-            break;
         case REG_DEAD_ZONE:
             g_config.blind_area = value;
             break;
@@ -821,9 +816,6 @@ uint8_t app_config_get_by_reg(uint16_t reg_addr, uint32_t *value)
             break;
 
         /* 出厂校准寄存器 */
-        case REG_FACTORY_RANGE:
-            *value = g_config.factory_range;
-            break;
         case REG_DEAD_ZONE:
             *value = g_config.blind_area;
             break;

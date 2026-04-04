@@ -293,9 +293,7 @@ void app_modbus_slave_update(void)
         modbus_slave_set_float(REG_RANGE_20MA, fval);
     }
 
-    /* 出厂校准寄存器 - 0x1001-0x1006 */
-    if (app_config_get_by_reg(REG_FACTORY_RANGE, &val) == 0)
-        modbus_slave_set_holding_register(REG_FACTORY_RANGE, (uint16_t)val);
+    /* 出厂校准寄存器 - 0x1002-0x1006 */
     if (app_config_get_by_reg(REG_DEAD_ZONE, &val) == 0)
         modbus_slave_set_holding_register(REG_DEAD_ZONE, (uint16_t)val);
     if (app_config_get_by_reg(REG_DIS_OFFSET, &val) == 0)

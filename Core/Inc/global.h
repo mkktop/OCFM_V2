@@ -106,13 +106,12 @@
 #define REG_RANGE_20MA          0x0107       /* 20mA量程寄存器 占2个寄存器 */
 
 //出厂校准寄存器
-#define REG_FACTORY_RANGE       0x1001       /* 出厂量程寄存器 占1个寄存器 */
-#define REG_DEAD_ZONE           0x1002       /* 盲区寄存器 占1个寄存器 */
-#define REG_DIS_OFFSET          0x1003       /* 距离偏移寄存器 占1个寄存器 */
-#define REG_CALIBRATION_4MA     0x1004       /* 4mA校准值寄存器 占1个寄存器 */
-#define REG_CALIBRATION_20MA    0x1005       /* 20mA校准值寄存器 占1个寄存器 */
-#define REG_FACTORY_SETTING     0x1006       /* 恢复出厂设置寄存器 占1个寄存器 */
-#define REG_CLEAR_TOTAL         0x1007       /* 清除累计(流量+时间)寄存器 占1个寄存器 (写1触发) */
+#define REG_DEAD_ZONE           0x1001       /* 盲区寄存器 占1个寄存器 */
+#define REG_DIS_OFFSET          0x1002       /* 距离偏移寄存器 占1个寄存器 */
+#define REG_CALIBRATION_4MA     0x1003       /* 4mA校准值寄存器 占1个寄存器 */
+#define REG_CALIBRATION_20MA    0x1004       /* 20mA校准值寄存器 占1个寄存器 */
+#define REG_FACTORY_SETTING     0x1005       /* 恢复出厂设置寄存器 占1个寄存器 */
+#define REG_CLEAR_TOTAL         0x1006       /* 清除累计(流量+时间)寄存器 占1个寄存器 (写1触发) */
 
 //RTC时间设置寄存器
 #define REG_RTC_YEAR            0x0200       /* 年 (2000-2099) 占1个寄存器 */
@@ -212,7 +211,6 @@ typedef struct
     float alarm_aal;            /* 下下限报警 (m³/h) */
     // 其他参数
     uint32_t factory_settings;  /* 恢复出厂设置 */
-    uint32_t factory_range;     /* 出厂量程 */
     uint32_t dis_offset;        /* 偏移量 */
     uint32_t canals_type;       /* 水渠类型 */
     uint32_t channel_id;        /* 通道编号 */
@@ -340,7 +338,6 @@ typedef enum
 // 其他参数默认值
 #define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */
 #define DEFAULT_DIS_OFFSET       10           /* 偏移量 */
-#define DEFAULT_FACTORY_RANGE    20000         /* 出厂量程 */
 #define DEFAULT_CANALS_TYPE      1           /* 水渠类型 (巴歇尔槽) */
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
 #define DEFAULT_INSTANT_UNIT     1           /* 瞬时流量单位 (L/s) */

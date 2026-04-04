@@ -64,22 +64,21 @@ static const reg_map_t reg_map[] = {
     {REG_SUM_POINT,        39},
     {REG_RANGE_4MA,        40},  /* 占2个: 40,41 */
     {REG_RANGE_20MA,       42},  /* 占2个: 42,43 */
-    /* 出厂校准区 (0x1001-0x1006) */
-    {REG_FACTORY_RANGE,    44},
-    {REG_DEAD_ZONE,        45},
-    {REG_DIS_OFFSET,       46},
-    {REG_CALIBRATION_4MA,  47},
-    {REG_CALIBRATION_20MA, 48},
-    {REG_FACTORY_SETTING,  49},
-    {REG_CLEAR_TOTAL,      50},
+    /* 出厂校准区 (0x1002-0x1006) */
+    {REG_DEAD_ZONE,        44},
+    {REG_DIS_OFFSET,       45},
+    {REG_CALIBRATION_4MA,  46},
+    {REG_CALIBRATION_20MA, 47},
+    {REG_FACTORY_SETTING,  48},
+    {REG_CLEAR_TOTAL,      49},
     /* RTC时间设置区 (0x0200-0x0206) */
-    {REG_RTC_YEAR,         51},
-    {REG_RTC_MONTH,        52},
-    {REG_RTC_DAY,          53},
-    {REG_RTC_HOUR,         54},
-    {REG_RTC_MINUTE,       55},
-    {REG_RTC_SECOND,       56},
-    {REG_RTC_WEEKDAY,      57},
+    {REG_RTC_YEAR,         50},
+    {REG_RTC_MONTH,        51},
+    {REG_RTC_DAY,          52},
+    {REG_RTC_HOUR,         53},
+    {REG_RTC_MINUTE,       54},
+    {REG_RTC_SECOND,       55},
+    {REG_RTC_WEEKDAY,      56},
 };
 
 #define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))
