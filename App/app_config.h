@@ -163,6 +163,18 @@ uint8_t app_config_is_float(config_id_t id);
  */
 void app_config_process(void);
 
+/**
+ * @brief 参数变更回调类型
+ */
+typedef void (*config_change_callback_t)(config_id_t id);
+
+/**
+ * @brief 注册参数变更回调
+ * @param cb: 回调函数指针，参数变更时被调用
+ * @note 用于波特率/停止位等需要硬件重配置的场景
+ */
+void app_config_set_change_callback(config_change_callback_t cb);
+
 /*============================================================================*/
 /*                           基本参数 Getter/Setter                             */
 /*============================================================================*/

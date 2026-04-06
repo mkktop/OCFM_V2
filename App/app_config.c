@@ -20,6 +20,10 @@ static volatile uint8_t config_saving = 0;  /* 防止并发EEPROM写入 */
 static uint32_t last_write_tick = 0;
 #define CONFIG_SAVE_DELAY_MS   3000
 
+/* 参数变更回调 */
+typedef void (*config_change_cb_t)(config_id_t id);
+static config_change_cb_t g_config_change_cb = NULL;
+
 /**
  * @brief 处理延迟保存请求
  * @note 需要在主循环中周期性调用
@@ -317,6 +321,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
 
     config_dirty = 1;
     last_write_tick = HAL_GetTick();
+    if (g_config_change_cb) g_config_change_cb(id);
     return CONFIG_OK;
 }
 
@@ -342,10 +347,6 @@ uint8_t app_config_setf(config_id_t id, float value)
 
     switch (id)
     {
-    }
-
-    switch (id)
-    {
         case CONFIG_ID_RANGE_4MA:  g_config.range_4ma  = value; break;
         case CONFIG_ID_RANGE_20MA: g_config.range_20ma = value; break;
         case CONFIG_ID_ALARM_AH:   g_config.alarm_ah   = value; break;
@@ -359,6 +360,7 @@ uint8_t app_config_setf(config_id_t id, float value)
 
     config_dirty = 1;
     last_write_tick = HAL_GetTick();
+    if (g_config_change_cb) g_config_change_cb(id);
     return CONFIG_OK;
 }
 
@@ -454,6 +456,15 @@ uint8_t app_config_is_float(config_id_t id)
         default:
             return 0;
     }
+}
+
+/**
+ * @brief 注册参数变更回调
+ * @param cb: 回调函数指针
+ */
+void app_config_set_change_callback(void (*cb)(config_id_t id))
+{
+    g_config_change_cb = cb;
 }
 
 /*============================================================================*/

@@ -13,6 +13,7 @@
 #include "app_sensor.h"
 #include "rtc_time.h"
 #include "global.h"
+#include "usart.h"
 #include <string.h>
 
 /*============================================================================*/
@@ -266,6 +267,100 @@ void app_modbus_slave_update(void)
 }
 
 /*============================================================================*/
+/*                           UART2 动态重配置                                   */
+/*============================================================================*/
+
+/**
+ * @brief 波特率索引转换为实际值
+ */
+static uint32_t baudrate_index_to_value(uint32_t index)
+{
+    switch (index) {
+        case 1:  return 4800;
+        case 2:  return 9600;
+        case 3:  return 14400;
+        case 4:  return 19200;
+        case 5:  return 38400;
+        case 6:  return 56000;
+        case 7:  return 57600;
+        case 8:  return 115200;
+        default: return 9600;
+    }
+}
+
+/**
+ * @brief 停止位索引转换为HAL常量
+ * @note 1=None1StopBits, 2=Odd1StopBits, 3=None2StopBits, 4=Even1StopBits
+ */
+static void stopbits_index_to_hal(uint32_t index, uint32_t *stopbits, uint32_t *parity)
+{
+    switch (index) {
+        case 1:  /* None1StopBits */
+            *stopbits = UART_STOPBITS_1;
+            *parity = UART_PARITY_NONE;
+            break;
+        case 2:  /* Odd1StopBits */
+            *stopbits = UART_STOPBITS_1;
+            *parity = UART_PARITY_ODD;
+            break;
+        case 3:  /* None2StopBits */
+            *stopbits = UART_STOPBITS_2;
+            *parity = UART_PARITY_NONE;
+            break;
+        case 4:  /* Even1StopBits */
+            *stopbits = UART_STOPBITS_1;
+            *parity = UART_PARITY_EVEN;
+            break;
+        default:
+            *stopbits = UART_STOPBITS_1;
+            *parity = UART_PARITY_NONE;
+            break;
+    }
+}
+
+/**
+ * @brief 重配置UART2波特率和停止位
+ */
+static void reconfigure_uart2(void)
+{
+    uint32_t baudrate = baudrate_index_to_value(app_config_get_modbus_baudrate());
+    uint32_t stopbits, parity;
+    stopbits_index_to_hal(app_config_get_modbus_stopbits(), &stopbits, &parity);
+
+    /* 停止DMA接收 */
+    HAL_UART_AbortReceive(&huart2);
+
+    /* 更新UART参数 */
+    huart2.Init.BaudRate = baudrate;
+    huart2.Init.StopBits = stopbits;
+    huart2.Init.Parity = parity;
+
+    /* 重新初始化UART */
+    HAL_UART_Init(&huart2);
+
+    /* 重启DMA接收 (通过重新初始化从机) */
+    extern modbus_slave_t sensor_slave;
+    modbus_slave_init(&sensor_slave, &huart2);
+}
+
+/**
+ * @brief 参数变更回调处理
+ */
+static void on_config_change(config_id_t id)
+{
+    extern modbus_slave_t sensor_slave;
+
+    if (id == CONFIG_ID_MODBUS_BAUDRATE || id == CONFIG_ID_MODBUS_STOPBITS)
+    {
+        reconfigure_uart2();
+    }
+    else if (id == CONFIG_ID_MODBUS_ADDR)
+    {
+        modbus_slave_set_id(&sensor_slave, (uint8_t)app_config_get_modbus_addr());
+    }
+}
+
+/*============================================================================*/
 /*                           初始化                                             */
 /*============================================================================*/
 
@@ -275,6 +370,9 @@ void app_modbus_slave_update(void)
  */
 void app_modbus_slave_init(void)
 {
+    /* 注册参数变更回调 */
+    app_config_set_change_callback(on_config_change);
+
     /* 首次同步所有配置参数到寄存器 */
     app_modbus_slave_update();
 }
