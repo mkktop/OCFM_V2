@@ -61,12 +61,22 @@ static void string_label_observer_cb(lv_observer_t *observer, lv_subject_t *subj
 {
     /* 从Observer对象中获取绑定的Label控件指针 */
     lv_obj_t *label = lv_observer_get_target(observer);
-    
+
     /* 从Subject中获取最新的字符串内容 */
     const char *text = lv_subject_get_string(subject);
-    
+
     /* 更新Label控件的显示文本，实现UI自动刷新 */
     lv_label_set_text(label, text);
+}
+
+/**
+ * @brief  累计流量Observer回调 (带m³单位后缀，用于记录页)
+ */
+static void total_flow_with_unit_observer_cb(lv_observer_t *observer, lv_subject_t *subject)
+{
+    lv_obj_t *label = lv_observer_get_target(observer);
+    const char *text = lv_subject_get_string(subject);
+    lv_label_set_text_fmt(label, "%s m\xC2\xB3", text);
 }
 
 /**
@@ -529,7 +539,7 @@ static void create_details_tile(lv_obj_t *tile)
     /* 创建累计流量单位标签 */
     lv_obj_t *total_flaw_label = lv_label_create(total_flaw_obj);
     lv_obj_set_size(total_flaw_label, LV_PCT(90), 20);
-    lv_label_set_text(total_flaw_label, "TOTAL:L/min");
+    lv_label_set_text(total_flaw_label, "TOTAL:m\xC2\xB3");
     
     /* 设置单位标签字体16px，青绿色 */
     lv_obj_set_style_text_font(total_flaw_label, &lv_font_montserrat_16, 0);
@@ -888,13 +898,13 @@ static void create_flow_record_tile(lv_obj_t *tile)
 
     /* 数值 */
     lv_obj_t *total_flow_value = lv_label_create(card2);
-    lv_label_set_text(total_flow_value, "0.000 m3");
+    lv_label_set_text(total_flow_value, "0.000 m\xC2\xB3");
     lv_obj_set_style_text_color(total_flow_value, lv_color_hex(0x2ECC71), 0);
     lv_obj_set_style_text_font(total_flow_value, &lv_font_montserrat_24, 0);
     lv_obj_align(total_flow_value, LV_ALIGN_TOP_LEFT, 14, 42);
 
     lv_subject_add_observer_obj(&ui_manager->subjects.total_flow_str,
-                                string_label_observer_cb,
+                                total_flow_with_unit_observer_cb,
                                 total_flow_value,
                                 NULL);
 }

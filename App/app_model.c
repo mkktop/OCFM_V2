@@ -87,7 +87,7 @@ void app_model_update(void)
     snprintf(g_app_model.instant_flow_str, sizeof(g_app_model.instant_flow_str),
              "%.2f", g_app_model.instant_flow);
     snprintf(g_app_model.total_flow_str, sizeof(g_app_model.total_flow_str),
-             "%.2f", g_app_model.total_flow);
+             "%.3f", g_app_model.total_flow);
 
     /* 计算4-20mA输出电流 (4mA/20mA量程单位固定m³/h) */
     app_current_format_ma(flow_calc_get_instant_lps() * 3.6f,
