@@ -40,6 +40,8 @@ typedef struct
     float water_level_m;        /**< 水位值 - 安装高度 - 距离 */
     uint8_t is_online;          /**< 传感器在线状态 (1:在线 0:离线) */
     uint32_t last_update_time;  /**< 最后更新时间戳 (ms) */
+    int16_t temperature_x10;    /**< 温度值 x10 (如256=25.6°C) */
+    uint8_t temp_valid;         /**< 温度数据有效 (1:有效 0:断线) */
 } SensorData_t;
 
 /*============================================================================*/
@@ -68,6 +70,12 @@ void app_sensor_poll(void);
  * @retval 距离值 (m)，传感器离线时返回0
  */
 float app_sensor_get_distance(void);
+
+/**
+ * @brief  获取温度值
+ * @retval 温度值 x10 (如256=25.6°C), 0=传感器断线
+ */
+int16_t app_sensor_get_temperature(void);
 
 /**
  * @brief  检查传感器是否在线

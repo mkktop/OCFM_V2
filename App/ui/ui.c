@@ -94,6 +94,7 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, g_app_model.instant_flow_str);
     lv_subject_copy_string(&ui_manager->subjects.current_ma_str, g_app_model.current_ma_str);
     lv_subject_copy_string(&ui_manager->subjects.total_flow_str, g_app_model.total_flow_str);
+    lv_subject_copy_string(&ui_manager->subjects.temperature_str, g_app_model.temperature_str);
 
     /* 第五步：更新趋势图数据 */
     if (ui_manager->trend_chart != NULL) {
@@ -578,11 +579,16 @@ static void create_details_tile(lv_obj_t *tile)
     lv_obj_set_flex_align(bottom_child2, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t *bottom_child2_label = lv_label_create(bottom_child2);
-    lv_label_set_text(bottom_child2_label, "25.2°C");
+    lv_label_set_text(bottom_child2_label, "--.-\xC2\xB0""C");
     lv_obj_set_style_text_font(bottom_child2_label, &lv_font_montserrat_26, 0);
     lv_obj_set_style_text_color(bottom_child2_label, lv_color_hex(0x2effde), 0);
     lv_obj_set_style_text_align(bottom_child2_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_bg_color(bottom_child2_label, lv_color_hex(0x8B8B7A), 0);
+
+    lv_subject_add_observer_obj(&ui_manager->subjects.temperature_str,
+                                string_label_observer_cb,
+                                bottom_child2_label,
+                                NULL);
 }
 
 /**
@@ -1050,6 +1056,12 @@ static void ui_init_subjects(void)
                            ui_manager->subjects.current_ma_buf,
                            ui_manager->subjects.current_ma_prev_buf,
                            sizeof(ui_manager->subjects.current_ma_buf), "4.00mA");
+
+    /* 初始化温度Subject */
+    lv_subject_init_string(&ui_manager->subjects.temperature_str,
+                           ui_manager->subjects.temperature_buf,
+                           ui_manager->subjects.temperature_prev_buf,
+                           sizeof(ui_manager->subjects.temperature_buf), "--.-\xC2\xB0""C");
 }
 
 /**

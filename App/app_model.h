@@ -31,6 +31,8 @@ typedef struct {
     double total_flow;          ///< 累计流量 (m³)
     float instant_flow;         ///< 瞬时流量 (L/s)
     float water_level_m;        ///< 当前水位
+    int16_t temperature_x10;    ///< 温度值 x10 (如256=25.6°C)
+    char temperature_str[16];   ///< 温度字符串，格式：xx.x°C
     uint8_t sensor_online;      ///< 传感器在线状态 (1:在线 0:离线)
 } AppDataModel;
 

@@ -110,7 +110,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
-  app_sensor_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

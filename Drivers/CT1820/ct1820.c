@@ -1,18 +1,20 @@
 /**
  * @file    ct1820.c
- * @brief   CT1820 (GX1832G) æ¸©åº¦ä¼ æ„Ÿå™¨é©±åŠ¨
- * @note    1-Wireåè®® bit-bang å®ç°ï¼Œé€‚é… STM32F407 @168MHz
- *          éé˜»å¡å¼ï¼šCT1820_StartConvert() ä¸ CT1820_GetTemp() åˆ†å¼€è°ƒç”¨
+ * @brief   CT1820 (GX1832G) ÎÂ¶È´«¸ĞÆ÷Çı¶¯
+ * @note    1-WireĞ­Òé bit-bang ÊµÏÖ£¬ÊÊÅä STM32F407 @168MHz
+ *          ·Ç×èÈûÊ½£ºCT1820_StartConvert() Óë CT1820_GetTemp() ·Ö¿ªµ÷ÓÃ
  */
 
 #include "ct1820.h"
+#include <stdint.h>
+#include "core_cm4.h"
 
-/* 1-Wire å‘½ä»¤ */
+/* 1-Wire ÃüÁî */
 #define SKIP_ROM              0xCC
 #define CONVERT_TEMP          0x44
 #define READ_SCRATCHPAD       0xBE
 
-/* ---- GPIO æ–¹å‘åˆ‡æ¢ï¼šç›´æ¥æ“ä½œMODERå¯„å­˜å™¨ ---- */
+/* ---- GPIO ·½ÏòÇĞ»»£ºÖ±½Ó²Ù×÷MODER¼Ä´æÆ÷ ---- */
 
 #define DQ_MODER_OUT()   (CT1820_GPIO_Port->MODER = (CT1820_GPIO_Port->MODER & ~3U) | 1U)
 #define DQ_MODER_IN()    (CT1820_GPIO_Port->MODER = CT1820_GPIO_Port->MODER & ~3U)
@@ -22,23 +24,18 @@
 #define DQ_READ() HAL_GPIO_ReadPin(CT1820_GPIO_Port, CT1820_Pin)
 
 /**
- * @brief  å¾®ç§’çº§å»¶æ—¶
- * @param  us: å»¶æ—¶å¾®ç§’æ•°
- * @note   168MHzä¸‹ ~24æ¬¡NOPå¾ªç¯/us
+ * @brief  Î¢Ãë¼¶ÑÓÊ± (»ùÓÚDWTÖÜÆÚ¼ÆÊıÆ÷)
+ * @param  us: ÑÓÊ±Î¢ÃëÊı
  */
 static void ct1820_delay_us(uint32_t us)
 {
-    while (us--) {
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-        __NOP(); __NOP(); __NOP();
-    }
+    uint32_t start = DWT->CYCCNT;
+    uint32_t ticks = us * (SystemCoreClock / 1000000U);
+    while ((DWT->CYCCNT - start) < ticks);
 }
 
 /**
- * @brief  å¤ä½è„‰å†²
+ * @brief  ¸´Î»Âö³å
  */
 static void ct1820_reset(void)
 {
@@ -50,13 +47,13 @@ static void ct1820_reset(void)
     DQ_MODER_IN();
     ct1820_delay_us(60);
 
-    /* å¿½ç•¥åº”ç­” */
+    /* ºöÂÔÓ¦´ğ */
     ct1820_delay_us(500);
 }
 
 /**
- * @brief  å†™1ä¸ªå­—èŠ‚
- * @param  data: è¦å†™å…¥çš„å­—èŠ‚
+ * @brief  Ğ´1¸ö×Ö½Ú
+ * @param  data: ÒªĞ´ÈëµÄ×Ö½Ú
  */
 static void ct1820_write_byte(uint8_t data)
 {
@@ -78,8 +75,8 @@ static void ct1820_write_byte(uint8_t data)
 }
 
 /**
- * @brief  è¯»1ä¸ªå­—èŠ‚ (CT1820å…¼å®¹æ—¶åº)
- * @retval è¯»å–åˆ°çš„å­—èŠ‚
+ * @brief  ¶Á1¸ö×Ö½Ú (CT1820/GX1832¼æÈİÊ±Ğò)
+ * @retval ¶ÁÈ¡µ½µÄ×Ö½Ú
  */
 static uint8_t ct1820_read_byte(void)
 {
@@ -88,23 +85,30 @@ static uint8_t ct1820_read_byte(void)
     for (uint8_t i = 0; i < 8; i++) {
         DQ_MODER_OUT();
         DQ_L();
+        ct1820_delay_us(2);     /* ±£³ÖµÍµçÆ½ÖÁÉÙ1¦Ìs */
         DQ_MODER_IN();
+        ct1820_delay_us(8);     /* µÈ´ı×ÜÏßÎÈ¶¨£¬ÔÚ15¦ÌsÄÚ²ÉÑù */
         byte = (byte >> 1) | (DQ_READ() ? 0x80 : 0x00);
-        ct1820_delay_us(48);
+        ct1820_delay_us(50);    /* µÈ´ıÊ±Ï¶½áÊø(ÖÁÉÙ60¦Ìs) */
     }
 
     return byte;
 }
 
 /**
- * @brief  åˆå§‹åŒ–CT1820
+ * @brief  ³õÊ¼»¯CT1820/GX1832
  */
 void CT1820_Init(void)
 {
+    /* Ê¹ÄÜDWTÖÜÆÚ¼ÆÊıÆ÷ */
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
     GPIO_InitTypeDef g = {0};
     g.Pin = CT1820_Pin;
-    g.Mode = GPIO_MODE_OUTPUT_PP;
-    g.Pull = GPIO_NOPULL;
+    g.Mode = GPIO_MODE_OUTPUT_OD;   /* ¿ªÂ©Êä³ö£¬ÅäºÏÍâ²¿ÉÏÀ­µç×è */
+    g.Pull = GPIO_NOPULL;            /* Íâ²¿ÒÑÓĞÉÏÀ­µç×è */
     g.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(CT1820_GPIO_Port, &g);
     DQ_H();
@@ -113,8 +117,8 @@ void CT1820_Init(void)
 }
 
 /**
- * @brief  å‘èµ·æ¸©åº¦è½¬æ¢ (éé˜»å¡)
- * @note   è°ƒç”¨åéœ€ç­‰å¾… >= 750ms å†è°ƒç”¨ CT1820_GetTemp()
+ * @brief  ·¢ÆğÎÂ¶È×ª»» (·Ç×èÈû)
+ * @note   µ÷ÓÃºóĞèµÈ´ı >= 750ms ÔÙµ÷ÓÃ CT1820_GetTemp()
  */
 void CT1820_StartConvert(void)
 {
@@ -124,8 +128,9 @@ void CT1820_StartConvert(void)
 }
 
 /**
- * @brief  è¯»å–æ¸©åº¦å€¼
- * @retval æ¸©åº¦å€¼ x10 (ä¾‹å¦‚ 256 è¡¨ç¤º 25.6Â°C)
+ * @brief  ¶ÁÈ¡ÎÂ¶ÈÖµ
+ * @retval ÎÂ¶ÈÖµ x10 (ÀıÈç 256 ±íÊ¾ 25.6¡ãC)
+ * @retval INT16_MIN ´«¸ĞÆ÷¶ÏÏß
  */
 int16_t CT1820_GetTemp(void)
 {
@@ -140,13 +145,13 @@ int16_t CT1820_GetTemp(void)
     temp_l = ct1820_read_byte();
     temp_h = ct1820_read_byte();
 
-    /* è¿‡æ»¤å…¨1(æ–­çº¿) */
+    /* ¹ıÂËÈ«1(¶ÏÏß) */
     if (temp_h == 0xFF && temp_l == 0xFF)
-        return 0;
+        return INT16_MIN;
 
     raw = ((uint16_t)temp_h << 8) | temp_l;
 
-    /* 12bit: raw * 0.0625 Â°Cï¼Œæ”¾å¤§10å€ */
+    /* 12bit: raw * 0.0625 ¡ãC£¬·Å´ó10±¶ */
     temp = (int32_t)(int16_t)raw * 625 / 1000;
 
     return (int16_t)temp;

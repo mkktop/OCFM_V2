@@ -182,7 +182,11 @@ void app_modbus_slave_update(void)
         modbus_slave_set_holding_register(REG_DISTANCE, distance_mm);
     }
 
-    /* 温度 - 0x0003 (暂无温度数据，保持0) */
+    /* 温度 - 0x0003 */
+    if (sensor != NULL)
+    {
+        modbus_slave_set_holding_register(REG_TEMPERATURE, (uint16_t)sensor->temperature_x10);
+    }
 
     /* 瞬时流量 (float) - 0x0004 占2个寄存器 */
     {

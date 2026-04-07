@@ -49,6 +49,10 @@ typedef struct{
         // 水位相关
         lv_subject_t water_level_str;
         char water_level_buf[16], water_level_prev_buf[16];
+
+        // 温度相关
+        lv_subject_t temperature_str;
+        char temperature_buf[16], temperature_prev_buf[16];
     } subjects;
 }ui_manager_t;
 

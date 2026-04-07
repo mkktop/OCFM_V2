@@ -15,6 +15,9 @@
 #include "modbus_master.h"
 #include "global.h"
 #include "usart.h"
+#include "ct1820.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
 
 /*============================================================================*/
@@ -29,6 +32,12 @@
 /* 数据更新间隔 (ms) */
 #define SENSOR_UPDATE_INTERVAL_MS    1000
 
+/* 温度测量间隔 (ms) */
+#define TEMP_UPDATE_INTERVAL_MS      5000
+
+/* CT1820 转换等待时间 (ms) */
+#define TEMP_CONVERT_WAIT_MS         800
+
 /*============================================================================*/
 /*                           私有变量                                          */
 /*============================================================================*/
@@ -37,6 +46,15 @@
  * @brief 传感器数据实例
  */
 static SensorData_t g_sensor_data;
+
+/**
+ * @brief CT1820 温度轮询状态机
+ */
+static struct {
+    uint8_t converting;         /**< 是否正在转换中 */
+    uint32_t convert_start;     /**< 发起转换的时间戳 */
+    uint32_t last_update;       /**< 上次完成测量的时间戳 */
+} g_temp_state;
 
 /*============================================================================*/
 /*                           公共函数实现                                      */
@@ -50,6 +68,10 @@ void app_sensor_init(void)
 {
     /* 清零传感器数据 */
     memset(&g_sensor_data, 0, sizeof(SensorData_t));
+
+    /* 初始化CT1820温度传感器 */
+    CT1820_Init();
+    memset(&g_temp_state, 0, sizeof(g_temp_state));
 
     /* 初始化Modbus主机 */
     modbus_master_init(&sensor_master, &huart1);
@@ -108,6 +130,40 @@ void app_sensor_poll(void)
             g_sensor_data.last_update_time = HAL_GetTick();
         }
     }
+
+    /* CT1820 温度测量状态机 (每5秒一次) */
+    if (g_temp_state.converting)
+    {
+        if (HAL_GetTick() - g_temp_state.convert_start >= TEMP_CONVERT_WAIT_MS)
+        {
+            int16_t temp;
+            taskENTER_CRITICAL();
+            temp = CT1820_GetTemp();
+            taskEXIT_CRITICAL();
+            if (temp != INT16_MIN)
+            {
+                g_sensor_data.temperature_x10 = temp;
+                g_sensor_data.temp_valid = 1;
+            }
+            else
+            {
+                g_sensor_data.temp_valid = 0;
+            }
+            g_temp_state.converting = 0;
+            g_temp_state.last_update = HAL_GetTick();
+        }
+    }
+    else
+    {
+        if (HAL_GetTick() - g_temp_state.last_update >= TEMP_UPDATE_INTERVAL_MS)
+        {
+            taskENTER_CRITICAL();
+            CT1820_StartConvert();
+            taskEXIT_CRITICAL();
+            g_temp_state.converting = 1;
+            g_temp_state.convert_start = HAL_GetTick();
+        }
+    }
 }
 
 /**
@@ -121,6 +177,15 @@ float app_sensor_get_distance(void)
         return g_sensor_data.distance_m;
     }
     return 0.0f;
+}
+
+/**
+ * @brief  获取温度值
+ * @retval 温度值 x10 (如256=25.6°C), 0=传感器断线
+ */
+int16_t app_sensor_get_temperature(void)
+{
+    return g_sensor_data.temperature_x10;
 }
 
 /**

@@ -98,10 +98,23 @@ void app_model_update(void)
     sensor = app_sensor_get_data();
     if (sensor != NULL) {
         g_app_model.water_level_m = sensor->water_level_m;
+        g_app_model.temperature_x10 = sensor->temperature_x10;
         g_app_model.sensor_online = sensor->is_online;
     }
 
     /* 格式化水位字符串 */
     snprintf(g_app_model.water_level_str, sizeof(g_app_model.water_level_str),
              "L:%.3fm", g_app_model.water_level_m);
+
+    /* 格式化温度字符串 */
+    if (sensor->temp_valid)
+    {
+        snprintf(g_app_model.temperature_str, sizeof(g_app_model.temperature_str),
+                 "%.1f\xC2\xB0""C", g_app_model.temperature_x10 / 10.0f);
+    }
+    else
+    {
+        snprintf(g_app_model.temperature_str, sizeof(g_app_model.temperature_str),
+                 "--\xC2\xB0""C");
+    }
 }
