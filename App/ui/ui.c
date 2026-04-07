@@ -133,6 +133,19 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     /* 第三步：将水位数据同步到Subject */
     lv_subject_copy_string(&ui_manager->subjects.water_level_str, g_app_model.water_level_str);
 
+    /* 更新水位标签颜色（离线时变红，在线时恢复青绿色） */
+    if (ui_manager->water_level_label != NULL &&
+        ui_manager->prev_sensor_online != g_app_model.sensor_online) {
+        ui_manager->prev_sensor_online = g_app_model.sensor_online;
+        if (g_app_model.sensor_online) {
+            lv_obj_set_style_text_color(ui_manager->water_level_label,
+                                        lv_color_hex(0x2effde), 0);
+        } else {
+            lv_obj_set_style_text_color(ui_manager->water_level_label,
+                                        lv_color_hex(0xff3333), 0);
+        }
+    }
+
     /* 第四步：将流量数据同步到Subject */
     lv_subject_copy_string(&ui_manager->subjects.instant_flow_str, g_app_model.instant_flow_str);
     lv_subject_copy_string(&ui_manager->subjects.current_ma_str, g_app_model.current_ma_str);
@@ -439,13 +452,16 @@ static void create_details_tile(lv_obj_t *tile)
     /* 创建水位标签 */
     lv_obj_t *water_level_label = lv_label_create(top_bar);
     lv_label_set_text(water_level_label, "L:0.000m");
-    
+
     /* 设置水位字体大小为24px */
     lv_obj_set_style_text_font(water_level_label, &lv_font_montserrat_24, 0);
-    
+
     /* 设置水位文字颜色为青绿色 */
     lv_obj_set_style_text_color(water_level_label, lv_color_hex(0x2effde), 0);
-    
+
+    /* 保存水位标签指针，用于离线时更新颜色 */
+    ui_manager->water_level_label = water_level_label;
+
     /* 绑定水位Subject，实现每秒自动更新 */
     lv_subject_add_observer_obj(&ui_manager->subjects.water_level_str, 
                                 string_label_observer_cb, 
@@ -1190,6 +1206,9 @@ void ui_create(void)
 
     /* 注册配置变更回调，量程变化时立即刷新趋势图 */
     app_config_set_change_callback(ui_config_change_cb);
+
+    /* 初始化传感器状态追踪，首次定时器回调会根据实际状态设置颜色 */
+    ui_manager->prev_sensor_online = 1;
 
     /* 第八步：预留其他屏幕的内存空间（延迟创建） */
     ui_manager->settings_screen = NULL;  /* 设置页面由set_page动态创建 */

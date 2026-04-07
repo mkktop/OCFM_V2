@@ -102,9 +102,14 @@ void app_model_update(void)
         g_app_model.sensor_online = sensor->is_online;
     }
 
-    /* 格式化水位字符串 */
-    snprintf(g_app_model.water_level_str, sizeof(g_app_model.water_level_str),
-             "L:%.3fm", g_app_model.water_level_m);
+    /* 格式化水位字符串（离线时显示error） */
+    if (g_app_model.sensor_online) {
+        snprintf(g_app_model.water_level_str, sizeof(g_app_model.water_level_str),
+                 "L:%.3fm", g_app_model.water_level_m);
+    } else {
+        snprintf(g_app_model.water_level_str, sizeof(g_app_model.water_level_str),
+                 "L:error");
+    }
 
     /* 格式化温度字符串 */
     if (sensor->temp_valid)

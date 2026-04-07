@@ -21,6 +21,7 @@ typedef struct{
     
     // 主屏幕控件
     lv_obj_t *inst_unit_label;            ///< 瞬时流量单位标签
+    lv_obj_t *water_level_label;          ///< 水位标签（离线时变红）
 
     // 趋势图相关
     lv_obj_t *trend_chart;               ///< 趋势图控件
@@ -29,6 +30,7 @@ typedef struct{
     lv_obj_t *trend_max_label;           ///< 底部最大值标签
     uint32_t trend_tick_counter;         ///< 秒计数器
     float trend_max_flow;                ///< 历史最大瞬时流量 (m³/h)
+    uint8_t prev_sensor_online;          ///< 上一次传感器在线状态（用于检测变化）
 
     // Subjects 层 - LVGL Observer 主题
     struct {
