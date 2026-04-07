@@ -33,7 +33,7 @@
 #define SENSOR_UPDATE_INTERVAL_MS    1000
 
 /* 温度测量间隔 (ms) */
-#define TEMP_UPDATE_INTERVAL_MS      5000
+#define TEMP_UPDATE_INTERVAL_MS      10000
 
 /* CT1820 转换等待时间 (ms) */
 #define TEMP_CONVERT_WAIT_MS         800
