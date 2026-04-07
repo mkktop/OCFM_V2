@@ -10,12 +10,32 @@
 #include "global.h"
 #include "app_model.h"
 #include "app_sensor.h"
+#include "app_config.h"
 
 ui_manager_t *ui_manager;
 
 /*============================================================================*/
 /*                           私有函数                                           */
 /*============================================================================*/
+
+/**
+ * @brief  获取瞬时流量单位字符串
+ * @retval 单位字符串 (如 "L/s", "m³/h")
+ */
+static const char *get_flow_unit_str(void)
+{
+    switch (app_config_get_instant_unit()) {
+        case FLOW_UNIT_L_S:    return "L/s";
+        case FLOW_UNIT_L_MIN:  return "L/min";
+        case FLOW_UNIT_L_H:    return "L/h";
+        case FLOW_UNIT_M3_H:   return "m³/h";
+        case FLOW_UNIT_M3_S:   return "m³/s";
+        case FLOW_UNIT_M3_MIN: return "m³/min";
+        case FLOW_UNIT_T_H:    return "T/h";
+        case FLOW_UNIT_G_H:    return "G/h";
+        default:               return "L/s";
+    }
+}
 
 /**
  * @brief  字符串标签Observer回调函数
@@ -95,6 +115,11 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     lv_subject_copy_string(&ui_manager->subjects.current_ma_str, g_app_model.current_ma_str);
     lv_subject_copy_string(&ui_manager->subjects.total_flow_str, g_app_model.total_flow_str);
     lv_subject_copy_string(&ui_manager->subjects.temperature_str, g_app_model.temperature_str);
+
+    /* 更新瞬时流量单位标签 */
+    if (ui_manager->inst_unit_label != NULL) {
+        lv_label_set_text_fmt(ui_manager->inst_unit_label, "INST:%s", get_flow_unit_str());
+    }
 
     /* 第五步：更新趋势图数据 */
     if (ui_manager->trend_chart != NULL) {
@@ -450,7 +475,8 @@ static void create_details_tile(lv_obj_t *tile)
     /* 创建瞬时流量单位标签 */
     lv_obj_t *inst_flaw_label = lv_label_create(inst_flaw_obj);
     lv_obj_set_size(inst_flaw_label, LV_PCT(90), 20);
-    lv_label_set_text(inst_flaw_label, "INST:L/min");
+    lv_label_set_text_fmt(inst_flaw_label, "INST:%s", get_flow_unit_str());
+    ui_manager->inst_unit_label = inst_flaw_label;
     
     /* 设置单位标签字体16px，青绿色 */
     lv_obj_set_style_text_font(inst_flaw_label, &lv_font_montserrat_16, 0);

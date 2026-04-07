@@ -23,6 +23,12 @@ void flow_calc_update(void);
 float flow_calc_get_instant(void);
 
 /**
+ * @brief  获取当前瞬时流量 (原始L/s)
+ * @retval 瞬时流量 (L/s，未经单位转换)
+ */
+float flow_calc_get_instant_lps(void);
+
+/**
  * @brief  获取累计流量
  * @retval 累计流量 (m³)
  */

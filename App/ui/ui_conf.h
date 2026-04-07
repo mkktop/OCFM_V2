@@ -19,6 +19,9 @@ typedef struct{
     // 当前激活的屏幕
     lv_obj_t *active_screen;//当前激活的屏幕指针
     
+    // 主屏幕控件
+    lv_obj_t *inst_unit_label;            ///< 瞬时流量单位标签
+
     // 趋势图相关
     lv_obj_t *trend_chart;               ///< 趋势图控件
     lv_chart_series_t *trend_series_10s;  ///< 10秒采样序列 (30点=5分钟历史)

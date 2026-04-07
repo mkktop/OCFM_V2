@@ -88,6 +88,7 @@ typedef struct {
 /*============================================================================*/
 
 static float s_instant_flow = 0.0f;     /**< 当前瞬时流量 (根据配置的单位) */
+static float s_instant_flow_lps = 0.0f;  /**< 当前瞬时流量 (原始L/s，未经单位转换) */
 static double s_total_flow_m3 = 0.0;    /**< 累计流量 (m³) */
 static uint32_t s_total_time_sec = 0;   /**< 累计时长 (秒) */
 static uint8_t s_bkp_save_counter = 0;  /**< 备份寄存器保存计数器 (10秒周期) */
@@ -469,7 +470,8 @@ void flow_calc_update(void)
     water_level_m = sensor->water_level_m;
 
     /* 计算瞬时流量 (L/s) */
-    s_instant_flow = flow_calc_instant(water_level_m);
+    s_instant_flow_lps = flow_calc_instant(water_level_m);
+    s_instant_flow = s_instant_flow_lps;
 
     /* 累加累计流量: L/s * 1s = L, 除以1000转m³
      * 注意：使用double精度计算，避免float除法丢失精度 */
@@ -512,6 +514,15 @@ void flow_calc_process(void)
 float flow_calc_get_instant(void)
 {
     return s_instant_flow;
+}
+
+/**
+ * @brief  获取当前瞬时流量 (原始L/s)
+ * @retval 瞬时流量 (L/s，未经单位转换)
+ */
+float flow_calc_get_instant_lps(void)
+{
+    return s_instant_flow_lps;
 }
 
 /**
