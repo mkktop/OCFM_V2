@@ -149,6 +149,12 @@ uint8_t app_sensor_set_float(uint16_t reg_addr, float value, void (*callback)(ui
  */
 uint8_t app_sensor_get_cmd_status(uint8_t cmd_index);
 
+/**
+ * @brief 注册参数变更同步回调
+ * @note 在 app_sensor_init() 中内部调用
+ */
+void app_sensor_register_config_callback(void);
+
 #ifdef __cplusplus
 }
 #endif

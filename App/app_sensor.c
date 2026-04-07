@@ -23,8 +23,8 @@
 
 /* 传感器配置 */
 #define SENSOR_SLAVE_ID     SENSOR_ADDR_1     /* 从机地址 */
-#define SENSOR_START_ADDR   0x0005            /* 距离寄存器地址 */
-#define SENSOR_QUANTITY     1                 /* 只读取1个寄存器(距离) */
+#define SENSOR_START_ADDR   SENSOR_REG_DISTANCE /* 距离寄存器地址 */
+#define SENSOR_QUANTITY     SENSOR_REG_QUANTITY /* 轮询寄存器数量 */
 
 /* 数据更新间隔 (ms) */
 #define SENSOR_UPDATE_INTERVAL_MS    1000
@@ -59,6 +59,9 @@ void app_sensor_init(void)
                               SENSOR_SLAVE_ID,
                               SENSOR_START_ADDR,
                               SENSOR_QUANTITY);
+
+    /* 注册参数变更同步回调 */
+    app_sensor_register_config_callback();
 }
 
 /**
@@ -166,11 +169,9 @@ uint8_t app_sensor_set_register(uint16_t reg_addr, uint16_t value,
  */
 uint8_t app_sensor_set_height(uint32_t height_mm, void (*callback)(uint8_t result))
 {
-    /* 更新本地配置 */
-    app_config_set(CONFIG_ID_HEIGHT, height_mm);
-
-    /* 下发到传感器 (寄存器地址 REG_HEIGHT = 0x0066) */
-    return app_sensor_set_register(REG_HEIGHT, (uint16_t)height_mm, callback);
+    /* 更新本地配置，回调自动下发到传感器 */
+    (void)callback;
+    return app_config_set(CONFIG_ID_HEIGHT, height_mm) == CONFIG_OK ? 0 : 0xFF;
 }
 
 /**
@@ -181,11 +182,9 @@ uint8_t app_sensor_set_height(uint32_t height_mm, void (*callback)(uint8_t resul
  */
 uint8_t app_sensor_set_range(uint32_t range_mm, void (*callback)(uint8_t result))
 {
-    /* 更新本地配置 */
-    app_config_set(CONFIG_ID_RANGE_MAX, range_mm);
-
-    /* 下发到传感器 (寄存器地址 REG_RANGE_MAX = 0x0065) */
-    return app_sensor_set_register(REG_RANGE_MAX, (uint16_t)range_mm, callback);
+    /* 更新本地配置，回调自动下发到传感器 */
+    (void)callback;
+    return app_config_set(CONFIG_ID_RANGE_MAX, range_mm) == CONFIG_OK ? 0 : 0xFF;
 }
 
 /**
@@ -196,11 +195,9 @@ uint8_t app_sensor_set_range(uint32_t range_mm, void (*callback)(uint8_t result)
  */
 uint8_t app_sensor_set_blind_area(uint32_t blind_area_mm, void (*callback)(uint8_t result))
 {
-    /* 更新本地配置 */
-    app_config_set(CONFIG_ID_BLIND_AREA, blind_area_mm);
-
-    /* 下发到传感器 (寄存器地址 REG_L4 = 0x006A) */
-    return app_sensor_set_register(REG_L4, (uint16_t)blind_area_mm, callback);
+    /* 更新本地配置，回调自动下发到传感器 */
+    (void)callback;
+    return app_config_set(CONFIG_ID_BLIND_AREA, blind_area_mm) == CONFIG_OK ? 0 : 0xFF;
 }
 
 /**
@@ -246,4 +243,73 @@ uint8_t app_sensor_set_float(uint16_t reg_addr, float value, void (*callback)(ui
 uint8_t app_sensor_get_cmd_status(uint8_t cmd_index)
 {
     return (uint8_t)modbus_master_get_cmd_status(&sensor_master, cmd_index);
+}
+
+/*============================================================================*/
+/*                           参数变更同步到传感器                               */
+/*============================================================================*/
+
+/**
+ * @brief 将本地配置参数下发到传感器
+ * @param id: 变更的配置参数ID
+ * @note 由 app_config 变更回调触发，通过UART1 Modbus写入传感器
+ */
+static void on_config_change_to_sensor(config_id_t id)
+{
+    uint16_t value;
+
+    switch (id)
+    {
+        case CONFIG_ID_RANGE_MAX:
+            value = (uint16_t)app_config_get_range_max();
+            app_sensor_set_register(SENSOR_COM_FACTORY_LC, value, NULL);
+            break;
+        case CONFIG_ID_HEIGHT:
+            value = (uint16_t)app_config_get_height();
+            app_sensor_set_register(SENSOR_COM_GAODU, value, NULL);
+            break;
+        case CONFIG_ID_BLIND_AREA:
+            value = (uint16_t)app_config_get_blind_area();
+            app_sensor_set_register(SENSOR_COM_L4, value, NULL);
+            break;
+        case CONFIG_ID_WINDOW_WIDTH:
+            value = (uint16_t)app_config_get_window_width();
+            app_sensor_set_register(SENSOR_COM_L1, value, NULL);
+            break;
+        case CONFIG_ID_FILTER_COUNT:
+            value = (uint16_t)app_config_get_filter_count();
+            app_sensor_set_register(SENSOR_COM_L2, value, NULL);
+            break;
+        case CONFIG_ID_DELAY_TIME:
+            value = (uint16_t)app_config_get_delay_time();
+            app_sensor_set_register(SENSOR_COM_L3, value, NULL);
+            break;
+        case CONFIG_ID_W_COEFF:
+            value = (uint16_t)app_config_get_w_coeff();
+            app_sensor_set_register(SENSOR_COM_L5, value, NULL);
+            break;
+        case CONFIG_ID_M_COEFF:
+            value = (uint16_t)app_config_get_m_coeff();
+            app_sensor_set_register(SENSOR_COM_L6, value, NULL);
+            break;
+        case CONFIG_ID_ANTENNA_TYPE:
+            value = (uint16_t)app_config_get_antenna_type();
+            app_sensor_set_register(SENSOR_COM_DEAD_ZONE, value, NULL);
+            break;
+        case CONFIG_ID_DIS_OFFSET:
+            value = (uint16_t)app_config_get_dis_offset();
+            app_sensor_set_register(SENSOR_COM_DIS_OFFSET, value, NULL);
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief 注册传感器参数同步回调
+ * @note 在 app_sensor_init 中调用
+ */
+void app_sensor_register_config_callback(void)
+{
+    app_config_set_change_callback(on_config_change_to_sensor);
 }
