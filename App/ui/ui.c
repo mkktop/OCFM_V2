@@ -38,6 +38,19 @@ static const char *get_flow_unit_str(void)
 }
 
 /**
+ * @brief  配置变更回调函数
+ * @details 当量程配置变更时，立即刷新趋势图Y轴范围
+ * @param id  变更的配置项ID
+ */
+static void ui_config_change_cb(config_id_t id)
+{
+    if (id == CONFIG_ID_RANGE_4MA || id == CONFIG_ID_RANGE_20MA)
+    {
+        ui_trend_update_range();
+    }
+}
+
+/**
  * @brief  字符串标签Observer回调函数
  * @details 当绑定的Subject值发生变化时，LVGL事件系统会自动调用此函数
  *          该函数是MVVM模式中Observer角色的具体实现
@@ -160,28 +173,6 @@ static void ui_update_timer_cb(lv_timer_t *timer)
             pushed = true;
         }
 
-        /* 仅在当前可见且推入新数据后执行Y轴缩放 */
-        if (pushed && ui_manager->current_page == 1) {
-            int32_t *arr_10s = lv_chart_get_series_y_array(ui_manager->trend_chart,
-                                                            ui_manager->trend_series_10s);
-            int32_t *arr_5min = lv_chart_get_series_y_array(ui_manager->trend_chart,
-                                                             ui_manager->trend_series_5min);
-            int32_t data_max = 0;
-            for (int i = 0; i < 30; i++) {
-                if (arr_10s[i] > data_max) data_max = arr_10s[i];
-                if (arr_5min[i] > data_max) data_max = arr_5min[i];
-            }
-
-            /* 超过当前上限×1.1或低于×0.5时才调整，避免频繁重绘 */
-            if (data_max > ui_manager->trend_y_max * 11 / 10 ||
-                (ui_manager->trend_y_max > 100 && data_max < ui_manager->trend_y_max / 2)) {
-                ui_manager->trend_y_max = (data_max > 0) ? (int32_t)(data_max * 12 / 10) : 100;
-                if (ui_manager->trend_y_max < 100) ui_manager->trend_y_max = 100;
-                lv_chart_set_axis_range(ui_manager->trend_chart,
-                                        LV_CHART_AXIS_PRIMARY_Y, 0,
-                                        ui_manager->trend_y_max);
-            }
-        }
     }
 }
 
@@ -679,8 +670,10 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     /* X轴范围（数据点索引 0~29） */
     lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, 29);
 
-    /* Y轴范围初始值（×100缩放，100 = 1.00 m³/h） */
-    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+    /* Y轴范围使用4mA/20mA量程（×100缩放） */
+    int32_t y_min = (int32_t)(app_config_get_range_4ma() * 100);
+    int32_t y_max = (int32_t)(app_config_get_range_20ma() * 100);
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, y_min, y_max);
 
     /* 仅保留3条水平参考线，去除垂直参考线 */
     lv_chart_set_div_line_count(chart, 3, 0);
@@ -765,7 +758,6 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     ui_manager->trend_series_5min = ser_5min;
     ui_manager->trend_max_label = max_label;
     ui_manager->trend_tick_counter = 0;
-    ui_manager->trend_y_max = 100;
     ui_manager->trend_max_flow = 0.0f;
 }
 
@@ -1010,6 +1002,20 @@ void ui_switch_tile(uint8_t page_index)
     ui_manager->current_page = page_index;
 }
 
+/**
+ * @brief  刷新趋势图Y轴范围
+ * @details 根据当前4mA/20mA量程配置更新趋势图Y轴范围
+ *          在量程配置变更时调用以立即生效
+ */
+void ui_trend_update_range(void)
+{
+    if (ui_manager == NULL || ui_manager->trend_chart == NULL) return;
+
+    int32_t y_min = (int32_t)(app_config_get_range_4ma() * 100);
+    int32_t y_max = (int32_t)(app_config_get_range_20ma() * 100);
+    lv_chart_set_axis_range(ui_manager->trend_chart, LV_CHART_AXIS_PRIMARY_Y, y_min, y_max);
+}
+
 /*============================================================================*/
 /*                           内部函数                                           */
 /*============================================================================*/
@@ -1181,6 +1187,9 @@ void ui_create(void)
     create_details_tile(ui_manager->tile1);
     create_trend_chart_tile(ui_manager->tile2);
     create_flow_record_tile(ui_manager->tile3);
+
+    /* 注册配置变更回调，量程变化时立即刷新趋势图 */
+    app_config_set_change_callback(ui_config_change_cb);
 
     /* 第八步：预留其他屏幕的内存空间（延迟创建） */
     ui_manager->settings_screen = NULL;  /* 设置页面由set_page动态创建 */
