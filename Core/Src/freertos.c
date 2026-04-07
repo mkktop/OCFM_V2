@@ -36,6 +36,7 @@
 #include "app_config.h"
 #include "app_flow_calc.h"
 #include "app_current.h"
+#include "app_alarm.h"
 #include "../Interface/modbus_slave.h"
 #include "../App/app_modbus_slave.h"
 /* USER CODE END Includes */
@@ -182,6 +183,7 @@ void main_task_func(void *argument)
 {
   /* USER CODE BEGIN main_task_func */
   app_config_init();  // 初始化配置（从EEPROM加载或使用默认值）
+  app_alarm_init();   // 初始化报警模块（继电器初始化为关闭状态）
   flow_calc_load_total();  // 加载累计流量（优先备份寄存器，其次EEPROM）
   app_sensor_init();  // 初始化传感器模块
   app_current_init();  // 初始化4-20mA电流输出

@@ -12,6 +12,7 @@
 
 #include "app_flow_calc.h"
 #include "app_sensor.h"
+#include "app_alarm.h"
 #include "rtc.h"
 #include "at24c02.h"
 #include <string.h>
@@ -456,11 +457,14 @@ void flow_calc_update(void)
 {
     SensorData_t *sensor;
     float water_level_m;
+    float instant_flow_m3h;
 
     /* 获取传感器数据 */
     sensor = app_sensor_get_data();
     if (sensor == NULL || !sensor->is_online) {
         s_instant_flow = 0.0f;
+        /* 传感器离线时解除所有报警 */
+        app_alarm_update(0.0f);
         return;
     }
 
@@ -481,6 +485,10 @@ void flow_calc_update(void)
     if (app_config_get_instant_unit() != FLOW_UNIT_L_S) {
         s_instant_flow = flow_convert_instant(s_instant_flow, app_config_get_instant_unit());
     }
+
+    /* 报警判断：使用 m³/h 单位 (L/s * 3.6 = m³/h) */
+    instant_flow_m3h = s_instant_flow_lps * 3.6f;
+    app_alarm_update(instant_flow_m3h);
 
     /* 每10秒保存累计流量到备份寄存器 */
     if (++s_bkp_save_counter >= 10) {
