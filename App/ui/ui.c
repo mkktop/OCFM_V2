@@ -28,9 +28,9 @@ static const char *get_flow_unit_str(void)
         case FLOW_UNIT_L_S:    return "L/s";
         case FLOW_UNIT_L_MIN:  return "L/min";
         case FLOW_UNIT_L_H:    return "L/h";
-        case FLOW_UNIT_M3_H:   return "m³/h";
-        case FLOW_UNIT_M3_S:   return "m³/s";
-        case FLOW_UNIT_M3_MIN: return "m³/min";
+        case FLOW_UNIT_M3_H:   return "m\xC2\xB3/h";
+        case FLOW_UNIT_M3_S:   return "m\xC2\xB3/s";
+        case FLOW_UNIT_M3_MIN: return "m\xC2\xB3/min";
         case FLOW_UNIT_T_H:    return "T/h";
         case FLOW_UNIT_G_H:    return "G/h";
         default:               return "L/s";
@@ -143,7 +143,7 @@ static void ui_update_timer_cb(lv_timer_t *timer)
         if (flow_m3h > ui_manager->trend_max_flow) {
             ui_manager->trend_max_flow = flow_m3h;
             lv_label_set_text_fmt(ui_manager->trend_max_label,
-                                  "MAX: %.2f m³/h", ui_manager->trend_max_flow);
+                                  "MAX: %.2f m\xC2\xB3/h", ui_manager->trend_max_flow);
         }
 
         /* 每10秒推入10秒采样序列 */
@@ -489,7 +489,7 @@ static void create_details_tile(lv_obj_t *tile)
     ui_manager->inst_unit_label = inst_flaw_label;
     
     /* 设置单位标签字体16px，青绿色 */
-    lv_obj_set_style_text_font(inst_flaw_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(inst_flaw_label, &my_font_montserrat_16, 0);
     lv_obj_set_style_text_color(inst_flaw_label, lv_color_hex(0x2effde), 0);
 
     /* 创建瞬时流量数值标签（核心数据显示） */
@@ -542,7 +542,7 @@ static void create_details_tile(lv_obj_t *tile)
     lv_label_set_text(total_flaw_label, "TOTAL:m\xC2\xB3");
     
     /* 设置单位标签字体16px，青绿色 */
-    lv_obj_set_style_text_font(total_flaw_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(total_flaw_label, &my_font_montserrat_16, 0);
     lv_obj_set_style_text_color(total_flaw_label, lv_color_hex(0x2effde), 0);
 
     /* 创建累计流量数值标签 */
@@ -752,8 +752,9 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     lv_obj_set_flex_grow(spacer, 1);
 
     lv_obj_t *max_label = lv_label_create(info_bar);
-    lv_label_set_text(max_label, "MAX: 0.00 m³/h");
+    lv_label_set_text(max_label, "MAX: 0.00 m\xC2\xB3/h");
     lv_obj_set_style_text_color(max_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(max_label, &my_font_montserrat_14, 0);
 
     /*--------------------------------------------------------------------*/
     /* 第六部分：保存引用到 ui_manager                                     */
@@ -900,7 +901,7 @@ static void create_flow_record_tile(lv_obj_t *tile)
     lv_obj_t *total_flow_value = lv_label_create(card2);
     lv_label_set_text(total_flow_value, "0.000 m\xC2\xB3");
     lv_obj_set_style_text_color(total_flow_value, lv_color_hex(0x2ECC71), 0);
-    lv_obj_set_style_text_font(total_flow_value, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_text_font(total_flow_value, &my_font_montserrat_24, 0);
     lv_obj_align(total_flow_value, LV_ALIGN_TOP_LEFT, 14, 42);
 
     lv_subject_add_observer_obj(&ui_manager->subjects.total_flow_str,

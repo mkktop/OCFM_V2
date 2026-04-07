@@ -234,9 +234,9 @@ static const char *format_flow_unit(uint32_t val)
         case FLOW_UNIT_L_S:   return "L/s";      /* 升/秒 */
         case FLOW_UNIT_L_MIN: return "L/min";    /* 升/分钟 */
         case FLOW_UNIT_L_H:   return "L/h";      /* 升/小时 */
-        case FLOW_UNIT_M3_H:  return "m³/h";     /* 立方米/小时 */
-        case FLOW_UNIT_M3_S:  return "m³/s";     /* 立方米/秒 */
-        case FLOW_UNIT_M3_MIN:return "m³/min";   /* 立方米/分钟 */
+        case FLOW_UNIT_M3_H:  return "m\xC2\xB3/h";     /* 立方米/小时 */
+        case FLOW_UNIT_M3_S:  return "m\xC2\xB3/s";     /* 立方米/秒 */
+        case FLOW_UNIT_M3_MIN:return "m\xC2\xB3/min";   /* 立方米/分钟 */
         case FLOW_UNIT_T_H:   return "T/h";      /* 吨/小时 */
         case FLOW_UNIT_G_H:   return "G/h";      /* 美制加仑/小时 */
         default: return "L/s";
@@ -853,7 +853,7 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
             snprintf(val_buf, sizeof(val_buf), "%lu", (unsigned long)item->get());
             lv_label_set_text(val_label, val_buf);
         }
-        lv_obj_set_style_text_font(val_label, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(val_label, &my_font_montserrat_16, 0);
         lv_obj_set_style_text_color(val_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
 
         /* 单位标签 (仅当单位字符串非空时创建) */
