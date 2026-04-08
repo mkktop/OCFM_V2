@@ -39,6 +39,7 @@
 #include "app_alarm.h"
 #include "../Interface/modbus_slave.h"
 #include "../App/app_modbus_slave.h"
+#include "../App/ui/ui_async.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -188,6 +189,7 @@ void main_task_func(void *argument)
   app_sensor_init();  // 初始化传感器模块
   app_current_init();  // 初始化4-20mA电流输出
   lv_init();  // 初始化LVGL库
+  ui_async_init();  // 初始化线程安全异步UI队列
   lv_tick_set_cb(xTaskGetTickCount);  // 设置LVGL定时器回调函数，使用FreeRTOS的tick计数
   lv_delay_set_cb(vTaskDelay);  // 设置LVGL延时回调函数，使用FreeRTOS的延时函数
   lv_port_disp_init();  // 初始化显示端口
@@ -205,6 +207,9 @@ void main_task_func(void *argument)
     /* 处理EEPROM保存请求 (在任务上下文执行，避免阻塞定时器) */
     app_config_process();
     flow_calc_process();
+
+    /* 处理按键任务投递的异步UI操作 (在LVGL上下文安全执行) */
+    ui_async_process();
 
     uint32_t tick = lv_timer_handler();
     osDelay(pdMS_TO_TICKS(tick));

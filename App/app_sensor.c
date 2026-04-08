@@ -72,6 +72,7 @@ void app_sensor_init(void)
     /* 初始化CT1820温度传感器 */
     CT1820_Init();
     memset(&g_temp_state, 0, sizeof(g_temp_state));
+    g_temp_state.last_update = HAL_GetTick() - TEMP_UPDATE_INTERVAL_MS - 1;  /* 确保首次poll立即启动转换 */
 
     /* 初始化Modbus主机 */
     modbus_master_init(&sensor_master, &huart1);
