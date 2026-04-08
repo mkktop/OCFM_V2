@@ -27,7 +27,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 OCFM_V2/
 ├── Core/                    # STM32 HAL和系统文件 (STM32CubeMX生成)
 │   ├── Inc/
-│   │   ├── global.h         # 全局配置、寄存器定义、SystemConfig_t、SET_TABLE
+│   │   ├── global.h         # 全局配置、寄存器定义、SystemConfig_t
 │   │   └── rtc_time.h       # 统一RTC时间API (格式化、时间戳)
 │   └── Src/                 # 外设初始化 (main.c, freertos.c, rtc.c等)
 ├── App/                     # 应用层代码
@@ -41,6 +41,8 @@ OCFM_V2/
 │   ├── app_button.c/h       # 应用层按键处理 (按屏幕分发)
 │   ├── app_sensor.c/h       # 传感器应用层 (Modbus主机封装)
 │   ├── app_flow_calc.c/h    # 流量计算模块 (堰槽公式, 累计流量)
+│   ├── app_alarm.c/h        # 流量报警模块 (4级滞回控制, 4路继电器输出)
+│   ├── app_current.c/h      # 4-20mA模拟电流输出 (TIM3 CH4 PWM→V/I)
 │   └── app_modbus_slave.c/h # Modbus从机应用层 (寄存器映射, 写回调)
 ├── Drivers/
 │   ├── STM32F4xx_HAL_Driver/# HAL库
@@ -73,8 +75,8 @@ OCFM_V2/
 | UART1 | 水位传感器 (RS485, Modbus主机) |
 | UART2 | 用户通信接口 (Modbus从机) |
 | UART4 | 4G模块 (ML307) |
-| TIM3 | PWM输出 (蜂鸣器/背光) |
-| GPIO | 4路继电器 + 4个按键 |
+| TIM3 | PWM输出 (蜂鸣器/背光) + 4-20mA电流输出 (CH4/PB1) |
+| GPIO | 4路继电器 (PA4-PA7) + 4个按键 |
 | GPIO PB0 | CT1820温度传感器 (1-Wire) |
 
 ### FreeRTOS任务与定时器
@@ -94,6 +96,8 @@ OCFM_V2/
 ```
 app_config_init()          → 从EEPROM加载配置
 flow_calc_load_total()     → 从备份寄存器/EEPROM加载累计流量
+app_alarm_init()           → 初始化报警模块 (继电器默认关闭)
+app_current_init()         → 初始化4-20mA输出 (TIM3 CH4 PWM)
 app_sensor_init()          → 初始化传感器模块
 lv_init() + display port   → 初始化LVGL显示
 ui_create()                → 创建完整UI
@@ -113,6 +117,16 @@ LVGL 9.x 与 8.x API有较大变化：
 - 显示刷新: `lv_display_set_flush_cb()` (非旧版 `lv_disp_drv_set_flush_cb()`)
 - 输入设备: `lv_indev_create()` 系列API
 - 数据绑定: `lv_subject_t` / `lv_observer_t` 实现Observer模式
+
+**LVGL配置 (lv_conf.h) 关键参数：**
+- 内存池: 64KB，位于外部SRAM (FSMC地址 0x10000000)
+- 颜色深度: 16位 (RGB565)
+- OS集成: `LV_OS_FREERTOS`，使用任务通知
+- 默认字体: `lv_font_montserrat_14`，另有自定义字体 `my_font_montserrat_14/16/24`（支持立方米符号）
+- 编码: UTF-8
+- 刷新周期: 33ms (~30 FPS)
+
+**注意：** `/Middlewares` 目录（LVGL、FreeRTOS、FatFs）在 `.gitignore` 中被排除，不会被git跟踪。
 
 ### 异步UI操作
 **从按键回调等非LVGL上下文修改UI时，必须使用 `lv_async_call()`**，否则会触发 "Asserted at expression: !disp->rendering_in_progress"。
@@ -138,7 +152,7 @@ void button_callback(...) {
 
 ## 重要文件
 
-- `Core/Inc/global.h` - 全局配置、Modbus寄存器定义、SystemConfig_t、SET_TABLE
+- `Core/Inc/global.h` - 全局配置、Modbus寄存器定义、SystemConfig_t
 - `Core/Src/freertos.c` - FreeRTOS任务/定时器定义和启动流程
 - `Core/Inc/rtc_time.h` / `Core/Src/rtc_time.c` - 统一RTC时间API
 - `Middlewares/lvgl/lv_conf.h` - LVGL配置
@@ -251,6 +265,41 @@ UART1 + DMA (硬件层)
 - `app_modbus_slave_update()` - 每秒同步实时数据到寄存器（水位、距离、温度、流量、继电器、报警值、传感器参数、RTC时间）
 - `app_modbus_slave_on_write()` - 处理主机写请求（配置变更、出厂复位、清零流量、RTC时间设置）
 - `app_modbus_slave_process()` - 处理延迟EEPROM保存
+
+## 报警模块 (app_alarm)
+
+4级流量报警控制，驱动4路继电器输出。由 `flow_calc_update()` 每秒调用。
+
+**报警类型与继电器映射：**
+| 类型 | 继电器 | GPIO | 触发条件 | 恢复条件 |
+|------|--------|------|----------|----------|
+| AH (上限) | relay1 | PA4 | 流量 > AH | 流量 < AH - DH |
+| AL (下限) | relay2 | PA5 | 流量 < AL | 流量 > AL + DL |
+| AAH (上上限) | relay3 | PA6 | 流量 > AAH | 流量 < AH |
+| AAL (下下限) | relay4 | PA7 | 流量 < AAL | 流量 > AL |
+
+**核心API：**
+- `app_alarm_init()` - 初始化（继电器默认关闭）
+- `app_alarm_update(float flow_m3h)` - 更新报警状态（流量单位: m³/h，传感器离线传0.0f）
+- `app_alarm_get_state(type)` - 获取指定报警类型状态 (NORMAL/ACTIVE)
+- `app_alarm_get_relay_states()` - 获取4路继电器状态位图
+- `app_alarm_set_relay(relay, state)` - 手动控制继电器（调试用）
+
+**滞回逻辑：** AH触发后，需流量降到AH-DH以下才恢复；AAH触发后，需流量降到AH以下才恢复（非AAH-DH）。下限同理。
+
+## 4-20mA电流输出 (app_current)
+
+将瞬时流量线性映射为PWM占空比，驱动外部V/I电路产生4-20mA标准工业模拟信号。
+
+**硬件链路：** TIM3 CH4 (PB1) → RC低通滤波 → V/I转换器 → 4-20mA输出
+
+**核心API：**
+- `app_current_init()` - 启动TIM3 CH4 PWM，初始输出4mA
+- `app_current_update(float flow_data)` - 根据流量(m³/h)更新CCR寄存器
+- `app_current_calc_ma(float flow_data)` - 计算电流值（返回百分之一mA，如1200=12.00mA）
+- `app_current_format_ma(flow_data, buf, size)` - 格式化为字符串（如"12.00mA"）
+
+**校准模型：** `calibration_4ma/20ma`为工厂校准的CCR值，`range_4ma/20ma`为用户可调的流量量程端点。
 
 ## Modbus寄存器映射
 

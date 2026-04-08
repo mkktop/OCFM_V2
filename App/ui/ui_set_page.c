@@ -211,14 +211,14 @@ static const set_item_t alarm_items[] = {
                                        app_config_get_alarm_ah,  app_config_set_alarm_ah,           0.0f, 99999.0f, 0.001f, 3},
     {"Alarm Low",       "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_al,  app_config_set_alarm_al,           0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm HH",        "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_aah, app_config_set_alarm_aah,          0.0f, 99999.0f, 0.001f, 3},
+    {"Alarm LL",        "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+                                       app_config_get_alarm_aal, app_config_set_alarm_aal,          0.0f, 99999.0f, 0.001f, 3},
     {"Alarm High DB",   "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_dh,  app_config_set_alarm_dh,           0.0f, 99999.0f, 0.001f, 3},
     {"Alarm Low DB",    "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_dl,  app_config_set_alarm_dl,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm HiHi",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
-                                       app_config_get_alarm_aah, app_config_set_alarm_aah,          0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm LoLo",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
-                                       app_config_get_alarm_aal, app_config_set_alarm_aal,          0.0f, 99999.0f, 0.001f, 3},
 };
 
 /* ---------- format 回调函数 ---------- */
@@ -860,7 +860,7 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
         if (item->unit && item->unit[0] != '\0') {
             lv_obj_t *unit_label = lv_label_create(row);
             lv_label_set_text(unit_label, item->unit);
-            lv_obj_set_style_text_font(unit_label, &lv_font_montserrat_14, 0);
+            lv_obj_set_style_text_font(unit_label, &my_font_montserrat_14, 0);
             lv_obj_set_style_text_color(unit_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
             lv_obj_set_style_margin_left(unit_label, 5, 0);
         }
@@ -1134,7 +1134,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
         lv_label_set_text(unit_label, "");
     }
     lv_obj_set_style_text_color(unit_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(unit_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(unit_label, &my_font_montserrat_16, 0);
 
     /* --- 底栏 (操作提示) --- */
     lv_obj_t *bottom_bar = lv_obj_create(screen);

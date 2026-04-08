@@ -4937,6 +4937,11 @@
               <FileType>5</FileType>
               <FilePath>..\App\app_current.h</FilePath>
             </File>
+            <File>
+              <FileName>app_alarm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_alarm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
