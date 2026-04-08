@@ -40,6 +40,7 @@
 #include "../Interface/modbus_slave.h"
 #include "../App/app_modbus_slave.h"
 #include "../App/ui/ui_async.h"
+#include "data_recorder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -228,11 +229,43 @@ void log_task_func(void *argument)
 {
   /* USER CODE BEGIN log_task_func */
   app_log_data_init();
+
+  /* 等待首次数据就绪 (flow_refresh_timer 1秒后才首次运行) */
+  osDelay(2000);
+
   /* Infinite loop */
   for(;;)
   {
-    printf("test_task_func running\r\n");
-    osDelay(5000);
+    /* 获取传感器数据 */
+    SensorData_t *sensor = app_sensor_get_data();
+
+    float water_level = 0.0f;
+    float temperature = 0.0f;
+    if (sensor && sensor->is_online) {
+        water_level = sensor->water_level_m;
+    }
+    if (sensor && sensor->temp_valid) {
+        temperature = sensor->temperature_x10 / 10.0f;
+    }
+
+    /* 组装报警标志位 */
+    uint16_t flags = 0;
+    if (app_alarm_get_state(ALARM_TYPE_AH) == ALARM_STATE_ACTIVE)  flags |= 0x0001;
+    if (app_alarm_get_state(ALARM_TYPE_AL) == ALARM_STATE_ACTIVE)  flags |= 0x0002;
+    if (app_alarm_get_state(ALARM_TYPE_AAH) == ALARM_STATE_ACTIVE) flags |= 0x0004;
+    if (app_alarm_get_state(ALARM_TYPE_AAL) == ALARM_STATE_ACTIVE) flags |= 0x0008;
+
+    /* 记录一条数据到CSV (data_record_flow 内部自动获取RTC时间) */
+    data_record_flow(
+        water_level,
+        flow_calc_get_instant_lps() / 1000.0f,  /* L/s → m³/s */
+        flow_calc_get_total(),                    /* m³ */
+        flow_calc_get_total_time(),               /* 秒 */
+        temperature,
+        flags
+    );
+
+    osDelay(DATA_RECORD_INTERVAL_MS);
   }
   /* USER CODE END log_task_func */
 }
