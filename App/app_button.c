@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "global.h"
 #include "ui/ui_set_page.h"
-#include "ui/ui_async.h"
+
 /**
  * @brief 按键事件处理入口
  * @param button_id: 按键ID
@@ -129,18 +129,19 @@ static void async_switch_tile_cb(void *context)
  */
 void app_main_screen_up_button_handler(void)
 {
-    tile_switch_context_t ctx;
-
     if (ui_manager == NULL) return;
+
+    tile_switch_context_t *ctx = lv_malloc(sizeof(tile_switch_context_t));
+    if (ctx == NULL) return;
 
     /* 当前页码-1，小于0则循环回到2 */
     if (ui_manager->current_page == 0) {
-        ctx.page_index = 2;
+        ctx->page_index = 2;
     } else {
-        ctx.page_index = ui_manager->current_page - 1;
+        ctx->page_index = ui_manager->current_page - 1;
     }
 
-    ui_async_call(async_switch_tile_cb, &ctx, sizeof(ctx));
+    lv_async_call(async_switch_tile_cb, ctx);
 }
 
 /**
@@ -149,12 +150,13 @@ void app_main_screen_up_button_handler(void)
  */
 void app_main_screen_down_button_handler(void)
 {
-    tile_switch_context_t ctx;
-
     if (ui_manager == NULL) return;
 
-    /* 当前页码+1，超过2则循环回到0 */
-    ctx.page_index = (ui_manager->current_page + 1) % 3;
+    tile_switch_context_t *ctx = lv_malloc(sizeof(tile_switch_context_t));
+    if (ctx == NULL) return;
 
-    ui_async_call(async_switch_tile_cb, &ctx, sizeof(ctx));
+    /* 当前页码+1，超过2则循环回到0 */
+    ctx->page_index = (ui_manager->current_page + 1) % 3;
+
+    lv_async_call(async_switch_tile_cb, ctx);
 }

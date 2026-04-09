@@ -41,7 +41,7 @@
 #include "ui_set_page.h"
 #include "ui.h"
 #include "ui_conf.h"
-#include "ui_async.h"
+#include "lvgl.h"
 #include "app_config.h"
 #include "app_flow_calc.h"
 #include "rtc_time.h"
@@ -448,9 +448,13 @@ void set_page_enter(void)
     g_set_nav.selected_index = 0;                     /* 选中项归零，默认高亮第一个分类 */
     g_set_nav.current_screen = NULL;                  /* 清空屏幕指针，防止指向已释放的旧屏幕 */
 
-    set_nav_context_t ctx = { .target_level = 0, .category_idx = 0, .item_idx = 0 };
+    set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+    if (ctx == NULL) return;
+    ctx->target_level = 0;
+    ctx->category_idx = 0;
+    ctx->item_idx = 0;
     g_set_busy = 1;                                   /* 设置忙标志，屏蔽过渡动画期间的按键事件 */
-    ui_async_call(async_enter_category_cb, &ctx, sizeof(ctx));
+    lv_async_call(async_enter_category_cb, ctx);
     /* 注意: g_set_busy 在 async_enter_category_cb 回调中重置为0 */
 }
 
@@ -466,7 +470,7 @@ void set_page_exit(void)
         lv_timer_del(g_idle_timer);
         g_idle_timer = NULL;
     }
-    ui_async_call(async_exit_to_main_cb, NULL, 0);
+    lv_async_call(async_exit_to_main_cb, NULL);
 }
 
 /**
@@ -687,24 +691,27 @@ static void handle_category_key(uint8_t button_id)
     case BUTTON_ID_UP:
         if (g_set_nav.selected_index > 0) {
             g_set_nav.selected_index--;
-            set_select_context_t ctx = { .new_index = g_set_nav.selected_index };
-            ui_async_call(async_select_category_cb, &ctx, sizeof(ctx));
+            set_select_context_t *ctx = lv_malloc(sizeof(set_select_context_t));
+            if (ctx) { ctx->new_index = g_set_nav.selected_index; lv_async_call(async_select_category_cb, ctx); }
         }
         break;
     case BUTTON_ID_DOWN:
         if (g_set_nav.selected_index < (int8_t)(CATEGORY_COUNT - 1)) {
             g_set_nav.selected_index++;
-            set_select_context_t ctx = { .new_index = g_set_nav.selected_index };
-            ui_async_call(async_select_category_cb, &ctx, sizeof(ctx));
+            set_select_context_t *ctx = lv_malloc(sizeof(set_select_context_t));
+            if (ctx) { ctx->new_index = g_set_nav.selected_index; lv_async_call(async_select_category_cb, ctx); }
         }
         break;
     case BUTTON_ID_OK:
         /* 保存选中的分类索引 (跨层级保持) */
         g_category_index = g_set_nav.selected_index;
         {
-            set_nav_context_t ctx = { .target_level = 0, .category_idx = g_category_index, .item_idx = 0 };
-            g_set_busy = 1;  /* 过渡期间屏蔽按键 */
-            ui_async_call(async_enter_parameter_cb, &ctx, sizeof(ctx));
+            set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+            if (ctx) {
+                ctx->target_level = 0; ctx->category_idx = g_category_index; ctx->item_idx = 0;
+                g_set_busy = 1;  /* 过渡期间屏蔽按键 */
+                lv_async_call(async_enter_parameter_cb, ctx);
+            }
         }
         break;
     case BUTTON_ID_SHIFT:
@@ -915,29 +922,35 @@ static void handle_parameter_key(uint8_t button_id)
     case BUTTON_ID_UP:
         if (g_set_nav.selected_index > 0) {
             g_set_nav.selected_index--;
-            set_select_context_t ctx = { .new_index = g_set_nav.selected_index };
-            ui_async_call(async_select_parameter_cb, &ctx, sizeof(ctx));
+            set_select_context_t *ctx = lv_malloc(sizeof(set_select_context_t));
+            if (ctx) { ctx->new_index = g_set_nav.selected_index; lv_async_call(async_select_parameter_cb, ctx); }
         }
         break;
     case BUTTON_ID_DOWN:
         if (g_set_nav.selected_index < (int8_t)(cat->count - 1)) {
             g_set_nav.selected_index++;
-            set_select_context_t ctx = { .new_index = g_set_nav.selected_index };
-            ui_async_call(async_select_parameter_cb, &ctx, sizeof(ctx));
+            set_select_context_t *ctx = lv_malloc(sizeof(set_select_context_t));
+            if (ctx) { ctx->new_index = g_set_nav.selected_index; lv_async_call(async_select_parameter_cb, ctx); }
         }
         break;
     case BUTTON_ID_OK:
         {
-            set_nav_context_t ctx = { .target_level = 0, .category_idx = g_category_index, .item_idx = g_set_nav.selected_index };
-            g_set_busy = 1;
-            ui_async_call(async_enter_edit_cb, &ctx, sizeof(ctx));
+            set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+            if (ctx) {
+                ctx->target_level = 0; ctx->category_idx = g_category_index; ctx->item_idx = g_set_nav.selected_index;
+                g_set_busy = 1;
+                lv_async_call(async_enter_edit_cb, ctx);
+            }
         }
         break;
     case BUTTON_ID_SHIFT:
         {
-            set_nav_context_t ctx = { .target_level = 0, .category_idx = g_category_index, .item_idx = 0 };
-            g_set_busy = 1;
-            ui_async_call(async_enter_category_cb, &ctx, sizeof(ctx));
+            set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+            if (ctx) {
+                ctx->target_level = 0; ctx->category_idx = g_category_index; ctx->item_idx = 0;
+                g_set_busy = 1;
+                lv_async_call(async_enter_category_cb, ctx);
+            }
         }
         break;
     default:
@@ -1378,16 +1391,16 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             float new_val = g_set_nav.edit_valuef + step;
             if (new_val > item->max_valf) new_val = item->max_valf;
             g_set_nav.edit_valuef = new_val;
-            set_edit_val_context_t ctxf = { .new_valuef = new_val };
-            ui_async_call(async_update_edit_val_cb, &ctxf, sizeof(ctxf));
+            set_edit_val_context_t *ctxf = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
         } else {
             if (g_set_nav.edit_value + g_step_list[g_step_index] <= item->max_val) {
                 g_set_nav.edit_value += g_step_list[g_step_index];
             } else {
                 g_set_nav.edit_value = item->max_val;
             }
-            set_edit_val_context_t ctxi = { .new_value = g_set_nav.edit_value };
-            ui_async_call(async_update_edit_val_cb, &ctxi, sizeof(ctxi));
+            set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         }
         break;
     case BUTTON_ID_DOWN:
@@ -1396,16 +1409,16 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             float new_val = g_set_nav.edit_valuef - step;
             if (new_val < item->min_valf) new_val = item->min_valf;
             g_set_nav.edit_valuef = new_val;
-            set_edit_val_context_t ctxf = { .new_valuef = new_val };
-            ui_async_call(async_update_edit_val_cb, &ctxf, sizeof(ctxf));
+            set_edit_val_context_t *ctxf = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
         } else {
             if (g_set_nav.edit_value >= item->min_val + g_step_list[g_step_index]) {
                 g_set_nav.edit_value -= g_step_list[g_step_index];
             } else {
                 g_set_nav.edit_value = item->min_val;
             }
-            set_edit_val_context_t ctxi = { .new_value = g_set_nav.edit_value };
-            ui_async_call(async_update_edit_val_cb, &ctxi, sizeof(ctxi));
+            set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         }
         break;
     case BUTTON_ID_OK:
@@ -1420,9 +1433,12 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
         g_edit_item = NULL;
         /* 返回参数列表 (重新创建屏幕以显示更新后的值) */
         {
-            set_nav_context_t ctx = { .target_level = 0, .category_idx = g_category_index, .item_idx = g_set_nav.selected_index };
-            g_set_busy = 1;
-            ui_async_call(async_enter_parameter_cb, &ctx, sizeof(ctx));
+            set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+            if (ctx) {
+                ctx->target_level = 0; ctx->category_idx = g_category_index; ctx->item_idx = g_set_nav.selected_index;
+                g_set_busy = 1;
+                lv_async_call(async_enter_parameter_cb, ctx);
+            }
         }
         break;
     case BUTTON_ID_SHIFT:
@@ -1431,16 +1447,19 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             g_edit_value_label = NULL;
             g_edit_item = NULL;
             {
-                set_nav_context_t ctx = { .target_level = 0, .category_idx = g_category_index, .item_idx = g_set_nav.selected_index };
-                g_set_busy = 1;
-                ui_async_call(async_enter_parameter_cb, &ctx, sizeof(ctx));
+                set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+                if (ctx) {
+                    ctx->target_level = 0; ctx->category_idx = g_category_index; ctx->item_idx = g_set_nav.selected_index;
+                    g_set_busy = 1;
+                    lv_async_call(async_enter_parameter_cb, ctx);
+                }
             }
         } else {
             /* 短按: 循环切换步进值 */
             if (g_step_count > 1) {
                 g_step_index = (g_step_index + 1) % g_step_count;
-                set_step_context_t ctx = { .new_step_index = g_step_index };
-                ui_async_call(async_update_step_cb, &ctx, sizeof(ctx));
+                set_step_context_t *ctx = lv_malloc(sizeof(set_step_context_t));
+                if (ctx) { ctx->new_step_index = g_step_index; lv_async_call(async_update_step_cb, ctx); }
             }
         }
         break;

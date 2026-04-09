@@ -1,6 +1,9 @@
 /**
  * @file    ui_async.c
  * @brief   线程安全的异步UI操作实现
+ *
+ * 已弃用: 使用 LVGL 原生的 lv_async_call() 替代。
+ * 本文件保留仅为兼容 Keil 工程配置，不再使用。
  */
 
 #include "ui_async.h"
@@ -9,7 +12,7 @@
 #include <string.h>
 
 #define UI_ASYNC_QUEUE_SIZE     8
-#define UI_ASYNC_MAX_DATA_SIZE  16  /* 足够容纳所有上下文结构体 */
+#define UI_ASYNC_MAX_DATA_SIZE  16
 
 typedef struct {
     lv_async_cb_t cb;
