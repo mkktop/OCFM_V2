@@ -367,7 +367,18 @@ void modbus_slave_task_func(void *argument)
 void flow_refresh_fun(void *argument)
 {
   /* USER CODE BEGIN flow_refresh_fun */
-  flow_calc_update();
+  SensorData_t *sensor = app_sensor_get_data();
+  float water_level = 0.0f;
+  if (sensor && sensor->is_online)
+      water_level = sensor->water_level_m;
+
+  flow_calc_update(water_level);
+
+  /* 报警判断: 传感器离线时传0解除所有报警 */
+  float flow_m3h = flow_calc_get_instant_lps() * 3.6f;
+  app_alarm_update(sensor && sensor->is_online ? flow_m3h : 0.0f);
+
+  /* 4-20mA输出: 使用转换后的瞬时流量 */
   app_current_update(flow_calc_get_instant() * 3.6f);
   /* USER CODE END flow_refresh_fun */
 }

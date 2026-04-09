@@ -11,8 +11,7 @@
  */
 
 #include "app_flow_calc.h"
-#include "app_sensor.h"
-#include "app_alarm.h"
+#include "app_config.h"
 #include "rtc.h"
 #include "at24c02.h"
 #include <string.h>
@@ -456,32 +455,27 @@ void flow_calc_load_total(void)
 
 /**
  * @brief  更新流量计算 (每秒调用)
- * @note   从传感器获取水位，计算瞬时流量并累加累计流量和累计时长
+ * @param  water_level_m: 水位 (米), 传入负值或0时不做流量计算
+ * @note   计算瞬时流量并累加累计流量和累计时长
  *         - 瞬时流量: 根据配置的单位显示
  *         - 累计流量: 固定使用 m³
  *         - 累计时长: 单位 秒
  *         - 每10秒保存到备份寄存器
  *         - 每5分钟保存到EEPROM
  */
-void flow_calc_update(void)
+void flow_calc_update(float water_level_m)
 {
-    SensorData_t *sensor;
-    float water_level_m;
     float instant_flow_m3h;
 
-    /* 获取传感器数据 */
-    sensor = app_sensor_get_data();
-    if (sensor == NULL || !sensor->is_online) {
+    /* 传感器离线时累计时长不递增 */
+    if (water_level_m <= 0.0f) {
+        s_instant_flow_lps = 0.0f;
         s_instant_flow = 0.0f;
-        /* 传感器离线时解除所有报警 */
-        app_alarm_update(0.0f);
         return;
     }
 
     /* 传感器在线时，累计时长加1秒 */
     s_total_time_sec++;
-
-    water_level_m = sensor->water_level_m;
 
     /* 计算瞬时流量 (L/s) */
     s_instant_flow_lps = flow_calc_instant(water_level_m);
@@ -495,10 +489,6 @@ void flow_calc_update(void)
     if (app_config_get_instant_unit() != FLOW_UNIT_L_S) {
         s_instant_flow = flow_convert_instant(s_instant_flow, app_config_get_instant_unit());
     }
-
-    /* 报警判断：使用 m³/h 单位 (L/s * 3.6 = m³/h) */
-    instant_flow_m3h = s_instant_flow_lps * 3.6f;
-    app_alarm_update(instant_flow_m3h);
 
     /* 每10秒保存累计流量到备份寄存器 */
     if (++s_bkp_save_counter >= 10) {

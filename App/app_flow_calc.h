@@ -12,9 +12,10 @@
 
 /**
  * @brief  更新流量计算 (每秒调用)
- * @note   从传感器获取水位，计算瞬时流量并累加累计流量
+ * @param  water_level_m: 水位 (米), <=0表示传感器离线
+ * @note   计算瞬时流量并累加累计流量
  */
-void flow_calc_update(void);
+void flow_calc_update(float water_level_m);
 
 /**
  * @brief  获取当前瞬时流量
