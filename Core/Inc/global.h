@@ -302,7 +302,7 @@ typedef enum
 #define DEFAULT_CALIBRATION_4MA  313         /* 4mA校准值 */
 #define DEFAULT_CALIBRATION_20MA 1583       /* 20mA校准值 */
 #define DEFAULT_RANGE_4MA        0.0f        /* 4mA量程 (m³/h) */
-#define DEFAULT_RANGE_20MA       1935.0f     /* 20mA量程 (m³/h) */
+#define DEFAULT_RANGE_20MA       19.44f     /* 20mA量程 (m³/h) */
 #define DEFAULT_POINT_NUM        3           /* 小数点数量 */
 
 // 测量参数默认值
@@ -320,12 +320,12 @@ typedef enum
 #define DEFAULT_MODBUS_STOP      1           /* 停止位索引 */
 
 // 报警参数默认值
-#define DEFAULT_ALARM_AH         8000.0f     /* 上限报警 (m³/h) */
-#define DEFAULT_ALARM_AL         500.0f      /* 下限报警 (m³/h) */
-#define DEFAULT_ALARM_DH         100.0f      /* 上限回差 (m³/h) */
-#define DEFAULT_ALARM_DL         50.0f       /* 下限回差 (m³/h) */
-#define DEFAULT_ALARM_AAH        9000.0f     /* 上上限报警 (m³/h) */
-#define DEFAULT_ALARM_AAL        200.0f      /* 下下限报警 (m³/h) */
+#define DEFAULT_ALARM_AH         19.44f     /* 上限报警 (m³/h) */
+#define DEFAULT_ALARM_AL         0.0f      /* 下限报警 (m³/h) */
+#define DEFAULT_ALARM_DH         2.0f      /* 上限回差 (m³/h) */
+#define DEFAULT_ALARM_DL         2.0f       /* 下限回差 (m³/h) */
+#define DEFAULT_ALARM_AAH        100.0f     /* 上上限报警 (m³/h) */
+#define DEFAULT_ALARM_AAL        0.0f      /* 下下限报警 (m³/h) */
 
 // 其他参数默认值
 #define DEFAULT_FACTORY_SETTINGS 0           /* 恢复出厂设置 */

@@ -480,13 +480,18 @@ static void create_details_tile(lv_obj_t *tile)
     ui_container_style_init(inst_flaw_obj);
     lv_obj_set_style_margin_left(inst_flaw_obj, 10, 0);
     lv_obj_set_style_margin_right(inst_flaw_obj, 10, 0);
-    
+
     /* 启用Flex垂直列布局，内容居中 */
     lv_obj_set_layout(inst_flaw_obj, LV_LAYOUT_FLEX);
     lv_obj_set_flex_align(inst_flaw_obj, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    
+
     /* 设置容器背景色为中等灰色 */
     lv_obj_set_style_bg_color(inst_flaw_obj, lv_color_hex(0x363636), 0);
+
+    /* 左侧青绿色边框 (#2effde) */
+    lv_obj_set_style_border_width(inst_flaw_obj, 3, LV_PART_MAIN);
+    lv_obj_set_style_border_color(inst_flaw_obj, lv_color_hex(0x2effde), LV_PART_MAIN);
+    lv_obj_set_style_border_side(inst_flaw_obj, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
     lv_obj_set_flex_flow(inst_flaw_obj, LV_FLEX_FLOW_COLUMN);
 
     /* 创建瞬时流量单位标签 */
@@ -534,13 +539,18 @@ static void create_details_tile(lv_obj_t *tile)
     lv_obj_set_style_margin_left(total_flaw_obj, 10, 0);
     lv_obj_set_style_margin_right(total_flaw_obj, 10, 0);
     lv_obj_set_style_margin_bottom(total_flaw_obj, 10, 0);
-    
+
     /* 启用Flex垂直列布局，内容居中 */
     lv_obj_set_layout(total_flaw_obj, LV_LAYOUT_FLEX);
     lv_obj_set_flex_align(total_flaw_obj, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    
+
     /* 设置容器背景色为中等灰色 */
     lv_obj_set_style_bg_color(total_flaw_obj, lv_color_hex(0x363636), 0);
+
+    /* 左侧蓝色边框 (#3498DB) */
+    lv_obj_set_style_border_width(total_flaw_obj, 3, LV_PART_MAIN);
+    lv_obj_set_style_border_color(total_flaw_obj, lv_color_hex(0x3498DB), LV_PART_MAIN);
+    lv_obj_set_style_border_side(total_flaw_obj, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
     lv_obj_set_flex_flow(total_flaw_obj, LV_FLEX_FLOW_COLUMN);
 
     /* 创建累计流量单位标签 */
