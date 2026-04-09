@@ -11,6 +11,7 @@
 #include "app_model.h"
 #include "app_sensor.h"
 #include "app_config.h"
+#include "app_alarm.h"
 
 ui_manager_t *ui_manager;
 
@@ -155,6 +156,40 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     /* 更新瞬时流量单位标签 */
     if (ui_manager->inst_unit_label != NULL) {
         lv_label_set_text_fmt(ui_manager->inst_unit_label, "INST:%s", get_flow_unit_str());
+    }
+
+    /* 更新底栏报警指示：位图 bit3=HH, bit2=H, bit1=L, bit0=LL */
+    if (ui_manager->bottom_alarm_cont != NULL) {
+        uint8_t bitmap = 0;
+        if (app_alarm_get_state(ALARM_TYPE_AAH) == ALARM_STATE_ACTIVE) bitmap |= 0x08;
+        if (app_alarm_get_state(ALARM_TYPE_AH)  == ALARM_STATE_ACTIVE) bitmap |= 0x04;
+        if (app_alarm_get_state(ALARM_TYPE_AL)  == ALARM_STATE_ACTIVE) bitmap |= 0x02;
+        if (app_alarm_get_state(ALARM_TYPE_AAL) == ALARM_STATE_ACTIVE) bitmap |= 0x01;
+
+        if (bitmap != ui_manager->prev_alarm_bitmap) {
+            ui_manager->prev_alarm_bitmap = bitmap;
+
+            /* 各报警标签显隐：HH触发时隐藏H，LL触发时隐藏L */
+            if (bitmap & 0x08) lv_obj_clear_flag(ui_manager->alarm_label_hh, LV_OBJ_FLAG_HIDDEN);
+            else               lv_obj_add_flag(ui_manager->alarm_label_hh, LV_OBJ_FLAG_HIDDEN);
+
+            if ((bitmap & 0x04) && !(bitmap & 0x08))
+                lv_obj_clear_flag(ui_manager->alarm_label_h, LV_OBJ_FLAG_HIDDEN);
+            else
+                lv_obj_add_flag(ui_manager->alarm_label_h, LV_OBJ_FLAG_HIDDEN);
+
+            if ((bitmap & 0x02) && !(bitmap & 0x01))
+                lv_obj_clear_flag(ui_manager->alarm_label_l, LV_OBJ_FLAG_HIDDEN);
+            else
+                lv_obj_add_flag(ui_manager->alarm_label_l, LV_OBJ_FLAG_HIDDEN);
+
+            if (bitmap & 0x01) lv_obj_clear_flag(ui_manager->alarm_label_ll, LV_OBJ_FLAG_HIDDEN);
+            else               lv_obj_add_flag(ui_manager->alarm_label_ll, LV_OBJ_FLAG_HIDDEN);
+
+            /* 整个报警区：有任一报警则显示，否则隐藏（自动变为两栏） */
+            if (bitmap) lv_obj_clear_flag(ui_manager->bottom_alarm_cont, LV_OBJ_FLAG_HIDDEN);
+            else        lv_obj_add_flag(ui_manager->bottom_alarm_cont, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 
     /* 第五步：更新趋势图数据 */
@@ -422,6 +457,10 @@ static void create_details_tile(lv_obj_t *tile)
     /* 设置顶部栏背景色 */
     lv_obj_set_style_bg_color(top_bar, lv_color_hex(0x1E272E), 0);
 
+    /* 左右留10px边距，与下方流量区对齐 */
+    lv_obj_set_style_pad_left(top_bar, 10, 0);
+    lv_obj_set_style_pad_right(top_bar, 10, 0);
+
     /* 创建时间标签 */
     lv_obj_t *time_label = lv_label_create(top_bar);
     lv_label_set_text(time_label, "14:30");
@@ -496,29 +535,23 @@ static void create_details_tile(lv_obj_t *tile)
 
     /* 创建瞬时流量单位标签 */
     lv_obj_t *inst_flaw_label = lv_label_create(inst_flaw_obj);
-    lv_obj_set_size(inst_flaw_label, LV_PCT(90), 20);
     lv_label_set_text_fmt(inst_flaw_label, "INST:%s", get_flow_unit_str());
     ui_manager->inst_unit_label = inst_flaw_label;
-    
+
     /* 设置单位标签字体16px，青绿色 */
     lv_obj_set_style_text_font(inst_flaw_label, &my_font_montserrat_16, 0);
     lv_obj_set_style_text_color(inst_flaw_label, lv_color_hex(0x2effde), 0);
 
     /* 创建瞬时流量数值标签（核心数据显示） */
     lv_obj_t *inst_flaw_data_label = lv_label_create(inst_flaw_obj);
-    lv_obj_set_size(inst_flaw_data_label, LV_PCT(90), 50);
     lv_label_set_text(inst_flaw_data_label, "0.00");
-    
+
     /* 设置数值字体为48px最大字号，白色，突出显示 */
     lv_obj_set_style_text_font(inst_flaw_data_label, &lv_font_montserrat_48, 0);
     lv_obj_set_style_text_color(inst_flaw_data_label, lv_color_hex(0xFFFFFF), 0);
-    
+
     /* 设置文字水平居中对齐 */
     lv_obj_set_style_text_align(inst_flaw_data_label, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 设置数值背景为深灰色 */
-    lv_obj_set_style_bg_color(inst_flaw_data_label, lv_color_hex(0x4F4F4F), 0);
-    lv_obj_set_style_bg_opa(inst_flaw_data_label, LV_OPA_COVER, 0);
     
     /* 绑定瞬时流量Subject，实现每秒自动更新 */
     lv_subject_add_observer_obj(&ui_manager->subjects.instant_flow_str, 
@@ -555,28 +588,22 @@ static void create_details_tile(lv_obj_t *tile)
 
     /* 创建累计流量单位标签 */
     lv_obj_t *total_flaw_label = lv_label_create(total_flaw_obj);
-    lv_obj_set_size(total_flaw_label, LV_PCT(90), 20);
     lv_label_set_text(total_flaw_label, "TOTAL:m\xC2\xB3");
-    
-    /* 设置单位标签字体16px，青绿色 */
+
+    /* 设置单位标签字体16px，蓝色（匹配左侧边框） */
     lv_obj_set_style_text_font(total_flaw_label, &my_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(total_flaw_label, lv_color_hex(0x2effde), 0);
+    lv_obj_set_style_text_color(total_flaw_label, lv_color_hex(0x3498DB), 0);
 
     /* 创建累计流量数值标签 */
     lv_obj_t *total_flaw_data_label = lv_label_create(total_flaw_obj);
-    lv_obj_set_size(total_flaw_data_label, LV_PCT(90), 30);
     lv_label_set_text(total_flaw_data_label, "0.00");
-    
+
     /* 设置数值字体为26px，白色 */
     lv_obj_set_style_text_font(total_flaw_data_label, &lv_font_montserrat_26, 0);
     lv_obj_set_style_text_color(total_flaw_data_label, lv_color_hex(0xFFFFFF), 0);
-    
+
     /* 设置文字水平居中对齐 */
     lv_obj_set_style_text_align(total_flaw_data_label, LV_TEXT_ALIGN_CENTER, 0);
-    
-    /* 设置数值背景为深灰色 */
-    lv_obj_set_style_bg_color(total_flaw_data_label, lv_color_hex(0x4F4F4F), 0);
-    lv_obj_set_style_bg_opa(total_flaw_data_label, LV_OPA_COVER, 0);
     
     /* 绑定累计流量Subject，实现每秒自动更新 */
     lv_subject_add_observer_obj(&ui_manager->subjects.total_flow_str, 
@@ -585,62 +612,105 @@ static void create_details_tile(lv_obj_t *tile)
                                 NULL);
 
     /*--------------------------------------------------------------------*/
-    /* 第五部分：底部栏 - 显示4-20mA电流和温度传感器数据                    */
+    /* 第五部分：底部栏 - 三栏布局：电流 | 报警 | 温度                      */
+    /*        无报警时中间栏隐藏，自动变为两栏                              */
     /*--------------------------------------------------------------------*/
-    
+
     /* 创建底部栏容器 */
     lv_obj_t *bottom_obj = lv_obj_create(tile);
-    
-    /* 设置底部栏宽度100%，高度50px */
     lv_obj_set_size(bottom_obj, LV_PCT(100), 50);
     ui_container_style_init(bottom_obj);
-    
-    /* 启用Flex行布局，两个子元素水平排列 */
     lv_obj_set_layout(bottom_obj, LV_LAYOUT_FLEX);
     lv_obj_set_flex_align(bottom_obj, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    
-    /* 设置底部栏背景色 */
-    lv_obj_set_style_bg_color(bottom_obj, lv_color_hex(0x1E272E), 0);
     lv_obj_set_flex_flow(bottom_obj, LV_FLEX_FLOW_ROW);
 
-    lv_obj_t *bottom_child1 = lv_obj_create(bottom_obj);
-    lv_obj_set_size(bottom_child1, LV_PCT(50), LV_PCT(100));
-    ui_container_style_init(bottom_child1);
-    lv_obj_set_style_bg_color(bottom_child1, lv_color_hex(0x1E272E), 0);
-    lv_obj_set_style_border_width(bottom_child1, 0, 0);
-    lv_obj_set_layout(bottom_child1, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_align(bottom_child1, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    /* 底栏背景色 */
+    lv_obj_set_style_bg_color(bottom_obj, lv_color_hex(0x253035), 0);
+    lv_obj_set_style_bg_opa(bottom_obj, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_left(bottom_obj, 10, 0);
+    lv_obj_set_style_pad_right(bottom_obj, 10, 0);
+    lv_obj_clear_flag(bottom_obj, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *bottom_child1_label = lv_label_create(bottom_child1);
-    lv_label_set_text(bottom_child1_label, "4.00mA");
-    lv_obj_set_style_text_font(bottom_child1_label, &lv_font_montserrat_26, 0);
-    lv_obj_set_style_text_color(bottom_child1_label, lv_color_hex(0x2effde), 0);
-    lv_obj_set_style_text_align(bottom_child1_label, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_bg_color(bottom_child1_label, lv_color_hex(0x8B8B7A), 0);
+    /* 左栏：4-20mA电流（flex_grow=1，与右栏均分剩余空间） */
+    lv_obj_t *bottom_left = lv_obj_create(bottom_obj);
+    lv_obj_set_size(bottom_left, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_flex_grow(bottom_left, 1);
+    ui_container_style_init(bottom_left);
+    lv_obj_set_style_bg_opa(bottom_left, LV_OPA_TRANSP, 0);
+    lv_obj_set_layout(bottom_left, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_align(bottom_left, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t *bottom_ma_label = lv_label_create(bottom_left);
+    lv_label_set_text(bottom_ma_label, "4.00mA");
+    lv_obj_set_style_text_font(bottom_ma_label, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_color(bottom_ma_label, lv_color_hex(0x2effde), 0);
 
     lv_subject_add_observer_obj(&ui_manager->subjects.current_ma_str,
                                 string_label_observer_cb,
-                                bottom_child1_label,
+                                bottom_ma_label,
                                 NULL);
 
-    lv_obj_t *bottom_child2 = lv_obj_create(bottom_obj);
-    lv_obj_set_size(bottom_child2, LV_PCT(50), LV_PCT(100));
-    ui_container_style_init(bottom_child2);
-    lv_obj_set_style_bg_color(bottom_child2, lv_color_hex(0x1E272E), 0);
-    lv_obj_set_style_border_width(bottom_child2, 0, 0);
-    lv_obj_set_layout(bottom_child2, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_align(bottom_child2, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    /* 中栏：报警指示（初始隐藏，有报警时由定时器回调显示） */
+    lv_obj_t *alarm_cont = lv_obj_create(bottom_obj);
+    lv_obj_set_size(alarm_cont, LV_SIZE_CONTENT, LV_PCT(100));
+    ui_container_style_init(alarm_cont);
+    lv_obj_set_style_bg_opa(alarm_cont, LV_OPA_TRANSP, 0);
+    lv_obj_set_layout(alarm_cont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(alarm_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(alarm_cont, 6, 0);
+    lv_obj_set_flex_align(alarm_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_add_flag(alarm_cont, LV_OBJ_FLAG_HIDDEN);
+    ui_manager->bottom_alarm_cont = alarm_cont;
 
-    lv_obj_t *bottom_child2_label = lv_label_create(bottom_child2);
-    lv_label_set_text(bottom_child2_label, "--.-\xC2\xB0""C");
-    lv_obj_set_style_text_font(bottom_child2_label, &lv_font_montserrat_26, 0);
-    lv_obj_set_style_text_color(bottom_child2_label, lv_color_hex(0x2effde), 0);
-    lv_obj_set_style_text_align(bottom_child2_label, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_bg_color(bottom_child2_label, lv_color_hex(0x8B8B7A), 0);
+    /* HH 上上限标签 - 红色 */
+    lv_obj_t *lbl_hh = lv_label_create(alarm_cont);
+    lv_label_set_text(lbl_hh, "HH");
+    lv_obj_set_style_text_font(lbl_hh, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(lbl_hh, lv_color_hex(0xFF3333), 0);
+    lv_obj_add_flag(lbl_hh, LV_OBJ_FLAG_HIDDEN);
+    ui_manager->alarm_label_hh = lbl_hh;
+
+    /* H 上限标签 - 橙色 */
+    lv_obj_t *lbl_h = lv_label_create(alarm_cont);
+    lv_label_set_text(lbl_h, "H");
+    lv_obj_set_style_text_font(lbl_h, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(lbl_h, lv_color_hex(0xF39C12), 0);
+    lv_obj_add_flag(lbl_h, LV_OBJ_FLAG_HIDDEN);
+    ui_manager->alarm_label_h = lbl_h;
+
+    /* L 下限标签 - 橙色 */
+    lv_obj_t *lbl_l = lv_label_create(alarm_cont);
+    lv_label_set_text(lbl_l, "L");
+    lv_obj_set_style_text_font(lbl_l, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(lbl_l, lv_color_hex(0xF39C12), 0);
+    lv_obj_add_flag(lbl_l, LV_OBJ_FLAG_HIDDEN);
+    ui_manager->alarm_label_l = lbl_l;
+
+    /* LL 下下限标签 - 红色 */
+    lv_obj_t *lbl_ll = lv_label_create(alarm_cont);
+    lv_label_set_text(lbl_ll, "LL");
+    lv_obj_set_style_text_font(lbl_ll, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(lbl_ll, lv_color_hex(0xFF3333), 0);
+    lv_obj_add_flag(lbl_ll, LV_OBJ_FLAG_HIDDEN);
+    ui_manager->alarm_label_ll = lbl_ll;
+
+    /* 右栏：温度（flex_grow=1，与左栏均分剩余空间） */
+    lv_obj_t *bottom_right = lv_obj_create(bottom_obj);
+    lv_obj_set_size(bottom_right, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_flex_grow(bottom_right, 1);
+    ui_container_style_init(bottom_right);
+    lv_obj_set_style_bg_opa(bottom_right, LV_OPA_TRANSP, 0);
+    lv_obj_set_layout(bottom_right, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_align(bottom_right, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t *bottom_temp_label = lv_label_create(bottom_right);
+    lv_label_set_text(bottom_temp_label, "--.-\xC2\xB0""C");
+    lv_obj_set_style_text_font(bottom_temp_label, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_color(bottom_temp_label, lv_color_hex(0x2effde), 0);
 
     lv_subject_add_observer_obj(&ui_manager->subjects.temperature_str,
                                 string_label_observer_cb,
-                                bottom_child2_label,
+                                bottom_temp_label,
                                 NULL);
 }
 

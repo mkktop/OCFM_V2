@@ -23,6 +23,14 @@ typedef struct{
     lv_obj_t *inst_unit_label;            ///< 瞬时流量单位标签
     lv_obj_t *water_level_label;          ///< 水位标签（离线时变红）
 
+    // 底栏报警相关
+    lv_obj_t *bottom_alarm_cont;          ///< 底栏报警区容器（无报警时隐藏）
+    lv_obj_t *alarm_label_hh;             ///< HH 上上限报警标签
+    lv_obj_t *alarm_label_h;              ///< H  上限报警标签
+    lv_obj_t *alarm_label_l;              ///< L  下限报警标签
+    lv_obj_t *alarm_label_ll;             ///< LL 下下限报警标签
+    uint8_t prev_alarm_bitmap;            ///< 上一次报警状态位图（检测变化用）
+
     // 趋势图相关
     lv_obj_t *trend_chart;               ///< 趋势图控件
     lv_chart_series_t *trend_series_10s;  ///< 10秒采样序列 (30点=5分钟历史)
