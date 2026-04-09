@@ -155,9 +155,9 @@ static char *format_with_decimal(uint32_t value, uint8_t decimal_places,
 /* ---------- 基本参数 ---------- */
 static const set_item_t basic_items[] = {
     {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 20000, 1,   3},
-    {"4mA Range",       "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"4mA Range",       "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_range_4ma,  app_config_set_range_4ma,        0.0f, 99999.0f, 0.001f, 3},
-    {"20mA Range",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"20mA Range",      "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_range_20ma, app_config_set_range_20ma,       0.0f, 99999.0f, 0.001f, 3},
 };
 
@@ -208,17 +208,17 @@ static const set_item_t modbus_items[] = {
 
 /* ---------- 报警参数 ---------- */
 static const set_item_t alarm_items[] = {
-    {"Alarm High",      "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"Alarm High",      "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_ah,  app_config_set_alarm_ah,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm Low",       "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"Alarm Low",       "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_al,  app_config_set_alarm_al,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm HH",        "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"Alarm HH",        "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_aah, app_config_set_alarm_aah,          0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm LL",        "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"Alarm LL",        "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_aal, app_config_set_alarm_aal,          0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm High DB",   "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"Alarm High DB",   "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_dh,  app_config_set_alarm_dh,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm Low DB",    "m³/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {"Alarm Low DB",    "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_dl,  app_config_set_alarm_dl,           0.0f, 99999.0f, 0.001f, 3},
 };
 
@@ -1091,7 +1091,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     /* format 回调(文字类型)用强调色，纯数字(含decimal/float)用白色 */
     if (item->format) {
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_STEP_HL), 0);
-        lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_font(g_edit_value_label, &my_font_montserrat_24, 0);
     } else {
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);

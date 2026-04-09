@@ -625,7 +625,7 @@ static void create_details_tile(lv_obj_t *tile)
     lv_obj_set_flex_flow(bottom_obj, LV_FLEX_FLOW_ROW);
 
     /* 底栏背景色 */
-    lv_obj_set_style_bg_color(bottom_obj, lv_color_hex(0x253035), 0);
+    lv_obj_set_style_bg_color(bottom_obj, lv_color_hex(0x363636), 0);
     lv_obj_set_style_bg_opa(bottom_obj, LV_OPA_COVER, 0);
     lv_obj_set_style_pad_left(bottom_obj, 10, 0);
     lv_obj_set_style_pad_right(bottom_obj, 10, 0);

@@ -1117,7 +1117,7 @@
 
     /** 1: ��ʾ CPU ʹ���ʺ� FPS ������
      *  - ��Ҫ `LV_USE_SYSMON = 1` */
-    #define LV_USE_PERF_MONITOR 1
+    #define LV_USE_PERF_MONITOR 0
     #if LV_USE_PERF_MONITOR
         #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 
@@ -1128,7 +1128,7 @@
     /** 1: ��ʾ�����ڴ���ڴ���Ƭ��
      *     - ��Ҫ `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`
      *     - ��Ҫ `LV_USE_SYSMON = 1`*/
-    #define LV_USE_MEM_MONITOR 1
+    #define LV_USE_MEM_MONITOR 0
     #if LV_USE_MEM_MONITOR
         #define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
     #endif
