@@ -12,6 +12,7 @@
 
 #include "app_sensor.h"
 #include "app_config.h"
+#include "app_log.h"
 #include "modbus_master.h"
 #include "global.h"
 #include "usart.h"
@@ -55,6 +56,8 @@ static struct {
     uint32_t convert_start;     /**< 发起转换的时间戳 */
     uint32_t last_update;       /**< 上次完成测量的时间戳 */
 } g_temp_state;
+
+static uint8_t sensor_prev_online = 0;  /**< 上次传感器在线状态 */
 
 /*============================================================================*/
 /*                           公共函数实现                                      */
@@ -109,6 +112,14 @@ void app_sensor_poll(void)
 
         /* 更新传感器在线状态 */
         g_sensor_data.is_online = modbus_master_is_sensor_online(0);
+
+        /* 检测在线状态变化，记录系统日志 */
+        if (g_sensor_data.is_online != sensor_prev_online)
+        {
+            app_log_send(LOG_TYPE_SYSTEM,
+                         g_sensor_data.is_online ? "SENSOR ONLINE" : "SENSOR OFFLINE");
+            sensor_prev_online = g_sensor_data.is_online;
+        }
 
         if (g_sensor_data.is_online)
         {

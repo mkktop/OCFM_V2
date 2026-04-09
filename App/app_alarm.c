@@ -7,9 +7,11 @@
 
 #include "app_alarm.h"
 #include "app_config.h"
+#include "app_log.h"
 #include "main.h"
 #include "gpio.h"
 #include <math.h>
+#include <stdio.h>
 
 /*============================================================================*/
 /*                           私有数据                                           */
@@ -105,12 +107,22 @@ void app_alarm_update(float instant_flow_m3h)
         if (instant_flow_m3h > ah) {
             alarm_states[ALARM_TYPE_AH] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AH, 1);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AH ACTIVE flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     } else {
         /* 报警状态，检查是否需要解除 */
         if (instant_flow_m3h < (ah - dh)) {
             alarm_states[ALARM_TYPE_AH] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AH, 0);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AH NORMAL flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     }
 
@@ -121,12 +133,22 @@ void app_alarm_update(float instant_flow_m3h)
         if (instant_flow_m3h > aah) {
             alarm_states[ALARM_TYPE_AAH] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AAH, 1);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AAH ACTIVE flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     } else {
         /* 上上限报警解除条件：流量降到上限报警值以下 */
         if (instant_flow_m3h < ah) {
             alarm_states[ALARM_TYPE_AAH] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AAH, 0);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AAH NORMAL flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     }
 
@@ -138,12 +160,22 @@ void app_alarm_update(float instant_flow_m3h)
         if (instant_flow_m3h < al) {
             alarm_states[ALARM_TYPE_AL] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AL, 1);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AL ACTIVE flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     } else {
         /* 报警状态，检查是否需要解除 */
         if (instant_flow_m3h > (al + dl)) {
             alarm_states[ALARM_TYPE_AL] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AL, 0);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AL NORMAL flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     }
 
@@ -154,12 +186,22 @@ void app_alarm_update(float instant_flow_m3h)
         if (instant_flow_m3h < aal) {
             alarm_states[ALARM_TYPE_AAL] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AAL, 1);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AAL ACTIVE flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     } else {
         /* 下下限报警解除条件：流量升到下限报警值以上 */
         if (instant_flow_m3h > al) {
             alarm_states[ALARM_TYPE_AAL] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AAL, 0);
+            {
+                char buf[48];
+                snprintf(buf, sizeof(buf), "AAL NORMAL flow=%.2f", instant_flow_m3h);
+                app_log_send(LOG_TYPE_ALARM, buf);
+            }
         }
     }
 }

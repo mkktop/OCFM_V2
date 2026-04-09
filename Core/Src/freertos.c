@@ -73,7 +73,7 @@ const osThreadAttr_t main_task_attributes = {
 osThreadId_t log_taskHandle;
 const osThreadAttr_t log_task_attributes = {
   .name = "log_task",
-  .stack_size = 512 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for button_scan_tas */
@@ -233,39 +233,50 @@ void log_task_func(void *argument)
   /* 等待首次数据就绪 (flow_refresh_timer 1秒后才首次运行) */
   osDelay(2000);
 
+  static uint32_t last_record_tick = 0;
+
   /* Infinite loop */
   for(;;)
   {
-    /* 获取传感器数据 */
-    SensorData_t *sensor = app_sensor_get_data();
+    /* 处理异步日志队列 (所有文件I/O统一在log_task上下文) */
+    app_log_process();
 
-    float water_level = 0.0f;
-    float temperature = 0.0f;
-    if (sensor && sensor->is_online) {
-        water_level = sensor->water_level_m;
+    /* 定时记录数据到CSV */
+    if (HAL_GetTick() - last_record_tick >= DATA_RECORD_INTERVAL_MS)
+    {
+      last_record_tick = HAL_GetTick();
+
+      /* 获取传感器数据 */
+      SensorData_t *sensor = app_sensor_get_data();
+
+      float water_level = 0.0f;
+      float temperature = 0.0f;
+      if (sensor && sensor->is_online) {
+          water_level = sensor->water_level_m;
+      }
+      if (sensor && sensor->temp_valid) {
+          temperature = sensor->temperature_x10 / 10.0f;
+      }
+
+      /* 组装报警标志位 */
+      uint16_t flags = 0;
+      if (app_alarm_get_state(ALARM_TYPE_AH) == ALARM_STATE_ACTIVE)  flags |= 0x0001;
+      if (app_alarm_get_state(ALARM_TYPE_AL) == ALARM_STATE_ACTIVE)  flags |= 0x0002;
+      if (app_alarm_get_state(ALARM_TYPE_AAH) == ALARM_STATE_ACTIVE) flags |= 0x0004;
+      if (app_alarm_get_state(ALARM_TYPE_AAL) == ALARM_STATE_ACTIVE) flags |= 0x0008;
+
+      /* 记录一条数据到CSV */
+      data_record_flow(
+          water_level,
+          flow_calc_get_instant_lps() / 1000.0f,
+          flow_calc_get_total(),
+          flow_calc_get_total_time(),
+          temperature,
+          flags
+      );
     }
-    if (sensor && sensor->temp_valid) {
-        temperature = sensor->temperature_x10 / 10.0f;
-    }
 
-    /* 组装报警标志位 */
-    uint16_t flags = 0;
-    if (app_alarm_get_state(ALARM_TYPE_AH) == ALARM_STATE_ACTIVE)  flags |= 0x0001;
-    if (app_alarm_get_state(ALARM_TYPE_AL) == ALARM_STATE_ACTIVE)  flags |= 0x0002;
-    if (app_alarm_get_state(ALARM_TYPE_AAH) == ALARM_STATE_ACTIVE) flags |= 0x0004;
-    if (app_alarm_get_state(ALARM_TYPE_AAL) == ALARM_STATE_ACTIVE) flags |= 0x0008;
-
-    /* 记录一条数据到CSV (data_record_flow 内部自动获取RTC时间) */
-    data_record_flow(
-        water_level,
-        flow_calc_get_instant_lps() / 1000.0f,  /* L/s → m³/s */
-        flow_calc_get_total(),                    /* m³ */
-        flow_calc_get_total_time(),               /* 秒 */
-        temperature,
-        flags
-    );
-
-    osDelay(DATA_RECORD_INTERVAL_MS);
+    osDelay(500);
   }
   /* USER CODE END log_task_func */
 }

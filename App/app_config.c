@@ -21,9 +21,9 @@ static uint32_t last_write_tick = 0;
 #define CONFIG_SAVE_DELAY_MS   3000
 
 /* 参数变更回调 (支持多个监听者) */
-#define CONFIG_MAX_CHANGE_CB  2
+#define CONFIG_MAX_CHANGE_CB  4
 typedef void (*config_change_cb_t)(config_id_t id);
-static config_change_cb_t g_config_change_cbs[CONFIG_MAX_CHANGE_CB] = {NULL, NULL};
+static config_change_cb_t g_config_change_cbs[CONFIG_MAX_CHANGE_CB] = {NULL, NULL, NULL, NULL};
 
 static void notify_config_change(config_id_t id)
 {
@@ -277,6 +277,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
             if (value == 1)
             {
                 app_config_factory_reset();
+                notify_config_change(id);
             }
         }
         else if (id == CONFIG_ID_CLEAR_TOTAL)
@@ -284,6 +285,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
             if (value == 1)
             {
                 flow_calc_reset_total();
+                notify_config_change(id);
             }
         }
         return CONFIG_OK;

@@ -12,9 +12,11 @@
 #include "app_flow_calc.h"
 #include "app_sensor.h"
 #include "rtc_time.h"
+#include "app_log.h"
 #include "global.h"
 #include "usart.h"
 #include <string.h>
+#include <stdio.h>
 
 /*============================================================================*/
 /*                           继电器GPIO (仅读取状态)                           */
@@ -132,6 +134,10 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
             RTC_Time_SetValues(year, (uint8_t)month, (uint8_t)day,
                                (uint8_t)hour, (uint8_t)minute, (uint8_t)second,
                                (uint8_t)weekday);
+            char rtc_buf[48];
+            snprintf(rtc_buf, sizeof(rtc_buf), "SET RTC %04u-%02u-%02u %02u:%02u:%02u",
+                     year, month, day, hour, minute, second);
+            app_log_send(LOG_TYPE_USER, rtc_buf);
         }
         return;
     }

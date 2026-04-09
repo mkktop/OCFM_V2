@@ -9,7 +9,8 @@
       "Bash(python -c \"K=60.4; n=1.550; H=0.152; Q=K*\\(H**n\\); print\\(f'Q = {Q:.2f} L/s'\\)\")",
       "Bash(python -c \"K=381.2; n=1.540; H=0.152; Q=K*\\(H**n\\); print\\(f'Q = {Q:.2f} L/s'\\)\")",
       "Bash(python -c ':*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(xxd \"d:/UGit/OCFM_V2/App/app_config.c\")"
     ]
   }
 }
