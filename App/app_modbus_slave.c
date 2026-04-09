@@ -124,12 +124,19 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
         uint16_t second  = modbus_slave_get_holding_register(REG_RTC_SECOND);
         uint16_t weekday = modbus_slave_get_holding_register(REG_RTC_WEEKDAY);
 
-        /* 校验范围 */
-        if (year >= 2000 && year <= 2099 &&
-            month >= 1 && month <= 12 &&
-            day >= 1 && day <= 31 &&
-            hour <= 23 && minute <= 59 && second <= 59 &&
-            weekday >= 1 && weekday <= 7)
+        /* 校验范围 (含月天数合法性) */
+        {
+            static const uint8_t days_in_month[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
+            uint8_t max_day = days_in_month[month];
+            if (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)))
+                max_day = 29;
+            if (!(year >= 2000 && year <= 2099 &&
+                  month >= 1 && month <= 12 &&
+                  day >= 1 && day <= max_day &&
+                  hour <= 23 && minute <= 59 && second <= 59 &&
+                  weekday >= 1 && weekday <= 7))
+                return;
+        }
         {
             RTC_Time_SetValues(year, (uint8_t)month, (uint8_t)day,
                                (uint8_t)hour, (uint8_t)minute, (uint8_t)second,

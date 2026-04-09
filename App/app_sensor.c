@@ -127,11 +127,13 @@ void app_sensor_poll(void)
             uint16_t distance_mm = modbus_master_get_register_value(0, 0);
             g_sensor_data.distance_m = distance_mm / 1000.0f;
 
-            /* 计算水位 = 安装高度 - 距离（只有距离>0时才计算） */
+            /* 计算水位 = 安装高度 - 距离（只有距离>0时才计算）
+             * 距离 > 安装高度时水位钳位为0，避免负值传入流量计算 */
             if (distance_mm > 0)
             {
                 float install_height_m = app_config_get_height() / 1000.0f;
-                g_sensor_data.water_level_m = install_height_m - g_sensor_data.distance_m;
+                float level = install_height_m - g_sensor_data.distance_m;
+                g_sensor_data.water_level_m = (level > 0.0f) ? level : 0.0f;
             }
             else
             {

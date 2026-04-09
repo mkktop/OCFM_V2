@@ -211,7 +211,7 @@ static float flow_convert_instant(float flow_l_s, flow_unit_t unit)
         case FLOW_UNIT_T_H:
             return flow_l_s * 3.6f;
         case FLOW_UNIT_G_H:
-            return flow_l_s * 3.785411784f;
+            return flow_l_s * 3.785411784f * 3600.0f;
         default:
             return flow_l_s;
     }
@@ -294,16 +294,26 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
 static float flow_calc_instant(float water_level_m)
 {
     float Q_l_s = 0.0f;
+    uint32_t cid = app_config_get_channel_id();
+    uint32_t canals_type = app_config_get_canals_type();
 
-    switch (app_config_get_canals_type()) {
+    /* 边界保护: channel_id 必须从1开始, 否则返回0 */
+    if (cid < 1) return 0.0f;
+
+    /* 按渠类型校验 channel_id 范围 */
+    if (canals_type == PARSHALL_FLUME && cid > 16) return 0.0f;
+    if (canals_type == TRIANGULAR_WEIR && cid > 5) return 0.0f;
+    if (canals_type == RECTANGULAR_WEIR && cid > 4) return 0.0f;
+
+    switch (canals_type) {
         case PARSHALL_FLUME:
-            Q_l_s = parshall_flow_Ls(water_level_m, &s_channel_tbl[app_config_get_channel_id() - 1]);
+            Q_l_s = parshall_flow_Ls(water_level_m, &s_channel_tbl[cid - 1]);
             break;
         case TRIANGULAR_WEIR:
-            Q_l_s = triangular_weir_flow_Ls(water_level_m, &s_triangular_weir_tbl[app_config_get_channel_id() - 1]);
+            Q_l_s = triangular_weir_flow_Ls(water_level_m, &s_triangular_weir_tbl[cid - 1]);
             break;
         case RECTANGULAR_WEIR:
-            Q_l_s = rectangular_weir_flow_Ls(water_level_m, &s_rectangular_weir_tbl[app_config_get_channel_id() - 1]);
+            Q_l_s = rectangular_weir_flow_Ls(water_level_m, &s_rectangular_weir_tbl[cid - 1]);
             break;
         default:
             Q_l_s = 0.0f;
@@ -549,8 +559,8 @@ void flow_calc_reset_total(void)
 {
     s_total_flow_m3 = 0.0;
     s_total_time_sec = 0;
-    flow_calc_save_total();       /* 同步清除备份寄存器 */
-    flow_calc_save_to_eeprom();   /* 同步清除EEPROM */
+    flow_calc_save_total();         /* 同步清除备份寄存器 (快速, 无阻塞) */
+    s_eeprom_save_pending = 1;      /* 延迟写入EEPROM (由flow_calc_process在主循环执行) */
 }
 
 /**

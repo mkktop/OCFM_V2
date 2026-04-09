@@ -598,6 +598,13 @@ uint32_t data_cleanup(uint16_t keep_days)
     /* 计算截止日期 */
     RTC_TimeData timeData;
     RTC_Time_Get(&timeData);
+
+    /* 防止日期无符号下溢: keep_days > date 时安全处理 */
+    if (keep_days >= timeData.date) {
+        /* 需要回溯到上个月, 简化处理: 保留当月所有数据 */
+        return 0;
+    }
+
     return data_delete_before(timeData.year, timeData.month, timeData.date - keep_days);
 }
 
