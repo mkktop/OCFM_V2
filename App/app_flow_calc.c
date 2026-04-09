@@ -521,7 +521,12 @@ void flow_calc_process(void)
 {
     if (s_eeprom_save_pending) {
         s_eeprom_save_pending = 0;
-        flow_calc_save_to_eeprom();
+        if (app_config_eeprom_lock()) {
+            flow_calc_save_to_eeprom();
+            app_config_eeprom_unlock();
+        } else {
+            s_eeprom_save_pending = 1;  /* 获取锁失败, 下次重试 */
+        }
     }
 }
 

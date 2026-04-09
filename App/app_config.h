@@ -164,6 +164,18 @@ uint8_t app_config_is_float(config_id_t id);
 void app_config_process(void);
 
 /**
+ * @brief 获取EEPROM互锁
+ * @retval 1: 成功获取, 0: EEPROM忙
+ * @note  其他模块写EEPROM前调用，防止与config模块冲突
+ */
+uint8_t app_config_eeprom_lock(void);
+
+/**
+ * @brief 释放EEPROM互锁
+ */
+void app_config_eeprom_unlock(void);
+
+/**
  * @brief 参数变更回调类型
  */
 typedef void (*config_change_callback_t)(config_id_t id);

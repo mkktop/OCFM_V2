@@ -16,7 +16,7 @@ static SystemConfig_t g_config;
 /*============================================================================*/
 
 static volatile uint8_t config_dirty = 0;
-static volatile uint8_t config_saving = 0;  /* 防止并发EEPROM写入 */
+static volatile uint8_t s_eeprom_busy = 0;  /* EEPROM操作互锁 (config/flow_calc共用) */
 static uint32_t last_write_tick = 0;
 #define CONFIG_SAVE_DELAY_MS   3000
 
@@ -53,6 +53,22 @@ void app_config_process(void)
         config_dirty = 0;
         app_config_save();
     }
+}
+
+/*============================================================================*/
+/*                           EEPROM互锁 (多模块共用)                            */
+/*============================================================================*/
+
+uint8_t app_config_eeprom_lock(void)
+{
+    if (s_eeprom_busy) return 0;
+    s_eeprom_busy = 1;
+    return 1;
+}
+
+void app_config_eeprom_unlock(void)
+{
+    s_eeprom_busy = 0;
 }
 
 /*============================================================================*/
@@ -117,11 +133,11 @@ void app_config_set_default(void)
 uint8_t app_config_save(void)
 {
     /* 防止并发EEPROM写入 */
-    if (config_saving)
+    if (s_eeprom_busy)
     {
         return 0;
     }
-    config_saving = 1;
+    s_eeprom_busy = 1;
 
     /* 确保magic_number已设置 */
     g_config.magic_number = CONFIG_MAGIC_NUMBER;
@@ -131,7 +147,7 @@ uint8_t app_config_save(void)
     memcpy(buf, &g_config, sizeof(SystemConfig_t));
     uint8_t ret = at24c02_write_buffer(CONFIG_EEPROM_ADDR, sizeof(SystemConfig_t), buf);
 
-    config_saving = 0;
+    s_eeprom_busy = 0;
     return ret;
 }
 
