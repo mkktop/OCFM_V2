@@ -107,10 +107,10 @@ static const char * const g_strings[LANG_COUNT][2] = {
     /* 格式回调字符串 */
     [LANG_F_ENGLISH]        = { "English",      "\xe8\x8b\xb1\xe6\x96\x87" },              /* 英文 */
     [LANG_F_CHINESE]        = { "Chinese",      "\xe4\xb8\xad\xe6\x96\x87" },              /* 中文 */
-    [LANG_F_NONE_1_STOP]    = { "None1StopBits","N-1" },                                   /* 无校验1停止 */
-    [LANG_F_ODD_1_STOP]     = { "Odd1StopBits", "O-1" },                                   /* 奇校验1停止 */
-    [LANG_F_NONE_2_STOP]    = { "None2StopBits","N-2" },                                   /* 无校验2停止 */
-    [LANG_F_EVEN_1_STOP]    = { "Even1StopBits","E-1" },                                   /* 偶校验1停止 */
+    [LANG_F_NONE_1_STOP]    = { "None1StopBits","None1StopBits" },
+    [LANG_F_ODD_1_STOP]     = { "Odd1StopBits", "Odd1StopBits" },
+    [LANG_F_NONE_2_STOP]    = { "None2StopBits","None2StopBits" },
+    [LANG_F_EVEN_1_STOP]    = { "Even1StopBits","Even1StopBits" },
     [LANG_F_PARSHALL_FLUME] = { "ParshallFlume","\xe5\xb7\xb4\xe6\xad\x87\xe5\xb0\x94\xe6\xa7\xbd" }, /* 巴歇尔槽 */
     [LANG_F_TRIANGULAR_WEIR]= { "TriangularWeir","\xe4\xb8\x89\xe8\xa7\x92\xe5\xa0\xb0" }, /* 三角堰 */
     [LANG_F_RECTANGULAR_WEIR]={ "RectangularWeir","\xe7\x9f\xa9\xe5\xbd\xa2\xe5\xa0\xb0" }, /* 矩形堰 */
