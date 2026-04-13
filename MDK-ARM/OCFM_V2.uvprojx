@@ -5027,6 +5027,11 @@
               <FileType>1</FileType>
               <FilePath>..\App\ui\font\noto_sans_sc_16.c</FilePath>
             </File>
+            <File>
+              <FileName>noto_sans_sc_24.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\ui\font\noto_sans_sc_24.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

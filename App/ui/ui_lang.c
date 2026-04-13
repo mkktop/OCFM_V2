@@ -25,6 +25,7 @@ extern const lv_font_t my_font_montserrat_24;
 
 /* CJK 字体 (仅包含设置菜单所需的汉字, fallback 到 my_font_montserrat) */
 extern const lv_font_t noto_sans_sc_16;
+extern const lv_font_t noto_sans_sc_24;
 
 /*============================================================================*/
 /*                          双语字符串查找表                                   */
@@ -159,4 +160,9 @@ const void *lang_get_font_18(void)
 const void *lang_get_font_20(void)
 {
     return lang_is_chinese() ? &noto_sans_sc_16 : &lv_font_montserrat_20;
+}
+
+const void *lang_get_font_24(void)
+{
+    return lang_is_chinese() ? &noto_sans_sc_24 : &my_font_montserrat_24;
 }

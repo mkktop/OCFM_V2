@@ -135,6 +135,11 @@ const void *lang_get_font_18(void);
 const void *lang_get_font_20(void);
 
 /**
+ * @brief 获取当前语言下的 24px 字体（编辑页用）
+ */
+const void *lang_get_font_24(void);
+
+/**
  * @brief 判断当前是否为中文模式
  * @return 1=中文, 0=英文
  */

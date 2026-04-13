@@ -700,6 +700,7 @@
 "ocfm_v2\ui_async.o"
 "ocfm_v2\ui_lang.o"
 "ocfm_v2\noto_sans_sc_16.o"
+"ocfm_v2\noto_sans_sc_24.o"
 "ocfm_v2\button_driver.o"
 "ocfm_v2\modbus.o"
 "ocfm_v2\modbus_master.o"

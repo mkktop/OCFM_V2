@@ -1106,7 +1106,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     /* format 回调(文字类型)用强调色，纯数字(含decimal/float)用白色 */
     if (item->format) {
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_STEP_HL), 0);
-        lv_obj_set_style_text_font(g_edit_value_label, lang_is_chinese() ? &noto_sans_sc_16 : &my_font_montserrat_24, 0);
+        lv_obj_set_style_text_font(g_edit_value_label, lang_get_font_24(), 0);
     } else {
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
