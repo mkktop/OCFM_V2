@@ -246,8 +246,9 @@ typedef struct
     uint32_t canals_type;       /* 水渠类型 */
     uint32_t channel_id;        /* 通道编号 */
     uint32_t instant_unit;      /* 瞬时流量单位 */
-    uint32_t sum_point;        /* 累计流量小数点数 */
+    uint32_t sum_point;         /* 累计流量小数点数 */
     uint32_t language;          /* 语言 */
+    uint32_t show_alarm;        /* 是否显示报警 (1:显示 0:不显示) */
 } SystemConfig_t;
 
 /*============================================================================*/
@@ -335,6 +336,7 @@ typedef enum
 #define DEFAULT_INSTANT_UNIT     1           /* 瞬时流量单位 (L/s) */
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
+#define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */
 
 extern ui_manager_t *ui_manager;
 

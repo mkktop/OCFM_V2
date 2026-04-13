@@ -74,6 +74,7 @@ typedef enum {
     LANG_P_LANGUAGE,
     LANG_P_DECIMAL,
     LANG_P_FLOW_UNIT,
+    LANG_P_SHOW_ALARM,
 
     /* 参数名称 - 高级设置 */
     LANG_P_RANGE_MAX,

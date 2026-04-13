@@ -315,6 +315,7 @@ static const set_item_t display_items[] = {
     {LANG_P_LANGUAGE,        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
     {LANG_P_DECIMAL,         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1,  0,  format_decimal},
     {LANG_P_FLOW_UNIT,       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1,  0,  format_flow_unit},
+    {LANG_P_SHOW_ALARM,      "",     app_config_get_show_alarm,          app_config_set_show_alarm,         0, 1,     1,  0,  format_yes_no},
 };
 
 /* ---------- 高级设置 ---------- */

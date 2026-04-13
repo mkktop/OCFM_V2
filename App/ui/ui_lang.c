@@ -95,6 +95,7 @@ static const char * const g_strings[LANG_COUNT][2] = {
     [LANG_P_LANGUAGE]       = { "Language",     "\xe8\xaf\xad\xe8\xa8\x80" },              /* 语言 */
     [LANG_P_DECIMAL]        = { "Decimal",      "\xe5\xb0\x8f\xe6\x95\xb0\xe4\xbd\x8d\xe6\x95\xb0" }, /* 小数位数 */
     [LANG_P_FLOW_UNIT]      = { "Flow Unit",    "\xe6\xb5\x81\xe9\x87\x8f\xe5\x8d\x95\xe4\xbd\x8d" }, /* 流量单位 */
+    [LANG_P_SHOW_ALARM]     = { "Show Alarm",   "\xe6\x98\xbe\xe7\xa4\xba\xe6\x8a\xa5\xe8\xad\xa6" }, /* 显示报警 */
 
     /* 参数名称 - 高级设置 */
     [LANG_P_RANGE_MAX]      = { "Range Max",    "\xe6\x9c\x80\xe5\xa4\xa7\xe9\x87\x8f\xe7\xa8\x8b" },  /* 最大量程 */

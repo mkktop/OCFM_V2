@@ -161,12 +161,15 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     /* 更新底栏报警指示：位图 bit3=HH, bit2=H, bit1=L, bit0=LL */
     if (ui_manager->bottom_alarm_cont != NULL) {
         uint8_t bitmap = 0;
+        uint8_t show_alarm = (uint8_t)app_config_get_show_alarm();
         if (app_alarm_get_state(ALARM_TYPE_AAH) == ALARM_STATE_ACTIVE) bitmap |= 0x08;
         if (app_alarm_get_state(ALARM_TYPE_AH)  == ALARM_STATE_ACTIVE) bitmap |= 0x04;
         if (app_alarm_get_state(ALARM_TYPE_AL)  == ALARM_STATE_ACTIVE) bitmap |= 0x02;
         if (app_alarm_get_state(ALARM_TYPE_AAL) == ALARM_STATE_ACTIVE) bitmap |= 0x01;
 
-        if (bitmap != ui_manager->prev_alarm_bitmap) {
+        if (!show_alarm) {
+            lv_obj_add_flag(ui_manager->bottom_alarm_cont, LV_OBJ_FLAG_HIDDEN);
+        } else if (bitmap != ui_manager->prev_alarm_bitmap) {
             ui_manager->prev_alarm_bitmap = bitmap;
 
             /* 各报警标签显隐：HH触发时隐藏H，LL触发时隐藏L */

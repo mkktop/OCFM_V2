@@ -50,6 +50,7 @@ typedef enum {
     CONFIG_ID_INSTANT_UNIT,
     CONFIG_ID_SUM_POINT,
     CONFIG_ID_LANGUAGE,
+    CONFIG_ID_SHOW_ALARM,
     /* 特殊动作 */
     CONFIG_ID_FACTORY_RESET,
     CONFIG_ID_CLEAR_TOTAL,
@@ -292,5 +293,8 @@ void app_config_set_sum_point(uint32_t value);
 
 uint32_t app_config_get_language(void);
 void app_config_set_language(uint32_t value);
+
+uint32_t app_config_get_show_alarm(void);
+void app_config_set_show_alarm(uint32_t value);
 
 #endif /* __APP_CONFIG_H */
