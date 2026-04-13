@@ -285,11 +285,19 @@ static uint32_t clear_total_flow_get(void) { return 0; }
 static void clear_total_flow_set(uint32_t v) { if (v == 1) flow_calc_reset_total(); }
 static const char *format_yes_no(uint32_t val) { return val == 1 ? lang_get(LANG_F_YES) : lang_get(LANG_F_NO); }
 
+/* ---------- 小数位数 (循环) ---------- */
+static char decimal_buf[4];
+static const char *format_decimal(uint32_t val)
+{
+    snprintf(decimal_buf, sizeof(decimal_buf), "%lu", (unsigned long)val);
+    return decimal_buf;
+}
+
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {LANG_P_CANAL_TYPE,      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
     {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,    1},
-    {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
+    {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          0, 3,     1,  0,  format_decimal},
     {LANG_P_CLEAR_TOTAL,     "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
 };
 static const set_item_t time_items[] = {
@@ -305,7 +313,7 @@ static const set_item_t time_items[] = {
 /* ---------- 显示设置 ---------- */
 static const set_item_t display_items[] = {
     {LANG_P_LANGUAGE,        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
-    {LANG_P_DECIMAL,         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1},
+    {LANG_P_DECIMAL,         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1,  0,  format_decimal},
     {LANG_P_FLOW_UNIT,       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1,  0,  format_flow_unit},
 };
 

@@ -8,6 +8,7 @@
 #include "app_flow_calc.h"
 #include "app_current.h"
 #include "app_sensor.h"
+#include "app_config.h"
 #include "global.h"
 #include "rtc_time.h"
 #include <stdio.h>
@@ -83,11 +84,20 @@ void app_model_update(void)
     g_app_model.instant_flow = flow_calc_get_instant();
     g_app_model.total_flow = flow_calc_get_total();
 
-    /* 格式化流量字符串 */
+    /* 格式化流量字符串 - 使用配置的小数位数 */
+    uint32_t point_num = app_config_get_point_num();
+    uint32_t sum_point = app_config_get_sum_point();
+    char fmt[8];
+
+    /* 瞬时流量 */
+    snprintf(fmt, sizeof(fmt), "%%.%luf", (unsigned long)point_num);
     snprintf(g_app_model.instant_flow_str, sizeof(g_app_model.instant_flow_str),
-             "%.2f", g_app_model.instant_flow);
+             fmt, g_app_model.instant_flow);
+
+    /* 累计流量 */
+    snprintf(fmt, sizeof(fmt), "%%.%luf", (unsigned long)sum_point);
     snprintf(g_app_model.total_flow_str, sizeof(g_app_model.total_flow_str),
-             "%.3f", g_app_model.total_flow);
+             fmt, g_app_model.total_flow);
 
     /* 计算4-20mA输出电流 (4mA/20mA量程单位固定m³/h) */
     app_current_format_ma(flow_calc_get_instant_lps() * 3.6f,
