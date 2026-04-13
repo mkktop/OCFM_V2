@@ -60,6 +60,13 @@ static struct {
 static uint8_t sensor_prev_online = 0;  /**< 上次传感器在线状态 */
 
 /*============================================================================*/
+/*                           私有函数声明                                      */
+/*============================================================================*/
+
+static void on_config_change_to_sensor(config_id_t id);
+static void sync_all_params_to_sensor(void);
+
+/*============================================================================*/
 /*                           公共函数实现                                      */
 /*============================================================================*/
 
@@ -88,6 +95,9 @@ void app_sensor_init(void)
 
     /* 注册参数变更同步回调 */
     app_sensor_register_config_callback();
+
+    /* 同步EEPROM中的配置参数到传感器 */
+    sync_all_params_to_sensor();
 }
 
 /**
@@ -382,6 +392,24 @@ static void on_config_change_to_sensor(config_id_t id)
         default:
             break;
     }
+}
+
+/**
+ * @brief 启动时同步所有EEPROM配置参数到传感器
+ * @note 在 app_sensor_init 中调用，确保传感器使用保存的参数
+ */
+static void sync_all_params_to_sensor(void)
+{
+    on_config_change_to_sensor(CONFIG_ID_RANGE_MAX);
+    on_config_change_to_sensor(CONFIG_ID_HEIGHT);
+    on_config_change_to_sensor(CONFIG_ID_BLIND_AREA);
+    on_config_change_to_sensor(CONFIG_ID_WINDOW_WIDTH);
+    on_config_change_to_sensor(CONFIG_ID_FILTER_COUNT);
+    on_config_change_to_sensor(CONFIG_ID_DELAY_TIME);
+    on_config_change_to_sensor(CONFIG_ID_W_COEFF);
+    on_config_change_to_sensor(CONFIG_ID_M_COEFF);
+    on_config_change_to_sensor(CONFIG_ID_ANTENNA_TYPE);
+    on_config_change_to_sensor(CONFIG_ID_DIS_OFFSET);
 }
 
 /**

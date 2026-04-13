@@ -390,6 +390,12 @@ void app_modbus_slave_init(void)
     /* 注册参数变更回调 */
     app_config_set_change_callback(on_config_change);
 
+    /* 应用EEPROM中的波特率和停止位配置到UART2 */
+    reconfigure_uart2();
+
+    /* 应用EEPROM中的从机地址 */
+    modbus_slave_set_id(&sensor_slave, (uint8_t)app_config_get_modbus_addr());
+
     /* 首次同步所有配置参数到寄存器 */
     app_modbus_slave_update();
 }
