@@ -1395,6 +1395,15 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             g_set_nav.edit_valuef = new_val;
             set_edit_val_context_t *ctxf = lv_malloc(sizeof(set_edit_val_context_t));
             if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
+        } else if (item->format) {
+            /* format类型: 循环设置 */
+            if (g_set_nav.edit_value >= item->max_val) {
+                g_set_nav.edit_value = item->min_val;
+            } else {
+                g_set_nav.edit_value += g_step_list[g_step_index];
+            }
+            set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         } else {
             if (g_set_nav.edit_value + g_step_list[g_step_index] <= item->max_val) {
                 g_set_nav.edit_value += g_step_list[g_step_index];
@@ -1413,6 +1422,15 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             g_set_nav.edit_valuef = new_val;
             set_edit_val_context_t *ctxf = lv_malloc(sizeof(set_edit_val_context_t));
             if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
+        } else if (item->format) {
+            /* format类型: 循环设置 */
+            if (g_set_nav.edit_value <= item->min_val) {
+                g_set_nav.edit_value = item->max_val;
+            } else {
+                g_set_nav.edit_value -= g_step_list[g_step_index];
+            }
+            set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         } else {
             if (g_set_nav.edit_value >= item->min_val + g_step_list[g_step_index]) {
                 g_set_nav.edit_value -= g_step_list[g_step_index];
