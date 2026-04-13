@@ -10,7 +10,19 @@
       "Bash(python -c \"K=381.2; n=1.540; H=0.152; Q=K*\\(H**n\\); print\\(f'Q = {Q:.2f} L/s'\\)\")",
       "Bash(python -c ':*)",
       "WebSearch",
-      "Bash(xxd \"d:/UGit/OCFM_V2/App/app_config.c\")"
+      "Bash(xxd \"d:/UGit/OCFM_V2/App/app_config.c\")",
+      "Bash(npm list:*)",
+      "Bash(npx lv_font_conv --version)",
+      "Bash(python \"d:/UGit/OCFM_V2/App/ui/font/extract_chars.py\")",
+      "Bash(python \"d:/UGit/OCFM_V2/App/ui/font/gen_font.py\")",
+      "Bash(cat)",
+      "Bash(python /tmp/check_chars.py)",
+      "Bash(python)",
+      "Bash(python3 -c \"import re;f=open\\('d:/UGit/OCFM_V2/App/ui/ui_lang.c','rb'\\);raw=f.read\\(\\);f.close\\(\\);pat=re.compile\\(b'\\\\\\\\\\\\\\\\x[0-9a-fA-F]{2}'\\);groups=re.findall\\(rb'\\(?:\\\\\\\\\\\\\\\\x[0-9a-fA-F]{2}\\){3,}',raw\\);needed=set\\(\\);[needed.add\\(ch\\) for g in groups for ch in bytes.fromhex\\(g.replace\\(b'\\\\\\\\\\\\\\\\x',b''\\).decode\\(\\)\\).decode\\('utf-8','ignore'\\) if 0x4e00<=ord\\(ch\\)<=0x9fff];print\\(len\\(needed\\),''.join\\(sorted\\(needed\\)\\)\\)\")",
+      "Bash(python3 -c \"needed='基本串口设置报警水渠专业显示高级时间高度量程窗口宽度滤波次数采样延迟盲区体系测量从机地址波特率停止位上限下回差类型通道编号累计小数清零语言位数流量单位最大天线校准距离偏移恢复出厂英文中文巴歇尔槽三角堰矩形是否周日一二三四五六';print\\(len\\(set\\(needed\\)\\),set\\(needed\\)\\)\")",
+      "Bash(python3 -V)",
+      "Bash(python -V)",
+      "Bash(python -c \"needed='基本串口设置报警水渠专业显示高级时间高度量程窗口宽度滤波次数采样延迟盲区体系测量从机地址波特率停止位上限下回差类型通道编号累计小数清零语言位数流量单位最大天线校准距离偏移恢复出厂英文中文巴歇尔槽三角堰矩形是否周日一二三四五六';print\\(len\\(set\\(needed\\)\\),set\\(needed\\)\\)\")"
     ]
   }
 }

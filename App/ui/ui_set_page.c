@@ -46,6 +46,7 @@
 #include "app_flow_calc.h"
 #include "rtc_time.h"
 #include "../../Drivers/Button/button_driver.h"
+#include "ui_lang.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -66,7 +67,7 @@
  * 菜单系统调用 get() 显示当前值，调用 set() 保存修改到 EEPROM。
  */
 typedef struct {
-    const char *name;           /**< 显示名称 (如 "Range Max")      */
+    lang_id_t name_id;          /**< 显示名称 ID (通过 lang_get() 翻译) */
     const char *unit;           /**< 单位字符串 (如 "mm"), 或 ""     */
     uint32_t (*get)(void);      /**< 从配置读取当前值 (uint32路径)   */
     void (*set)(uint32_t);      /**< 写入新值到配置 (uint32路径)     */
@@ -90,7 +91,7 @@ typedef struct {
  * 将相关的参数组织在一起，如"基本参数"、"报警参数"等。
  */
 typedef struct {
-    const char *name;           /**< 分类名称 (如 "Basic")          */
+    lang_id_t name_id;          /**< 分类名称 ID (通过 lang_get() 翻译) */
     const set_item_t *items;    /**< 指向参数数组的指针              */
     uint8_t count;              /**< 参数数量                        */
 } set_category_t;
@@ -154,21 +155,21 @@ static char *format_with_decimal(uint32_t value, uint8_t decimal_places,
 
 /* ---------- 基本参数 ---------- */
 static const set_item_t basic_items[] = {
-    {"Height",          "m",   app_config_get_height,            app_config_set_height,           0, 20000, 1,   3},
-    {"4mA Range",       "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_HEIGHT,          "m",   app_config_get_height,            app_config_set_height,           0, 20000, 1,   3},
+    {LANG_P_4MA_RANGE,       "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_range_4ma,  app_config_set_range_4ma,        0.0f, 99999.0f, 0.001f, 3},
-    {"20mA Range",      "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_20MA_RANGE,      "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_range_20ma, app_config_set_range_20ma,       0.0f, 99999.0f, 0.001f, 3},
 };
 
 /* ---------- 测量参数 ---------- */
 static const set_item_t measure_items[] = {
-    {"Window Width",    "",     app_config_get_window_width,       app_config_set_window_width,      0, 1000,  1},
-    {"Filter Count",    "",     app_config_get_filter_count,       app_config_set_filter_count,      0, 50,    1},
-    {"Sample Delay",    "ms",   app_config_get_delay_time,         app_config_set_delay_time,        0, 1000,  10},
-    {"Blind Area",      "mm",   app_config_get_blind_area,         app_config_set_blind_area,        0, 1000,  10},
-    {"Window Coeff",    "",     app_config_get_w_coeff,            app_config_set_w_coeff,           0, 10,    1},
-    {"Measure Coeff",   "",     app_config_get_m_coeff,            app_config_set_m_coeff,           0, 10,    1},
+    {LANG_P_WINDOW_WIDTH,    "",     app_config_get_window_width,       app_config_set_window_width,      0, 1000,  1},
+    {LANG_P_FILTER_COUNT,    "",     app_config_get_filter_count,       app_config_set_filter_count,      0, 50,    1},
+    {LANG_P_SAMPLE_DELAY,    "ms",   app_config_get_delay_time,         app_config_set_delay_time,        0, 1000,  10},
+    {LANG_P_BLIND_AREA,      "mm",   app_config_get_blind_area,         app_config_set_blind_area,        0, 1000,  10},
+    {LANG_P_WINDOW_COEFF,    "",     app_config_get_w_coeff,            app_config_set_w_coeff,           0, 10,    1},
+    {LANG_P_MEASURE_COEFF,   "",     app_config_get_m_coeff,            app_config_set_m_coeff,           0, 10,    1},
 };
 
 /* ---------- format 回调前向声明 ---------- */
@@ -191,34 +192,34 @@ static const char *format_baudrate(uint32_t val)
 static const char *format_stopbits(uint32_t val)
 {
     switch (val) {
-        case 1:  return "None1StopBits";
-        case 2:  return "Odd1StopBits";
-        case 3:  return "None2StopBits";
-        case 4:  return "Even1StopBits";
-        default: return "None1StopBits";
+        case 1:  return lang_get(LANG_F_NONE_1_STOP);
+        case 2:  return lang_get(LANG_F_ODD_1_STOP);
+        case 3:  return lang_get(LANG_F_NONE_2_STOP);
+        case 4:  return lang_get(LANG_F_EVEN_1_STOP);
+        default: return lang_get(LANG_F_NONE_1_STOP);
     }
 }
 
 /* ---------- Modbus从机参数 ---------- */
 static const set_item_t modbus_items[] = {
-    {"Slave Addr",      "",     app_config_get_modbus_addr,         app_config_set_modbus_addr,       0, 247,   1},
-    {"Baud Rate",       "",     app_config_get_modbus_baudrate,     app_config_set_modbus_baudrate,   1, 8,     1,  0,  format_baudrate},
-    {"Stop Bits",       "",     app_config_get_modbus_stopbits,     app_config_set_modbus_stopbits,   1, 4,     1,  0,  format_stopbits},
+    {LANG_P_SLAVE_ADDR,      "",     app_config_get_modbus_addr,         app_config_set_modbus_addr,       0, 247,   1},
+    {LANG_P_BAUD_RATE,       "",     app_config_get_modbus_baudrate,     app_config_set_modbus_baudrate,   1, 8,     1,  0,  format_baudrate},
+    {LANG_P_STOP_BITS,       "",     app_config_get_modbus_stopbits,     app_config_set_modbus_stopbits,   1, 4,     1,  0,  format_stopbits},
 };
 
 /* ---------- 报警参数 ---------- */
 static const set_item_t alarm_items[] = {
-    {"Alarm High",      "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_ALARM_HIGH,      "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_ah,  app_config_set_alarm_ah,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm Low",       "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_ALARM_LOW,       "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_al,  app_config_set_alarm_al,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm HH",        "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_ALARM_HH,        "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_aah, app_config_set_alarm_aah,          0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm LL",        "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_ALARM_LL,        "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_aal, app_config_set_alarm_aal,          0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm High DB",   "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_ALARM_HIGH_DB,   "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_dh,  app_config_set_alarm_dh,           0.0f, 99999.0f, 0.001f, 3},
-    {"Alarm Low DB",    "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
+    {LANG_P_ALARM_LOW_DB,    "m\xC2\xB3/h", NULL, NULL, 0, 0, 0, 0, NULL,
                                        app_config_get_alarm_dl,  app_config_set_alarm_dl,           0.0f, 99999.0f, 0.001f, 3},
 };
 
@@ -226,7 +227,7 @@ static const set_item_t alarm_items[] = {
 
 static const char *format_language(uint32_t val)
 {
-    return val == 0 ? "English" : "Chinese";
+    return val == 0 ? lang_get(LANG_F_ENGLISH) : lang_get(LANG_F_CHINESE);
 }
 
 static const char *format_flow_unit(uint32_t val)
@@ -247,16 +248,17 @@ static const char *format_flow_unit(uint32_t val)
 static const char *format_canals_type(uint32_t val)
 {
     switch (val) {
-        case 1:  return "ParshallFlume";
-        case 2:  return "TriangularWeir";
-        case 3:  return "RectangularWeir";
-        default: return "ParshallFlume";
+        case 1:  return lang_get(LANG_F_PARSHALL_FLUME);
+        case 2:  return lang_get(LANG_F_TRIANGULAR_WEIR);
+        case 3:  return lang_get(LANG_F_RECTANGULAR_WEIR);
+        default: return lang_get(LANG_F_PARSHALL_FLUME);
     }
 }
 
 static const char *format_weekday(uint32_t val)
 {
-    return RTC_Time_GetWeekDayString((uint8_t)val);
+    if (val < 1 || val > 7) return "";
+    return lang_get((lang_id_t)(LANG_F_WEEKDAY_SUN + val - 1));
 }
 
 /* ---------- RTC时间 getter/setter ---------- */
@@ -281,52 +283,52 @@ static void rtc_set_weekday(uint32_t v) { RTC_TimeData t; RTC_Time_Get(&t); t.we
 
 static uint32_t clear_total_flow_get(void) { return 0; }
 static void clear_total_flow_set(uint32_t v) { if (v == 1) flow_calc_reset_total(); }
-static const char *format_yes_no(uint32_t val) { return val == 1 ? "Yes" : "No"; }
+static const char *format_yes_no(uint32_t val) { return val == 1 ? lang_get(LANG_F_YES) : lang_get(LANG_F_NO); }
 
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
-    {"Canal Type",      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
-    {"Channel ID",      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,    1},
-    {"Sum Decimal",     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
-    {"Clear Total",    "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
+    {LANG_P_CANAL_TYPE,      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
+    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,    1},
+    {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          1, 3,     1},
+    {LANG_P_CLEAR_TOTAL,     "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
 };
 static const set_item_t time_items[] = {
-    {"Year",       "",  rtc_get_year,    rtc_set_year,    2000, 2099, 1},
-    {"Month",      "",  rtc_get_month,   rtc_set_month,   1,    12,   1},
-    {"Day",        "",  rtc_get_day,     rtc_set_day,     1,    31,   1},
-    {"Hour",       "",  rtc_get_hour,    rtc_set_hour,    0,    23,   1},
-    {"Minute",     "",  rtc_get_minute,  rtc_set_minute,  0,    59,   1},
-    {"Second",     "",  rtc_get_second,  rtc_set_second,  0,    59,   1},
-    {"Weekday",    "",  rtc_get_weekday, rtc_set_weekday, 1,    7,   1,  0,  format_weekday},
+    {LANG_P_YEAR,       "",  rtc_get_year,    rtc_set_year,    2000, 2099, 1},
+    {LANG_P_MONTH,      "",  rtc_get_month,   rtc_set_month,   1,    12,   1},
+    {LANG_P_DAY,        "",  rtc_get_day,     rtc_set_day,     1,    31,   1},
+    {LANG_P_HOUR,       "",  rtc_get_hour,    rtc_set_hour,    0,    23,   1},
+    {LANG_P_MINUTE,     "",  rtc_get_minute,  rtc_set_minute,  0,    59,   1},
+    {LANG_P_SECOND,     "",  rtc_get_second,  rtc_set_second,  0,    59,   1},
+    {LANG_P_WEEKDAY,    "",  rtc_get_weekday, rtc_set_weekday, 1,    7,   1,  0,  format_weekday},
 };
 
 /* ---------- 显示设置 ---------- */
 static const set_item_t display_items[] = {
-    {"Language",        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
-    {"Decimal",         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1},
-    {"Flow Unit",       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1,  0,  format_flow_unit},
+    {LANG_P_LANGUAGE,        "",     app_config_get_language,            app_config_set_language,           0, 1,     1,  0,  format_language},
+    {LANG_P_DECIMAL,         "",     app_config_get_point_num,          app_config_set_point_num,          0, 3,     1},
+    {LANG_P_FLOW_UNIT,       "",     app_config_get_instant_unit,        app_config_set_instant_unit,      1, 8,     1,  0,  format_flow_unit},
 };
 
 /* ---------- 高级设置 ---------- */
 static const set_item_t advanced_items[] = {
-    {"Range Max",       "m",   app_config_get_range_max,            app_config_set_range_max,        0, 20000, 1,   3},
-    {"Antenna Type",    "",     app_config_get_antenna_type,        app_config_set_antenna_type,     0, 10,    1},
-    {"4mA Cal",         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 0, 9999, 1},
-    {"20mA Cal",        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma,0, 9999, 1},
-    {"Dist Offset",     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
-    {"Factory Reset",   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1,  0,  format_yes_no},
+    {LANG_P_RANGE_MAX,       "m",   app_config_get_range_max,            app_config_set_range_max,        0, 20000, 1,   3},
+    {LANG_P_ANTENNA_TYPE,    "",     app_config_get_antenna_type,        app_config_set_antenna_type,     0, 10,    1},
+    {LANG_P_4MA_CAL,         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 0, 9999, 1},
+    {LANG_P_20MA_CAL,        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma,0, 9999, 1},
+    {LANG_P_DIST_OFFSET,     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
+    {LANG_P_FACTORY_RESET,   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1,  0,  format_yes_no},
 };
 
 /* ---------- 一级菜单分类表 ---------- */
 static const set_category_t categories[] = {
-    {"Basic",        basic_items,    sizeof(basic_items) / sizeof(basic_items[0])},
-    {"Modbus",       modbus_items,   sizeof(modbus_items) / sizeof(modbus_items[0])},
-    {"Alarm",        alarm_items,    sizeof(alarm_items) / sizeof(alarm_items[0])},
-    {"Canal",        system_items,   sizeof(system_items) / sizeof(system_items[0])},
-    {"Professional", measure_items,  sizeof(measure_items) / sizeof(measure_items[0])},
-    {"Display",      display_items,  sizeof(display_items) / sizeof(display_items[0])},
-    {"Advanced",     advanced_items, sizeof(advanced_items) / sizeof(advanced_items[0])},
-    {"Time",         time_items,     sizeof(time_items) / sizeof(time_items[0])},
+    {LANG_CAT_BASIC,        basic_items,    sizeof(basic_items) / sizeof(basic_items[0])},
+    {LANG_CAT_MODBUS,       modbus_items,   sizeof(modbus_items) / sizeof(modbus_items[0])},
+    {LANG_CAT_ALARM,        alarm_items,    sizeof(alarm_items) / sizeof(alarm_items[0])},
+    {LANG_CAT_CANAL,        system_items,   sizeof(system_items) / sizeof(system_items[0])},
+    {LANG_CAT_PROFESSIONAL, measure_items,  sizeof(measure_items) / sizeof(measure_items[0])},
+    {LANG_CAT_DISPLAY,      display_items,  sizeof(display_items) / sizeof(display_items[0])},
+    {LANG_CAT_ADVANCED,     advanced_items, sizeof(advanced_items) / sizeof(advanced_items[0])},
+    {LANG_CAT_TIME,         time_items,     sizeof(time_items) / sizeof(time_items[0])},
 };
 
 #define CATEGORY_COUNT (sizeof(categories) / sizeof(categories[0]))
@@ -560,7 +562,7 @@ static lv_obj_t *create_category_screen(void)
     lv_obj_t *title_label = lv_label_create(top_bar);
     lv_label_set_text(title_label, LV_SYMBOL_LEFT "  Settings");
     lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(title_label, lang_get_font_20(), 0);
 
     lv_obj_t *spacer = lv_obj_create(top_bar);
     ui_container_style_init(spacer);
@@ -572,7 +574,7 @@ static lv_obj_t *create_category_screen(void)
     lv_obj_t *back_label = lv_label_create(top_bar);
     lv_label_set_text(back_label, "SHIFT:Back");
     lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(back_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(back_label, lang_get_font_14(), 0);
     lv_obj_set_style_pad_right(back_label, 10, 0);
 
     /* --- 可滚动列表容器 --- */
@@ -602,8 +604,8 @@ static lv_obj_t *create_category_screen(void)
 
         /* 行子对象布局: [0]名称 [1]弹性空间 [2]箭头 [3]参数数量 */
         lv_obj_t *name_label = lv_label_create(row);
-        lv_label_set_text(name_label, categories[i].name);
-        lv_obj_set_style_text_font(name_label, &lv_font_montserrat_18, 0);
+        lv_label_set_text(name_label, lang_get(categories[i].name_id));
+        lv_obj_set_style_text_font(name_label, lang_get_font_18(), 0);
         lv_obj_set_style_text_color(name_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
 
         lv_obj_t *spacer = lv_obj_create(row);
@@ -621,7 +623,7 @@ static lv_obj_t *create_category_screen(void)
         snprintf(buf, sizeof(buf), "[%d]", categories[i].count);
         lv_label_set_text(cnt, buf);
         lv_obj_set_style_text_color(cnt, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-        lv_obj_set_style_text_font(cnt, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(cnt, lang_get_font_14(), 0);
         lv_obj_set_style_margin_right(cnt, 5, 0);
     }
 
@@ -769,10 +771,10 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
 
     lv_obj_t *title_label = lv_label_create(top_bar);
     char title_buf[32];
-    snprintf(title_buf, sizeof(title_buf), LV_SYMBOL_LEFT "  %s", cat->name);
+    snprintf(title_buf, sizeof(title_buf), LV_SYMBOL_LEFT "  %s", lang_get(cat->name_id));
     lv_label_set_text(title_label, title_buf);
     lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(title_label, lang_get_font_20(), 0);
 
     lv_obj_t *spacer = lv_obj_create(top_bar);
     ui_container_style_init(spacer);
@@ -784,7 +786,7 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
     lv_obj_t *back_label = lv_label_create(top_bar);
     lv_label_set_text(back_label, "SHIFT:Back");
     lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(back_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(back_label, lang_get_font_14(), 0);
     lv_obj_set_style_pad_right(back_label, 10, 0);
 
     /* --- 可滚动列表容器 --- */
@@ -820,8 +822,8 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
          *   [0] 参数名  [1] 弹性空间(grow)  [2] 参数值  [3] 单位(可选)
          */
         lv_obj_t *name_label = lv_label_create(row);
-        lv_label_set_text(name_label, item->name);
-        lv_obj_set_style_text_font(name_label, &lv_font_montserrat_16, 0);
+        lv_label_set_text(name_label, lang_get(item->name_id));
+        lv_obj_set_style_text_font(name_label, lang_get_font_16(), 0);
         lv_obj_set_style_text_color(name_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
 
         lv_obj_t *spacer = lv_obj_create(row);
@@ -847,14 +849,14 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
             snprintf(val_buf, sizeof(val_buf), "%lu", (unsigned long)item->get());
             lv_label_set_text(val_label, val_buf);
         }
-        lv_obj_set_style_text_font(val_label, &my_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(val_label, lang_get_font_16(), 0);
         lv_obj_set_style_text_color(val_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
 
         /* 单位标签 (仅当单位字符串非空时创建) */
         if (item->unit && item->unit[0] != '\0') {
             lv_obj_t *unit_label = lv_label_create(row);
             lv_label_set_text(unit_label, item->unit);
-            lv_obj_set_style_text_font(unit_label, &my_font_montserrat_14, 0);
+            lv_obj_set_style_text_font(unit_label, lang_get_font_14(), 0);
             lv_obj_set_style_text_color(unit_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
             lv_obj_set_style_margin_left(unit_label, 5, 0);
         }
@@ -1026,10 +1028,10 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 
     lv_obj_t *title_label = lv_label_create(top_bar);
     char title_buf[32];
-    snprintf(title_buf, sizeof(title_buf), LV_SYMBOL_LEFT "  %s", item->name);
+    snprintf(title_buf, sizeof(title_buf), LV_SYMBOL_LEFT "  %s", lang_get(item->name_id));
     lv_label_set_text(title_label, title_buf);
     lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(title_label, lang_get_font_20(), 0);
 
     /* 编辑页 SHIFT 用于切换步进，不显示 "SHIFT:Back"，底栏已有操作提示 */
 
@@ -1062,14 +1064,14 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     }
     lv_label_set_text(range_label, range_buf);
     lv_obj_set_style_text_color(range_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(range_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(range_label, lang_get_font_16(), 0);
     lv_obj_set_style_margin_bottom(range_label, 15, 0);
 
     /* 当前已保存的值 (只读显示) */
     lv_obj_t *cur_label = lv_label_create(content);
     lv_label_set_text(cur_label, "Current:");
     lv_obj_set_style_text_color(cur_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(cur_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(cur_label, lang_get_font_16(), 0);
 
     lv_obj_t *cur_val_label = lv_label_create(content);
     if (item->format) {
@@ -1090,7 +1092,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
         lv_label_set_text(cur_val_label, cur_val_buf);
     }
     lv_obj_set_style_text_color(cur_val_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(cur_val_label, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(cur_val_label, lang_get_font_18(), 0);
     lv_obj_set_style_margin_bottom(cur_val_label, 20, 0);
 
     /* 可编辑的值 (大字体，通过 UP/DOWN 经异步回调更新) */
@@ -1104,7 +1106,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     /* format 回调(文字类型)用强调色，纯数字(含decimal/float)用白色 */
     if (item->format) {
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_STEP_HL), 0);
-        lv_obj_set_style_text_font(g_edit_value_label, &my_font_montserrat_24, 0);
+        lv_obj_set_style_text_font(g_edit_value_label, lang_is_chinese() ? &noto_sans_sc_16 : &my_font_montserrat_24, 0);
     } else {
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
@@ -1120,7 +1122,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
         lv_label_set_text(unit_label, "");
     }
     lv_obj_set_style_text_color(unit_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(unit_label, &my_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(unit_label, lang_get_font_16(), 0);
 
     /* --- 底栏 (操作提示) --- */
     lv_obj_t *bottom_bar = lv_obj_create(screen);
@@ -1137,22 +1139,22 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     lv_obj_t *h_ok = lv_label_create(bottom_bar);
     lv_label_set_text(h_ok, "OK:Save");
     lv_obj_set_style_text_color(h_ok, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(h_ok, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(h_ok, lang_get_font_14(), 0);
 
     lv_obj_t *h_up = lv_label_create(bottom_bar);
     lv_label_set_text(h_up, "UP");
     lv_obj_set_style_text_color(h_up, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(h_up, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(h_up, lang_get_font_14(), 0);
 
     lv_obj_t *h_down = lv_label_create(bottom_bar);
     lv_label_set_text(h_down, "DOWN");
     lv_obj_set_style_text_color(h_down, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(h_down, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(h_down, lang_get_font_14(), 0);
 
     lv_obj_t *h_shift = lv_label_create(bottom_bar);
     lv_label_set_text(h_shift, "SHIFT:Step");
     lv_obj_set_style_text_color(h_shift, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(h_shift, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(h_shift, lang_get_font_14(), 0);
 
     return screen;
 }

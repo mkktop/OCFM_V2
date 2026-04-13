@@ -695,7 +695,8 @@
 #define LV_FONT_CUSTOM_DECLARE \
     LV_FONT_DECLARE(my_font_montserrat_14) \
     LV_FONT_DECLARE(my_font_montserrat_16) \
-    LV_FONT_DECLARE(my_font_montserrat_24)
+    LV_FONT_DECLARE(my_font_montserrat_24) \
+    LV_FONT_DECLARE(noto_sans_sc_16)
 
 /** Always set a default font */
 #define LV_FONT_DEFAULT &lv_font_montserrat_14

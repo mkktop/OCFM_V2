@@ -5017,6 +5017,16 @@
               <FileType>1</FileType>
               <FilePath>..\App\ui\ui_async.c</FilePath>
             </File>
+            <File>
+              <FileName>ui_lang.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\ui\ui_lang.c</FilePath>
+            </File>
+            <File>
+              <FileName>noto_sans_sc_16.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\ui\font\noto_sans_sc_16.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

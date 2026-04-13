@@ -13,11 +13,20 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 - 文件系统: FatFs (SD卡, SDIO接口)
 - 构建工具: Keil MDK-ARM (AC5工具链) 或 EIDE (VSCode插件)
 
-### Keil MDK-ARM
+### 构建
+**Keil MDK-ARM：**
 ```
 打开工程: MDK-ARM/OCFM_V2.uvprojx
 编译: Project -> Build Target (F7)
 下载: Flash -> Download (F8)
+```
+
+**EIDE (VSCode插件)：**
+```
+构建输出: build/ 目录
+工具链: AC5 (ARM Compiler v5), 使用 microLIB, Debug模式, 优化等级0
+烧录: J-Link
+配置文件: .eide/eide.yml (注意: .eide/ 在.gitignore中，需手动维护)
 ```
 
 ## 软件架构
@@ -34,7 +43,9 @@ OCFM_V2/
 │   ├── ui/                  # LVGL UI实现
 │   │   ├── ui.c/h           # 主UI逻辑 (Tileview, Observer绑定, 定时器)
 │   │   ├── ui_conf.h        # ui_manager_t和Subject定义
-│   │   └── ui_set_page.c/h  # 三级设置菜单 (分类→参数→编辑)
+│   │   ├── ui_set_page.c/h  # 三级设置菜单 (分类→参数→编辑)
+│   │   ├── ui_async.c/h     # [已弃用] 仅为Keil工程兼容保留，使用lv_async_call()替代
+│   │   └── font/            # 自定义字体 (支持m³等特殊符号)
 │   ├── app_model.c/h        # 数据模型 (MVVM, AppDataModel)
 │   ├── app_log.c/h          # 日志初始化
 │   ├── app_config.c/h       # 系统配置管理 (EEPROM存储, getter/setter)
@@ -122,7 +133,7 @@ LVGL 9.x 与 8.x API有较大变化：
 - 内存池: 64KB，位于外部SRAM (FSMC地址 0x10000000)
 - 颜色深度: 16位 (RGB565)
 - OS集成: `LV_OS_FREERTOS`，使用任务通知
-- 默认字体: `lv_font_montserrat_14`，另有自定义字体 `my_font_montserrat_14/16/24`（支持立方米符号）
+- 默认字体: `lv_font_montserrat_14`，另有自定义字体 `lv_font_sup3_14/16/24`（支持m³等特殊符号，源文件在 `App/ui/font/`）
 - 编码: UTF-8
 - 刷新周期: 33ms (~30 FPS)
 
