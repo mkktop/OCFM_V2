@@ -82,7 +82,7 @@ void password_screen_enter(void)
 {
     g_password_busy = 0;
     g_input_value = 0;
-    g_step_index = 0;
+    g_step_index = PASSWORD_DIGITS - 1;  /* 从最左侧(千位)开始 */
     g_last_key_tick = lv_tick_get();
 
     /* 创建空闲超时定时器 */
@@ -163,8 +163,8 @@ void password_button_handler(uint8_t button_id, uint8_t event)
         break;
     }
     case BUTTON_ID_SHIFT: {
-        /* 切换高亮位: 个→十→百→千→个 */
-        g_step_index = (g_step_index + 1) % PASSWORD_DIGITS;
+        /* 切换高亮位: 千→百→十→个→千 (从左到右) */
+        g_step_index = (g_step_index == 0) ? (PASSWORD_DIGITS - 1) : (g_step_index - 1);
         g_password_busy = 1;
         lv_async_call(async_update_value_cb, NULL);
         break;
@@ -420,7 +420,7 @@ static void async_password_wrong_cb(void *context)
 
     /* 重置输入值和步进 */
     g_input_value = 0;
-    g_step_index = 0;
+    g_step_index = PASSWORD_DIGITS - 1;
     update_password_display();
 
     /* 设置定时器延迟清除错误提示 */

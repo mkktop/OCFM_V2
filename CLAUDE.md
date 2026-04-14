@@ -40,6 +40,7 @@ OCFM_V2/
 │   │   ├── ui.c/h           # 主UI逻辑 (Tileview, Observer绑定, 定时器)
 │   │   ├── ui_conf.h        # ui_manager_t和Subject定义
 │   │   ├── ui_set_page.c/h  # 三级设置菜单 (分类→参数→编辑)
+│   │   ├── ui_password.c/h  # 密码锁屏界面 (进入设置前验证)
 │   │   └── font/            # 自定义字体 (支持m³等特殊符号)
 │   ├── app_model.c/h        # 数据模型 (MVVM, AppDataModel)
 │   ├── app_log.c/h          # 日志初始化
@@ -130,6 +131,11 @@ LVGL 9.x 与 8.x API有较大变化：
 - 颜色深度: 16位 (RGB565)
 - OS集成: `LV_OS_FREERTOS`，使用任务通知
 - 默认字体: `lv_font_montserrat_14`，另有自定义字体 `lv_font_sup3_14/16/24`（支持m³等特殊符号，源文件在 `App/ui/font/`）
+- CJK字体: `noto_sans_sc_16/24`，仅包含设置菜单所需汉字，字符列表在 `App/ui/font/chars.txt`。新增中文菜单项时需：
+  1. 在 `chars.txt` 追加新汉字
+  2. 用 LVGL 字体工具重新生成 `noto_sans_sc_16.c` 和 `noto_sans_sc_24.c`
+  3. 修正生成文件中的 `fallback` 指向 `my_font_montserrat_16/24`（非默认的 `lv_font_montserrat_*`）
+  4. 修正 `noto_sans_sc_16.c` 的 `line_height=20`, `base_line=4` 以匹配 Montserrat 对齐
 - 编码: UTF-8
 - 刷新周期: 33ms (~30 FPS)
 
@@ -193,7 +199,7 @@ button_driver_scan() → 状态机处理 (消抖/按下/长按)
     ↓ (松手时触发回调)
 app_button_event_handler() → 根据 active_screen 分发
     ↓
-app_main_screen_button_handler() / app_set_screen_button_handler() / app_history_screen_button_handler()
+app_main_screen_button_handler() / app_password_screen_button_handler() / app_set_screen_button_handler() / app_history_screen_button_handler()
 ```
 
 **按键：** BUTTON_ID_OK (确认), BUTTON_ID_UP (上), BUTTON_ID_DOWN (下), BUTTON_ID_SHIFT (位移)
@@ -217,7 +223,7 @@ app_main_screen_button_handler() / app_set_screen_button_handler() / app_history
 - 测量参数：window_width, filter_count, delay_time, antenna_type, blind_area, w_coeff, m_coeff
 - Modbus参数：modbus_addr, modbus_baudrate, modbus_stopbits
 - 报警参数：alarm_ah/al, alarm_dh/dl, alarm_aah/aal
-- 其他：canals_type, channel_id, instant_unit, language, factory_settings, dis_offset, sum_point
+- 其他：canals_type, channel_id, instant_unit, language, factory_settings, dis_offset, sum_point, show_alarm, password_enable
 
 **注意：** 所有配置修改后需调用 `app_config_save()` 才能持久化。Modbus从机写回参数时使用脏标记 + 3秒延迟保存机制。
 
@@ -390,14 +396,16 @@ UART1 + DMA (硬件层)
 **瓦片切换：** `ui_switch_tile(page_index)` (0/1/2)
 
 ### 设置页面 (三级菜单)
-- Level 1: 分类列表 (基本/测量/Modbus/报警/系统/时间)
+- Level 1: 分类列表 (基本/串口/报警/水渠/专业/显示/高级/时间)
 - Level 2: 参数列表 (显示当前值)
 - Level 3: 编辑页 (全屏编辑, 红色高亮当前位, SHIFT键切换步进: 1/10/100/1000/10000)
 - 15秒无操作自动返回主屏幕
+- 进入设置前可选密码验证（`password_enable`配置控制，固定密码1234）
 
 ### 屏幕切换
 `ui_switch_screen(new_screen, anim_type, time)`:
 - `ui_manager->main_screen`: 主屏幕（瓦片视图）
+- `ui_manager->password_screen`: 密码验证屏幕
 - `ui_manager->settings_screen`: 设置屏幕
 - `ui_manager->history_screen`: 历史记录屏幕
 - `ui_manager->active_screen`: 当前激活屏幕（按键事件分发依据）
