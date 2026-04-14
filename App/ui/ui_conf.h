@@ -14,6 +14,8 @@ typedef struct{
     int current_page; //当前瓦片页
     // 设置屏幕相关
     lv_obj_t *settings_screen;//设置屏幕指针
+    //密码验证屏幕指针
+    lv_obj_t *password_screen;//密码验证屏幕指针
     //历史记录屏幕指针
     lv_obj_t *history_screen;//历史记录屏幕指针
     // 当前激活的屏幕

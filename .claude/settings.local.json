@@ -45,7 +45,8 @@
       "Bash(kill %1)",
       "Bash(echo \"exit code: $?\")",
       "Bash(where iscc:*)",
-      "Read(//c/Program Files \\(x86\\)/Inno Setup 6/**)"
+      "Read(//c/Program Files \\(x86\\)/Inno Setup 6/**)",
+      "Bash(ls -la d:/UGit/OCFM_V2/App/ui/ui_password.*)"
     ]
   }
 }

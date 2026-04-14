@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "global.h"
 #include "ui/ui_set_page.h"
+#include "ui/ui_password.h"
 
 /**
  * @brief 按键事件处理入口
@@ -20,6 +21,10 @@ void app_button_event_handler(ButtonId_e button_id, ButtonEvent_e event)
     if (ui_manager->active_screen == ui_manager->main_screen)
     {
         app_main_screen_button_handler(button_id, event);
+    }
+    else if (ui_manager->active_screen == ui_manager->password_screen)
+    {
+        app_password_screen_button_handler(button_id, event);
     }
     else if (ui_manager->active_screen == ui_manager->settings_screen)
     {
@@ -56,7 +61,7 @@ void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
     } else if (event == BUTTON_EVENT_LONG) {
         /* 长按事件 */
         switch (button_id) {
-            case BUTTON_ID_OK:    set_page_enter(); break;
+            case BUTTON_ID_OK:    password_screen_enter(); break;
             case BUTTON_ID_UP:    printf("[Button] UP Long\r\n"); break;
             case BUTTON_ID_DOWN:  printf("[Button] DOWN Long\r\n"); break;
             case BUTTON_ID_SHIFT: printf("[Button] SHIFT Long\r\n"); break;
@@ -75,6 +80,18 @@ void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
 void app_set_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
 {
     set_page_button_handler((uint8_t)button_id, (uint8_t)event);
+}
+
+/**
+ * @brief 密码界面按键处理
+ * @param button_id: 按键ID
+ * @param event: 按键事件类型
+ * @retval None
+ * @note  委托给password_button_handler()处理
+ */
+void app_password_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
+{
+    password_button_handler((uint8_t)button_id, (uint8_t)event);
 }
 
 /**
