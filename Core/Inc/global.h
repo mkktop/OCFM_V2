@@ -336,7 +336,7 @@ typedef enum
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
 #define DEFAULT_INSTANT_UNIT     1           /* 瞬时流量单位 (L/s) */
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
-#define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
+#define DEFAULT_LANGUAGE         1           /* 语言 (中文) */
 #define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */
 #define DEFAULT_PASSWORD_ENABLE  1           /* 密码锁 (默认启用) */
 
