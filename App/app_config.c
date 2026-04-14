@@ -131,6 +131,7 @@ void app_config_set_default(void)
     g_config.sum_point         = DEFAULT_SUM_POINT;
     g_config.language          = DEFAULT_LANGUAGE;
     g_config.show_alarm        = DEFAULT_SHOW_ALARM;
+    g_config.password_enable   = DEFAULT_PASSWORD_ENABLE;
 }
 
 /**
@@ -280,7 +281,8 @@ static const config_range_t config_range_table[CONFIG_ID_COUNT] = {
     /* [27] CONFIG_ID_SUM_POINT       */ {0, 1, 1, 3,     0, 0},
     /* [28] CONFIG_ID_LANGUAGE        */ {0, 1, 0, 1,     0, 0},
     /* [29] CONFIG_ID_SHOW_ALARM      */ {0, 1, 0, 1,     0, 0},
-    /* [30] CONFIG_ID_FACTORY_RESET   */ {0, 0, 0, 0,     0, 0},
+    /* [30] CONFIG_ID_PASSWORD_ENABLE */ {0, 1, 0, 1,     0, 0},
+    /* [31] CONFIG_ID_FACTORY_RESET   */ {0, 0, 0, 0,     0, 0},
     /* [31] CONFIG_ID_CLEAR_TOTAL     */ {0, 0, 0, 0,     0, 0},
 };
 
@@ -355,6 +357,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         case CONFIG_ID_SUM_POINT:       g_config.sum_point = value;       break;
         case CONFIG_ID_LANGUAGE:        g_config.language = value;        break;
         case CONFIG_ID_SHOW_ALARM:      g_config.show_alarm = value;      break;
+        case CONFIG_ID_PASSWORD_ENABLE: g_config.password_enable = value; break;
         default: return CONFIG_ERR_ID;
     }
 
@@ -446,6 +449,7 @@ uint8_t app_config_get_val(config_id_t id, uint32_t *value)
         case CONFIG_ID_SUM_POINT:       *value = g_config.sum_point;       break;
         case CONFIG_ID_LANGUAGE:        *value = g_config.language;        break;
         case CONFIG_ID_SHOW_ALARM:      *value = g_config.show_alarm;      break;
+        case CONFIG_ID_PASSWORD_ENABLE: *value = g_config.password_enable; break;
         default: return CONFIG_ERR_ID;
     }
 
@@ -808,4 +812,13 @@ uint32_t app_config_get_show_alarm(void)
 void app_config_set_show_alarm(uint32_t value)
 {
     app_config_set(CONFIG_ID_SHOW_ALARM, value);
+}
+
+uint32_t app_config_get_password_enable(void)
+{
+    uint32_t v = 0; app_config_get_val(CONFIG_ID_PASSWORD_ENABLE, &v); return v;
+}
+void app_config_set_password_enable(uint32_t value)
+{
+    app_config_set(CONFIG_ID_PASSWORD_ENABLE, value);
 }

@@ -325,6 +325,7 @@ static const set_item_t advanced_items[] = {
     {LANG_P_4MA_CAL,         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 0, 9999, 1},
     {LANG_P_20MA_CAL,        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma,0, 9999, 1},
     {LANG_P_DIST_OFFSET,     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
+    {LANG_P_PASSWORD,        "",     app_config_get_password_enable,      app_config_set_password_enable,   0, 1,     1,  0,  format_yes_no},
     {LANG_P_FACTORY_RESET,   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1,  0,  format_yes_no},
 };
 

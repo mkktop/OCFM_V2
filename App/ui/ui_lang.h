@@ -83,6 +83,7 @@ typedef enum {
     LANG_P_20MA_CAL,
     LANG_P_DIST_OFFSET,
     LANG_P_FACTORY_RESET,
+    LANG_P_PASSWORD,
 
     /* 格式回调字符串 */
     LANG_F_ENGLISH,

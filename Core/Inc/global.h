@@ -249,6 +249,7 @@ typedef struct
     uint32_t sum_point;         /* 累计流量小数点数 */
     uint32_t language;          /* 语言 */
     uint32_t show_alarm;        /* 是否显示报警 (1:显示 0:不显示) */
+    uint32_t password_enable;   /* 是否启用密码锁 (1:启用 0:禁用) */
 } SystemConfig_t;
 
 /*============================================================================*/
@@ -337,5 +338,6 @@ typedef enum
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
 #define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */
+#define DEFAULT_PASSWORD_ENABLE  1           /* 密码锁 (默认启用) */
 
 #endif
