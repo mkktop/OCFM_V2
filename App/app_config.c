@@ -50,8 +50,9 @@ void app_config_process(void)
 
     if (HAL_GetTick() - last_write_tick >= CONFIG_SAVE_DELAY_MS)
     {
-        config_dirty = 0;
-        app_config_save();
+        if (app_config_save()) {
+            config_dirty = 0;
+        }
     }
 }
 
@@ -61,8 +62,13 @@ void app_config_process(void)
 
 uint8_t app_config_eeprom_lock(void)
 {
-    if (s_eeprom_busy) return 0;
+    __disable_irq();
+    if (s_eeprom_busy) {
+        __enable_irq();
+        return 0;
+    }
     s_eeprom_busy = 1;
+    __enable_irq();
     return 1;
 }
 

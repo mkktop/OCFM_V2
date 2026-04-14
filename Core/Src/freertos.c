@@ -372,8 +372,8 @@ void flow_refresh_fun(void *argument)
   float flow_m3h = flow_calc_get_instant_lps() * 3.6f;
   app_alarm_update(sensor && sensor->is_online ? flow_m3h : 0.0f);
 
-  /* 4-20mA输出: 使用转换后的瞬时流量 */
-  app_current_update(flow_calc_get_instant() * 3.6f);
+  /* 4-20mA输出: 使用原始L/s转m³/h（确保单位一致） */
+  app_current_update(flow_m3h);
   /* USER CODE END flow_refresh_fun */
 }
 
