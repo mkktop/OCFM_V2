@@ -432,7 +432,6 @@ static void async_update_step_cb(void *context);
 /* --- 屏幕切换辅助函数 --- */
 static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
 static void idle_timeout_cb(lv_timer_t *timer);
-static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
 
 /*============================================================================*/
 /*                          公共函数实现                                       */

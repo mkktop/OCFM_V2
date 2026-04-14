@@ -28,7 +28,6 @@
 #include "global.h"
 #include "lvgl.h"
 #include "lv_port_disp.h"
-#include "demos/lv_demos.h"
 #include "app_log.h"
 #include "rtc_time.h"
 #include "app_button.h"
@@ -331,10 +330,7 @@ void modbus_master_task_func(void *argument)
 void modbus_slave_task_func(void *argument)
 {
   /* USER CODE BEGIN modbus_slave_task_func */
-  /* 初始化Modbus从机 (UART2, DMA+空闲中断接收) */
-  modbus_slave_init(&sensor_slave, &huart2);
-
-  /* 初始化应用层：将配置参数预填到寄存器 */
+  /* 初始化应用层：将配置参数预填到寄存器（内部会调用modbus_slave_init） */
   app_modbus_slave_init();
 
   /* 注册写入回调 */

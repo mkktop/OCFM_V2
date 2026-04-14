@@ -22,7 +22,30 @@
       "Bash(python3 -c \"needed='基本串口设置报警水渠专业显示高级时间高度量程窗口宽度滤波次数采样延迟盲区体系测量从机地址波特率停止位上限下回差类型通道编号累计小数清零语言位数流量单位最大天线校准距离偏移恢复出厂英文中文巴歇尔槽三角堰矩形是否周日一二三四五六';print\\(len\\(set\\(needed\\)\\),set\\(needed\\)\\)\")",
       "Bash(python3 -V)",
       "Bash(python -V)",
-      "Bash(python -c \"needed='基本串口设置报警水渠专业显示高级时间高度量程窗口宽度滤波次数采样延迟盲区体系测量从机地址波特率停止位上限下回差类型通道编号累计小数清零语言位数流量单位最大天线校准距离偏移恢复出厂英文中文巴歇尔槽三角堰矩形是否周日一二三四五六';print\\(len\\(set\\(needed\\)\\),set\\(needed\\)\\)\")"
+      "Bash(python -c \"needed='基本串口设置报警水渠专业显示高级时间高度量程窗口宽度滤波次数采样延迟盲区体系测量从机地址波特率停止位上限下回差类型通道编号累计小数清零语言位数流量单位最大天线校准距离偏移恢复出厂英文中文巴歇尔槽三角堰矩形是否周日一二三四五六';print\\(len\\(set\\(needed\\)\\),set\\(needed\\)\\)\")",
+      "Bash(dotnet new:*)",
+      "Bash(where dotnet:*)",
+      "Bash(where msbuild:*)",
+      "Bash(where nuget:*)",
+      "Read(//c/Program Files/dotnet//**)",
+      "Read(//c/Program Files/**)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" --list-sdks)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" --list-runtimes)",
+      "Bash(dotnet --version)",
+      "Bash(where winget:*)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\" --version)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/dotnet:$PATH\")",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet build:*)",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) libs = data.get\\('libraries', {}\\) for k in sorted\\(libs.keys\\(\\)\\): if 'nmodbus' in k.lower\\(\\): print\\(k\\) \")",
+      "Bash(find /c/Users/kuo/.nuget/packages/livecharts* -name \"*.xml\" -path \"*/2.0.0-rc5.3/*\")",
+      "Bash(dotnet publish:*)",
+      "Bash(dotnet run:*)",
+      "Bash(kill %1)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(where iscc:*)",
+      "Read(//c/Program Files \\(x86\\)/Inno Setup 6/**)"
     ]
   }
 }

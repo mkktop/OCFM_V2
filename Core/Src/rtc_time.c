@@ -1,8 +1,8 @@
 /**
  * @file rtc_time.c
  * @brief RTC时间管理模块实现
- * @details 提供统一的时间获取、设置和格式化功能
- * @note 依赖于STM32 HAL层的RTC驱动
+ * @details 提供统一的时间读取、设置和格式化功能
+ * @note 封装STM32 HAL的RTC外设
  */
 
 #include "rtc_time.h"
@@ -11,47 +11,12 @@
 
 /**
  * @brief 全局RTC时间数据
- * @note 供其他模块直接访问，避免频繁调用RTC获取函数
+ * @note 各模块直接访问，减少频繁的RTC硬件读取
  */
 RTC_TimeData g_RtcTime = {0};
 
 /**
- * @brief 星期几英文名称数组
- * @note 索引1-7对应Sunday到Saturday
- */
-static const char* const g_weekDayStrings[] = {
-    "",           /* 索引0占位 */
-    "Sunday",     /* 1 - 星期日 */
-    "Monday",     /* 2 - 星期一 */
-    "Tuesday",    /* 3 - 星期二 */
-    "Wednesday",  /* 4 - 星期三 */
-    "Thursday",   /* 5 - 星期四 */
-    "Friday",     /* 6 - 星期五 */
-    "Saturday"    /* 7 - 星期六 */
-};
-
-/**
- * @brief 月份英文名称数组
- * @note 索引1-12对应January到December
- */
-static const char* const g_monthStrings[] = {
-    "",            /* 索引0占位 */
-    "January",     /* 1 - 一月 */
-    "February",    /* 2 - 二月 */
-    "March",       /* 3 - 三月 */
-    "April",       /* 4 - 四月 */
-    "May",         /* 5 - 五月 */
-    "June",        /* 6 - 六月 */
-    "July",        /* 7 - 七月 */
-    "August",      /* 8 - 八月 */
-    "September",   /* 9 - 九月 */
-    "October",     /* 10 - 十月 */
-    "November",    /* 11 - 十一月 */
-    "December"     /* 12 - 十二月 */
-};
-
-/**
- * @brief 各月份天数数组(非闰年)
+ * @brief 每月天数查找表(辅助表)
  * @note 用于计算Unix时间戳
  */
 static const uint8_t g_daysOfMonth[] = {
@@ -72,7 +37,7 @@ static const uint8_t g_daysOfMonth[] = {
 
 /**
  * @brief RTC时间模块初始化函数
- * @note 供外部调用，目前为空实现
+ * @note 由外部调用，目前为空实现
  *       实际初始化由MX_RTC_Init()完成
  * @return 无
  */
@@ -81,35 +46,10 @@ void RTC_Time_Init(void)
 }
 
 /**
- * @brief 检查RTC时间是否有效(已设置)
- * @note 通过判断是否为默认初始值来判断时间是否已设置
- *       默认初始值为: 2026-01-01 00:00:00
- * @return true  - 时间已设置
- * @return false - 时间未设置(处于默认状态)
- */
-bool RTC_Time_IsValid(void)
-{
-    RTC_DateTypeDef sDate = {0};
-    RTC_TimeTypeDef sTime = {0};
-
-    /* 先获取时间，再获取日期 */
-    HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-
-    /* 判断是否处于默认状态(2026-01-01 00:00:00) */
-    if (sDate.Year == 0 && sDate.Month == 1 && sDate.Date == 1 && 
-        sTime.Hours == 0 && sTime.Minutes == 0 && sTime.Seconds == 0) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
  * @brief 获取当前RTC时间
  * @note 从RTC硬件读取当前时间到用户结构体
- *       先读时间再读日期，保证数据一致性
- * @param[out] timeData 时间数据输出缓冲区指针
+ *       先读时间后读日期，保证数据一致性
+ * @param[out] timeData 时间数据输出缓冲指针
  * @return 无
  * @note 必须传入有效指针
  */
@@ -122,12 +62,12 @@ void RTC_Time_Get(RTC_TimeData* timeData)
         return;
     }
 
-    /* 先读时间，再读日期 - 这是HAL库推荐的方式 */
+    /* 先读时间，后读日期 - 遵循HAL推荐的方式 */
     HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
     HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-    /* 转换为用户格式 (RTC存储的是BCD码和2000基准年) */
-    timeData->year = 2000 + sDate.Year;   /* RTC只存两位年份，需要加2000 */
+    /* 转换为用户格式 (RTC存储年份为BCD码，2000年基准) */
+    timeData->year = 2000 + sDate.Year;   /* RTC只存储后两位年，需要加2000 */
     timeData->month = sDate.Month;
     timeData->date = sDate.Date;
     timeData->hour = sTime.Hours;
@@ -139,11 +79,11 @@ void RTC_Time_Get(RTC_TimeData* timeData)
 /**
  * @brief 设置RTC时间
  * @note 将用户时间结构体数据写入RTC硬件
- *       先设置时间，再设置日期
+ *       先设时间，后设日期
  * @param[in] timeData 时间数据输入缓冲区指针
  * @return 无
  * @note 必须传入有效指针
- * @warning 设置后会立即生效
+ * @warning 此操作会永久有效
  */
 void RTC_Time_Set(const RTC_TimeData* timeData)
 {
@@ -159,7 +99,7 @@ void RTC_Time_Set(const RTC_TimeData* timeData)
     sTime.Minutes = timeData->minute;
     sTime.Seconds = timeData->second;
     sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;    /* 不使用夏令时 */
-    sTime.StoreOperation = RTC_STOREOPERATION_RESET;  /* 重置夏令时标志 */
+    sTime.StoreOperation = RTC_STOREOPERATION_RESET;  /* 清除夏令时标志 */
 
     HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
@@ -173,8 +113,8 @@ void RTC_Time_Set(const RTC_TimeData* timeData)
 }
 
 /**
- * @brief 设置RTC时间（直接传入数值）
- * @note 将年月日时分秒等数值写入RTC硬件
+ * @brief 设置RTC时间（直接传参数值版）
+ * @note 将各时间参数值直接写入RTC硬件
  * @param[in] year 年份，如2026
  * @param[in] month 月份，1-12
  * @param[in] date 日期，1-31
@@ -183,7 +123,7 @@ void RTC_Time_Set(const RTC_TimeData* timeData)
  * @param[in] second 秒钟，0-59
  * @param[in] weekDay 星期，1-7 (Sunday=1, Saturday=7)
  * @return 无
- * @warning 设置后会立即生效，RTC继续运行
+ * @warning 此操作会永久有效，RTC立即生效
  */
 void RTC_Time_SetValues(uint16_t year, uint8_t month, uint8_t date,
                         uint8_t hour, uint8_t minute, uint8_t second,
@@ -224,39 +164,39 @@ void RTC_Time_GetString(char* buffer, RTC_TimeFormat format)
     switch (format) {
         case RTC_TIME_FORMAT_DATE:
             /* 日期格式: YYYY-MM-DD */
-            sprintf(buffer, "%04d-%02d-%02d", 
+            snprintf(buffer, RTC_TIME_STRING_LEN, "%04d-%02d-%02d",
                     timeData.year, timeData.month, timeData.date);
             break;
 
         case RTC_TIME_FORMAT_TIME:
             /* 时间格式: HH:MM:SS */
-            sprintf(buffer, "%02d:%02d:%02d", 
+            snprintf(buffer, RTC_TIME_STRING_LEN, "%02d:%02d:%02d",
                     timeData.hour, timeData.minute, timeData.second);
             break;
 
         case RTC_TIME_FORMAT_FULL:
             /* 完整格式: YYYY-MM-DD HH:MM:SS */
-            sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d", 
+            snprintf(buffer, RTC_TIME_STRING_LEN, "%04d-%02d-%02d %02d:%02d:%02d",
                     timeData.year, timeData.month, timeData.date,
                     timeData.hour, timeData.minute, timeData.second);
             break;
 
         case RTC_TIME_FORMAT_COMPACT:
             /* 紧凑格式: YYYYMMDDHHMMSS */
-            sprintf(buffer, "%04d%02d%02d%02d%02d%02d", 
+            snprintf(buffer, RTC_TIME_STRING_LEN, "%04d%02d%02d%02d%02d%02d",
                     timeData.year, timeData.month, timeData.date,
                     timeData.hour, timeData.minute, timeData.second);
             break;
 
         case RTC_TIME_FORMAT_LOG_FILE:
             /* 日志文件路径格式: YYYY/MM/DD */
-            sprintf(buffer, "%04d/%02d/%02d", 
+            snprintf(buffer, RTC_TIME_STRING_LEN, "%04d/%02d/%02d",
                     timeData.year, timeData.month, timeData.date);
             break;
 
         case RTC_TIME_FORMAT_LOG_DATETIME:
             /* 日志时间格式: YYYY-MM-DD HH:MM:SS */
-            sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d", 
+            snprintf(buffer, RTC_TIME_STRING_LEN, "%04d-%02d-%02d %02d:%02d:%02d",
                     timeData.year, timeData.month, timeData.date,
                     timeData.hour, timeData.minute, timeData.second);
             break;
@@ -268,44 +208,11 @@ void RTC_Time_GetString(char* buffer, RTC_TimeFormat format)
 }
 
 /**
- * @brief 获取日期字符串
- * @note 格式: YYYY-MM-DD
- * @param[out] buffer 字符串输出缓冲区，至少32字节
- * @return 无
- */
-void RTC_Time_GetDateString(char* buffer)
-{
-    RTC_Time_GetString(buffer, RTC_TIME_FORMAT_DATE);
-}
-
-/**
- * @brief 获取时间字符串
- * @note 格式: HH:MM:SS
- * @param[out] buffer 字符串输出缓冲区，至少32字节
- * @return 无
- */
-void RTC_Time_GetTimeString(char* buffer)
-{
-    RTC_Time_GetString(buffer, RTC_TIME_FORMAT_TIME);
-}
-
-/**
- * @brief 获取完整日期时间字符串
- * @note 格式: YYYY-MM-DD HH:MM:SS
- * @param[out] buffer 字符串输出缓冲区，至少32字节
- * @return 无
- */
-void RTC_Time_GetFullString(char* buffer)
-{
-    RTC_Time_GetString(buffer, RTC_TIME_FORMAT_FULL);
-}
-
-/**
- * @brief 计算Unix时间戳
- * @note 计算自1970-01-01 00:00:00以来的秒数
- *       考虑了闰年和非闰年，以及月份天数
+ * @brief 获取Unix时间戳
+ * @note 计算从1970-01-01 00:00:00到当前的秒数
+ *       不考虑闰秒，简化月份处理
  * @return Unix时间戳(秒)
- * @note 未考虑时区，默认返回UTC时间
+ * @note 未处理时区，默认返回UTC时间
  */
 uint32_t RTC_Time_GetTimestamp(void)
 {
@@ -320,75 +227,37 @@ uint32_t RTC_Time_GetTimestamp(void)
     y = timeData.year;
     m = timeData.month;
 
-    /* 计算从1970到指定年份的秒数 */
+    /* 累加从1970年到指定年份的天数 */
     for (uint16_t i = 1970; i < y; i++) {
-        /* 闰年判断: 能被4整除但不能被100整除，或者能被400整除 */
+        /* 闰年判断: 能被4整除且不能被100整除，或者能被400整除 */
         if ((i % 4 == 0 && i % 100 != 0) || (i % 400 == 0)) {
             timestamp += 366 * 24 * 3600;  /* 闰年366天 */
         } else {
-            timestamp += 365 * 24 * 3600;  /* 非闰年365天 */
+            timestamp += 365 * 24 * 3600;  /* 平年365天 */
         }
     }
 
-    /* 计算从年初到指定月份的秒数 */
+    /* 累加从年初到指定月份的天数 */
     for (uint8_t i = 1; i < m; i++) {
         if (i == 2) {
             /* 2月份需要判断闰年 */
             if ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)) {
                 timestamp += 29 * 24 * 3600;  /* 闰年2月29天 */
             } else {
-                timestamp += 28 * 24 * 3600;  /* 非闰年2月28天 */
+                timestamp += 28 * 24 * 3600;  /* 平年2月28天 */
             }
         } else {
             timestamp += g_daysOfMonth[i] * 24 * 3600;
         }
     }
 
-    /* 计算当月的秒数 (日期从1开始，需要减1) */
+    /* 计算当月的天数 (日期从1开始，所以减1) */
     timestamp += (timeData.date - 1) * 24 * 3600;
 
-    /* 加上当天的秒数 */
+    /* 加上时分秒 */
     timestamp += timeData.hour * 3600;
     timestamp += timeData.minute * 60;
     timestamp += timeData.second;
 
     return timestamp;
-}
-
-/**
- * @brief 获取星期几的英文名称
- * @param[in] weekDay 星期几(1-7)
- * @return 星期几的英文名称字符串
- * @note 如果参数无效，返回"Unknown"
- */
-const char* RTC_Time_GetWeekDayString(uint8_t weekDay)
-{
-    if (weekDay < RTC_TIME_WEEKDAY_SUNDAY || weekDay > RTC_TIME_WEEKDAY_SATURDAY) {
-        return "Unknown";
-    }
-    return g_weekDayStrings[weekDay];
-}
-
-/**
- * @brief 获取月份的英文名称
- * @param[in] month 月份(1-12)
- * @return 月份的英文名称字符串
- * @note 如果参数无效，返回"Unknown"
- */
-const char* RTC_Time_GetMonthString(uint8_t month)
-{
-    if (month < 1 || month > 12) {
-        return "Unknown";
-    }
-    return g_monthStrings[month];
-}
-
-/**
- * @brief 手动更新时间
- * @note 供外部定时任务调用
- *       当前为空实现，预留给后续扩展使用
- * @return 无
- */
-void RTC_Time_Update(void)
-{
 }

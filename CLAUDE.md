@@ -11,7 +11,11 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 - 实时系统: FreeRTOS V10.3.1
 - 图形界面: LVGL 9.5.0
 - 文件系统: FatFs (SD卡, SDIO接口)
-- 构建工具: Keil MDK-ARM (AC5工具链) 或 EIDE (VSCode插件)
+- 构建工具: Keil MDK-ARM (AC5工具链)
+
+**关键约束：**
+- EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 必须在此范围内。添加新配置字段前务必确认剩余空间。
+- 无自动化测试和lint工具，验证依赖实机调试和串口日志输出。
 
 ### 构建
 **Keil MDK-ARM：**
@@ -19,14 +23,6 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 打开工程: MDK-ARM/OCFM_V2.uvprojx
 编译: Project -> Build Target (F7)
 下载: Flash -> Download (F8)
-```
-
-**EIDE (VSCode插件)：**
-```
-构建输出: build/ 目录
-工具链: AC5 (ARM Compiler v5), 使用 microLIB, Debug模式, 优化等级0
-烧录: J-Link
-配置文件: .eide/eide.yml (注意: .eide/ 在.gitignore中，需手动维护)
 ```
 
 ## 软件架构
@@ -44,7 +40,6 @@ OCFM_V2/
 │   │   ├── ui.c/h           # 主UI逻辑 (Tileview, Observer绑定, 定时器)
 │   │   ├── ui_conf.h        # ui_manager_t和Subject定义
 │   │   ├── ui_set_page.c/h  # 三级设置菜单 (分类→参数→编辑)
-│   │   ├── ui_async.c/h     # [已弃用] 仅为Keil工程兼容保留，使用lv_async_call()替代
 │   │   └── font/            # 自定义字体 (支持m³等特殊符号)
 │   ├── app_model.c/h        # 数据模型 (MVVM, AppDataModel)
 │   ├── app_log.c/h          # 日志初始化
@@ -73,6 +68,7 @@ OCFM_V2/
 │   ├── lvgl/                # LVGL 9.5.0 图形库
 │   └── Third_Party/         # FreeRTOS, FatFs
 ├── FATFS/                   # FatFs配置 (STM32CubeMX生成)
+├── Doc/                     # 硬件原理图和技术文档
 └── MDK-ARM/                 # Keil工程文件
 ```
 
@@ -167,7 +163,6 @@ void button_callback(...) {
 - `Core/Src/freertos.c` - FreeRTOS任务/定时器定义和启动流程
 - `Core/Inc/rtc_time.h` / `Core/Src/rtc_time.c` - 统一RTC时间API
 - `Middlewares/lvgl/lv_conf.h` - LVGL配置
-- `.eide/eide.yml` - EIDE构建配置
 
 ## UI 数据更新架构 (MVVM)
 

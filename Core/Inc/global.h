@@ -338,6 +338,4 @@ typedef enum
 #define DEFAULT_LANGUAGE         0           /* 语言 (中文) */
 #define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */
 
-extern ui_manager_t *ui_manager;
-
 #endif
