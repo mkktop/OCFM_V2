@@ -301,8 +301,8 @@ typedef enum
 // 基本参数默认值
 #define DEFAULT_RANGE_MAX        5000       /* 最大量程 5000mm */
 #define DEFAULT_HEIGHT           5000        /* 高度 5000mm */
-#define DEFAULT_CALIBRATION_4MA  313         /* 4mA校准值 */
-#define DEFAULT_CALIBRATION_20MA 1583       /* 20mA校准值 */
+#define DEFAULT_CALIBRATION_4MA  1150        /* 4mA校准值 */
+#define DEFAULT_CALIBRATION_20MA 4355       /* 20mA校准值 */
 #define DEFAULT_RANGE_4MA        0.0f        /* 4mA量程 (m³/h) */
 #define DEFAULT_RANGE_20MA       19.44f     /* 20mA量程 (m³/h) */
 #define DEFAULT_POINT_NUM        3           /* 小数点数量 */
