@@ -138,7 +138,7 @@ uint8_t modbus_master_add_sensor(modbus_master_t *master, uint8_t slave_id,
     sensor->start_addr = start_addr;    /* 寄存器起始地址 */
     sensor->quantity = quantity;        /* 寄存器数量 */
     sensor->retry_count = 0;            /* 重试计数器清零 */
-    sensor->is_active = 1;              /* 标记为在线状态 */
+    sensor->is_active = 0;              /* 默认离线，首次成功通信后置在线 */
     sensor->last_poll_time = 0;         /* 上次轮询时间清零 */
 
     /* 传感器计数增加 */

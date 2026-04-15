@@ -1,8 +1,8 @@
 /**
  * @file    app_alarm.c
- * @brief   ±¨¾¯Ä£¿éÊµÏÖ - Ë²Ê±Á÷Á¿±¨¾¯¿ØÖÆ¼ÌµçÆ÷
- * @details »ùÓÚË²Ê±Á÷Á¿(m?/h)´¥·¢ËÄÂ·¼ÌµçÆ÷±¨¾¯
- *          »Ø²îÂß¼­·ÀÖ¹Æµ·±´¥·¢/½â³ı
+ * @brief   æŠ¥è­¦æ¨¡å—å®ç° - ç¬æ—¶æµé‡æŠ¥è­¦æ§åˆ¶ç»§ç”µå™¨è¾“å‡º
+ * @details æ ¹æ®ç¬æ—¶æµé‡(mÂ³/h)æ§åˆ¶å››è·¯ç»§ç”µå™¨è¾“å‡º
+ *          æ»å›é€»è¾‘ï¼Œé˜²æ­¢é¢‘ç¹è§¦å‘/æ¢å¤
  */
 
 #include "app_alarm.h"
@@ -14,39 +14,39 @@
 #include <stdio.h>
 
 /*============================================================================*/
-/*                           Ë½ÓĞÊı¾İ                                           */
+/*                           ç§æœ‰æ•°æ®                                           */
 /*============================================================================*/
 
 /**
- * @brief ¼ÌµçÆ÷GPIOÓ³Éä±í
+ * @brief ç»§ç”µå™¨GPIOæ˜ å°„è¡¨
  */
 static const struct {
     GPIO_TypeDef *port;
     uint16_t pin;
 } relay_gpio_map[4] = {
-    {RELAY1_CTRL_GPIO_Port, RELAY1_CTRL_Pin},  /**< ¼ÌµçÆ÷1: PA4 */
-    {RELAY2_CTRL_GPIO_Port, RELAY2_CTRL_Pin},  /**< ¼ÌµçÆ÷2: PA5 */
-    {RELAY3_CTRL_GPIO_Port, RELAY3_CTRL_Pin},  /**< ¼ÌµçÆ÷3: PA6 */
-    {RELAY4_CTRL_GPIO_Port, RELAY4_CTRL_Pin},  /**< ¼ÌµçÆ÷4: PA7 */
+    {RELAY1_CTRL_GPIO_Port, RELAY1_CTRL_Pin},  /**< ç»§ç”µå™¨1: PA4 */
+    {RELAY2_CTRL_GPIO_Port, RELAY2_CTRL_Pin},  /**< ç»§ç”µå™¨2: PA5 */
+    {RELAY3_CTRL_GPIO_Port, RELAY3_CTRL_Pin},  /**< ç»§ç”µå™¨3: PA6 */
+    {RELAY4_CTRL_GPIO_Port, RELAY4_CTRL_Pin},  /**< ç»§ç”µå™¨4: PA7 */
 };
 
 /**
- * @brief ±¨¾¯×´Ì¬±í (µ±Ç°¸÷±¨¾¯ÊÇ·ñ¼¤»î)
+ * @brief æŠ¥è­¦çŠ¶æ€è¡¨ (å½“å‰æŠ¥è­¦æ˜¯å¦æ¿€æ´»)
  */
 static alarm_state_t alarm_states[ALARM_TYPE_COUNT] = {
-    ALARM_STATE_NORMAL,  /**< ÉÏÏŞ±¨¾¯×´Ì¬ */
-    ALARM_STATE_NORMAL,  /**< ÏÂÏŞ±¨¾¯×´Ì¬ */
-    ALARM_STATE_NORMAL,  /**< ÉÏÉÏÏŞ±¨¾¯×´Ì¬ */
-    ALARM_STATE_NORMAL   /**< ÏÂÏÂÏŞ±¨¾¯×´Ì¬ */
+    ALARM_STATE_NORMAL,  /**< ä¸Šé™æŠ¥è­¦çŠ¶æ€ */
+    ALARM_STATE_NORMAL,  /**< ä¸‹é™æŠ¥è­¦çŠ¶æ€ */
+    ALARM_STATE_NORMAL,  /**< ä¸Šä¸Šé™æŠ¥è­¦çŠ¶æ€ */
+    ALARM_STATE_NORMAL   /**< ä¸‹ä¸‹é™æŠ¥è­¦çŠ¶æ€ */
 };
 
 /*============================================================================*/
-/*                           Ë½ÓĞº¯Êı                                           */
+/*                           ç§æœ‰å‡½æ•°                                           */
 /*============================================================================*/
 
 /**
- * @brief  ¿ØÖÆ¼ÌµçÆ÷Êä³ö
- * @param  relay_index: ¼ÌµçÆ÷Ë÷Òı (0-3, ¶ÔÓ¦¼ÌµçÆ÷1-4)
+ * @brief  æ§åˆ¶ç»§ç”µå™¨åŠ¨ä½œ
+ * @param  relay_index: ç»§ç”µå™¨ç´¢å¼• (0-3, å¯¹åº”ç»§ç”µå™¨1-4)
  * @param  on: 1=ON(GPIO_PIN_SET), 0=OFF(GPIO_PIN_RESET)
  */
 static void relay_set(uint8_t relay_index, uint8_t on)
@@ -62,16 +62,16 @@ static void relay_set(uint8_t relay_index, uint8_t on)
 }
 
 /*============================================================================*/
-/*                           ¶ÔÍâ½Ó¿Ú                                           */
+/*                           å…¬å…±æ¥å£                                           */
 /*============================================================================*/
 
 /**
- * @brief  ³õÊ¼»¯±¨¾¯Ä£¿é
- * @note   Æô¶¯Ê±µ÷ÓÃ£¬³õÊ¼»¯¼ÌµçÆ÷Îª¹Ø±Õ×´Ì¬
+ * @brief  åˆå§‹åŒ–æŠ¥è­¦æ¨¡å—
+ * @note   å¯åŠ¨æ—¶è°ƒç”¨ï¼Œåˆå§‹åŒ–ç»§ç”µå™¨ä¸ºå…³é—­çŠ¶æ€
  */
 void app_alarm_init(void)
 {
-    /* ³õÊ¼»¯ËùÓĞ¼ÌµçÆ÷Îª¹Ø±Õ×´Ì¬ */
+    /* åˆå§‹åŒ–æ‰€æœ‰ç»§ç”µå™¨ä¸ºå…³é—­çŠ¶æ€ */
     for (uint8_t i = 0; i < 4; i++) {
         alarm_states[i] = ALARM_STATE_NORMAL;
         relay_set(i, 0);
@@ -79,19 +79,32 @@ void app_alarm_init(void)
 }
 
 /**
- * @brief  ¸üĞÂ±¨¾¯ÅĞ¶Ï (Ã¿Ãëµ÷ÓÃ)
- * @param  instant_flow_m3h: Ë²Ê±Á÷Á¿ (m?/h)
- * @note   ±¨¾¯Âß¼­ËµÃ÷£º
- *         ÉÏÏŞ±¨¾¯(AH)£ºÁ÷Á¿³¬¹ıAH´¥·¢¼ÌµçÆ÷1£¬µÍÓÚ(AH-DH)½â³ı
- *         ÏÂÏŞ±¨¾¯(AL)£ºÁ÷Á¿µÍÓÚAL´¥·¢¼ÌµçÆ÷2£¬¸ßÓÚ(AL+DL)½â³ı
- *         ÉÏÉÏÏŞ±¨¾¯(AAH)£ºÁ÷Á¿³¬¹ıAAH´¥·¢¼ÌµçÆ÷3£¬µÍÓÚAH½â³ı
- *         ÏÂÏÂÏŞ±¨¾¯(AAL)£ºÁ÷Á¿µÍÓÚAAL´¥·¢¼ÌµçÆ÷4£¬¸ßÓÚAL½â³ı
+ * @brief  æ›´æ–°æŠ¥è­¦åˆ¤æ–­ (æ¯ç§’è°ƒç”¨)
+ * @param  instant_flow_m3h: ç¬æ—¶æµé‡ (mÂ³/h)
+ * @param  sensor_online: ä¼ æ„Ÿå™¨æ˜¯å¦åœ¨çº¿ (0=ç¦»çº¿, 1=åœ¨çº¿)
+ * @note   æŠ¥è­¦é€»è¾‘è¯´æ˜
+ *         ä¸Šé™æŠ¥è­¦(AH)ï¼šè§¦å‘>=AHï¼Œæ¢å¤<AH-DH (å›å·®)
+ *         ä¸‹é™æŠ¥è­¦(AL)ï¼šè§¦å‘<=ALï¼Œæ¢å¤>AL+DL (å›å·®)
+ *         ä¸Šä¸Šé™æŠ¥è­¦(AAH)ï¼šè§¦å‘>=AAHï¼Œæ¢å¤<AH (æ— å›å·®)
+ *         ä¸‹ä¸‹é™æŠ¥è­¦(AAL)ï¼šè§¦å‘<=AALï¼Œæ¢å¤>AL (æ— å›å·®)
+ *         ä¼ æ„Ÿå™¨ç¦»çº¿æ—¶è§£é™¤æ‰€æœ‰æŠ¥è­¦
  */
-void app_alarm_update(float instant_flow_m3h)
+void app_alarm_update(float instant_flow_m3h, uint8_t sensor_online)
 {
     float ah, al, dh, dl, aah, aal;
 
-    /* »ñÈ¡±¨¾¯ãĞÖµ²ÎÊı (µ¥Î»: m?/h) */
+    /* ä¼ æ„Ÿå™¨ç¦»çº¿æ—¶è§£é™¤æ‰€æœ‰æŠ¥è­¦å¹¶è¿”å› */
+    if (!sensor_online) {
+        for (uint8_t i = 0; i < ALARM_TYPE_COUNT; i++) {
+            if (alarm_states[i] == ALARM_STATE_ACTIVE) {
+                alarm_states[i] = ALARM_STATE_NORMAL;
+                relay_set(i, 0);
+            }
+        }
+        return;
+    }
+
+    /* è·å–æŠ¥è­¦è®¾å®šå€¼ (å•ä½: mÂ³/h) */
     ah = app_config_get_alarm_ah();
     al = app_config_get_alarm_al();
     dh = app_config_get_alarm_dh();
@@ -99,12 +112,12 @@ void app_alarm_update(float instant_flow_m3h)
     aah = app_config_get_alarm_aah();
     aal = app_config_get_alarm_aal();
 
-    /* ========== ÉÏÏŞ±¨¾¯ (¼ÌµçÆ÷1) ========== */
-    /* ´¥·¢Ìõ¼ş: Á÷Á¿ > AH
-     * ½â³ıÌõ¼ş: Á÷Á¿ < AH - DH (»Ø²î) */
+    /* ========== ä¸Šé™æŠ¥è­¦ (ç»§ç”µå™¨1) ========== */
+    /* è§¦å‘æ¡ä»¶: æµé‡ >= AH
+     * æ¢å¤æ¡ä»¶: æµé‡ < AH - DH (å›å·®) */
     if (alarm_states[ALARM_TYPE_AH] == ALARM_STATE_NORMAL) {
-        /* Õı³£×´Ì¬£¬¼ì²éÊÇ·ñĞèÒª´¥·¢ */
-        if (instant_flow_m3h > ah) {
+        /* æ­£å¸¸çŠ¶æ€ï¼Œæ£€æŸ¥æ˜¯å¦éœ€è¦è§¦å‘ */
+        if (instant_flow_m3h >= ah) {
             alarm_states[ALARM_TYPE_AH] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AH, 1);
             {
@@ -114,7 +127,7 @@ void app_alarm_update(float instant_flow_m3h)
             }
         }
     } else {
-        /* ±¨¾¯×´Ì¬£¬¼ì²éÊÇ·ñĞèÒª½â³ı */
+        /* æŠ¥è­¦çŠ¶æ€ï¼Œæ£€æŸ¥æ˜¯å¦éœ€è¦æ¢å¤ */
         if (instant_flow_m3h < (ah - dh)) {
             alarm_states[ALARM_TYPE_AH] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AH, 0);
@@ -126,11 +139,11 @@ void app_alarm_update(float instant_flow_m3h)
         }
     }
 
-    /* ========== ÉÏÉÏÏŞ±¨¾¯ (¼ÌµçÆ÷3) ========== */
-    /* ´¥·¢Ìõ¼ş: Á÷Á¿ > AAH
-     * ½â³ıÌõ¼ş: Á÷Á¿ < AH (¸úËæÉÏÏŞ±¨¾¯½â³ı) */
+    /* ========== ä¸Šä¸Šé™æŠ¥è­¦ (ç»§ç”µå™¨3) ========== */
+    /* è§¦å‘æ¡ä»¶: æµé‡ >= AAH
+     * æ¢å¤æ¡ä»¶: æµé‡ < AH (æ— ç‹¬ç«‹å›å·®) */
     if (alarm_states[ALARM_TYPE_AAH] == ALARM_STATE_NORMAL) {
-        if (instant_flow_m3h > aah) {
+        if (instant_flow_m3h >= aah) {
             alarm_states[ALARM_TYPE_AAH] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AAH, 1);
             {
@@ -140,7 +153,7 @@ void app_alarm_update(float instant_flow_m3h)
             }
         }
     } else {
-        /* ÉÏÉÏÏŞ±¨¾¯½â³ıÌõ¼ş£ºÁ÷Á¿½µµ½ÉÏÏŞ±¨¾¯ÖµÒÔÏÂ */
+        /* ä¸Šä¸Šé™æŠ¥è­¦æ¢å¤ä¾èµ–äºä¸Šé™æŠ¥è­¦é˜ˆå€¼ */
         if (instant_flow_m3h < ah) {
             alarm_states[ALARM_TYPE_AAH] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AAH, 0);
@@ -152,12 +165,12 @@ void app_alarm_update(float instant_flow_m3h)
         }
     }
 
-    /* ========== ÏÂÏŞ±¨¾¯ (¼ÌµçÆ÷2) ========== */
-    /* ´¥·¢Ìõ¼ş: Á÷Á¿ < AL
-     * ½â³ıÌõ¼ş: Á÷Á¿ > AL + DL (»Ø²î) */
+    /* ========== ä¸‹é™æŠ¥è­¦ (ç»§ç”µå™¨2) ========== */
+    /* è§¦å‘æ¡ä»¶: æµé‡ <= AL
+     * æ¢å¤æ¡ä»¶: æµé‡ > AL + DL (å›å·®) */
     if (alarm_states[ALARM_TYPE_AL] == ALARM_STATE_NORMAL) {
-        /* Õı³£×´Ì¬£¬¼ì²éÊÇ·ñĞèÒª´¥·¢ */
-        if (instant_flow_m3h < al) {
+        /* æ­£å¸¸çŠ¶æ€ï¼Œæ£€æŸ¥æ˜¯å¦éœ€è¦è§¦å‘ */
+        if (instant_flow_m3h <= al) {
             alarm_states[ALARM_TYPE_AL] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AL, 1);
             {
@@ -167,7 +180,7 @@ void app_alarm_update(float instant_flow_m3h)
             }
         }
     } else {
-        /* ±¨¾¯×´Ì¬£¬¼ì²éÊÇ·ñĞèÒª½â³ı */
+        /* æŠ¥è­¦çŠ¶æ€ï¼Œæ£€æŸ¥æ˜¯å¦éœ€è¦æ¢å¤ */
         if (instant_flow_m3h > (al + dl)) {
             alarm_states[ALARM_TYPE_AL] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AL, 0);
@@ -179,11 +192,11 @@ void app_alarm_update(float instant_flow_m3h)
         }
     }
 
-    /* ========== ÏÂÏÂÏŞ±¨¾¯ (¼ÌµçÆ÷4) ========== */
-    /* ´¥·¢Ìõ¼ş: Á÷Á¿ < AAL
-     * ½â³ıÌõ¼ş: Á÷Á¿ > AL (¸úËæÏÂÏŞ±¨¾¯½â³ı) */
+    /* ========== ä¸‹ä¸‹é™æŠ¥è­¦ (ç»§ç”µå™¨4) ========== */
+    /* è§¦å‘æ¡ä»¶: æµé‡ <= AAL
+     * æ¢å¤æ¡ä»¶: æµé‡ > AL (æ— ç‹¬ç«‹å›å·®) */
     if (alarm_states[ALARM_TYPE_AAL] == ALARM_STATE_NORMAL) {
-        if (instant_flow_m3h < aal) {
+        if (instant_flow_m3h <= aal) {
             alarm_states[ALARM_TYPE_AAL] = ALARM_STATE_ACTIVE;
             relay_set(ALARM_TYPE_AAL, 1);
             {
@@ -193,7 +206,7 @@ void app_alarm_update(float instant_flow_m3h)
             }
         }
     } else {
-        /* ÏÂÏÂÏŞ±¨¾¯½â³ıÌõ¼ş£ºÁ÷Á¿Éıµ½ÏÂÏŞ±¨¾¯ÖµÒÔÉÏ */
+        /* ä¸‹ä¸‹é™æŠ¥è­¦æ¢å¤ä¾èµ–äºä¸‹é™æŠ¥è­¦é˜ˆå€¼ */
         if (instant_flow_m3h > al) {
             alarm_states[ALARM_TYPE_AAL] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AAL, 0);
@@ -207,9 +220,9 @@ void app_alarm_update(float instant_flow_m3h)
 }
 
 /**
- * @brief  »ñÈ¡Ö¸¶¨±¨¾¯ÀàĞÍµÄµ±Ç°×´Ì¬
- * @param  type: ±¨¾¯ÀàĞÍ
- * @retval ±¨¾¯×´Ì¬ (ALARM_STATE_NORMAL/ALARM_STATE_ACTIVE)
+ * @brief  è·å–æŒ‡å®šæŠ¥è­¦ç±»å‹çš„å½“å‰çŠ¶æ€
+ * @param  type: æŠ¥è­¦ç±»å‹
+ * @retval æŠ¥è­¦çŠ¶æ€ (ALARM_STATE_NORMAL/ALARM_STATE_ACTIVE)
  */
 alarm_state_t app_alarm_get_state(alarm_type_t type)
 {
@@ -220,13 +233,13 @@ alarm_state_t app_alarm_get_state(alarm_type_t type)
 }
 
 /**
- * @brief  »ñÈ¡ËùÓĞ¼ÌµçÆ÷×´Ì¬ (ÓÃÓÚModbus)
- * @param  relay_states: 4×Ö½ÚÊı×é£¬´æ´¢¼ÌµçÆ÷×´Ì¬ (0=OFF, 1=ON)
+ * @brief  è·å–æ‰€æœ‰ç»§ç”µå™¨çš„çŠ¶æ€ (ç”¨äºModbus)
+ * @param  relay_states: 4å­—èŠ‚æ•°ç»„ï¼Œå­˜å‚¨ç»§ç”µå™¨çŠ¶æ€ (0=OFF, 1=ON)
  */
 void app_alarm_get_relay_states(uint8_t relay_states[4])
 {
     for (uint8_t i = 0; i < 4; i++) {
-        /* Ö±½Ó´ÓGPIO¶ÁÈ¡Êµ¼Ê×´Ì¬ */
+        /* ç›´æ¥ä»GPIOè¯»å–å®é™…çŠ¶æ€ */
         GPIO_PinState state = HAL_GPIO_ReadPin(relay_gpio_map[i].port,
                                                 relay_gpio_map[i].pin);
         relay_states[i] = (state == GPIO_PIN_SET) ? 1 : 0;
@@ -234,9 +247,9 @@ void app_alarm_get_relay_states(uint8_t relay_states[4])
 }
 
 /**
- * @brief  ÊÖ¶¯ÉèÖÃ¼ÌµçÆ÷×´Ì¬ (ÓÃÓÚ²âÊÔ/µ÷ÊÔ)
- * @param  relay_index: ¼ÌµçÆ÷Ë÷Òı (0-3)
- * @param  state: ×´Ì¬ (0=OFF, 1=ON)
+ * @brief  æ‰‹åŠ¨è®¾ç½®ç»§ç”µå™¨çŠ¶æ€ (ç”¨äºè°ƒè¯•/æµ‹è¯•)
+ * @param  relay_index: ç»§ç”µå™¨ç´¢å¼• (0-3)
+ * @param  state: çŠ¶æ€ (0=OFF, 1=ON)
  */
 void app_alarm_set_relay(uint8_t relay_index, uint8_t state)
 {
@@ -244,6 +257,6 @@ void app_alarm_set_relay(uint8_t relay_index, uint8_t state)
         return;
     }
     relay_set(relay_index, state);
-    /* Í¬²½¸üĞÂ×´Ì¬±í */
+    /* åŒæ­¥æŠ¥è­¦çŠ¶æ€è¡¨ */
     alarm_states[relay_index] = (state) ? ALARM_STATE_ACTIVE : ALARM_STATE_NORMAL;
 }

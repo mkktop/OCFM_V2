@@ -368,9 +368,9 @@ void flow_refresh_fun(void *argument)
 
   flow_calc_update(water_level);
 
-  /* 报警判断: 传感器离线时传0解除所有报警 */
+  /* 报警判断: 传感器离线时不触发报警 */
   float flow_m3h = flow_calc_get_instant_lps() * 3.6f;
-  app_alarm_update(sensor && sensor->is_online ? flow_m3h : 0.0f);
+  app_alarm_update(flow_m3h, sensor && sensor->is_online);
 
   /* 4-20mA输出: 使用原始L/s转m³/h（确保单位一致） */
   app_current_update(flow_m3h);
