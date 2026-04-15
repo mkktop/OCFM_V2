@@ -44,6 +44,7 @@
 #include "lvgl.h"
 #include "app_config.h"
 #include "app_flow_calc.h"
+#include "app_current.h"
 #include "rtc_time.h"
 #include "../../Drivers/Button/button_driver.h"
 #include "ui_lang.h"
@@ -366,6 +367,7 @@ static uint8_t g_step_count;                  /* 当前参数的步进级数 */
 static uint8_t g_step_index;                  /* 当前选中的步进索引 */
 static uint32_t g_last_key_tick;              /* 最后一次按键操作的 tick */
 static lv_timer_t *g_idle_timer = NULL;       /* 空闲超时检测定时器 */
+static uint8_t g_is_cal_edit = 0;             /* 当前编辑的是校准参数 */
 
 #define IDLE_TIMEOUT_MS       15000            /* 15秒无操作自动返回主页 */
 #define IDLE_CHECK_PERIOD_MS  1000             /* 每秒检查一次 */
@@ -434,6 +436,15 @@ static void async_update_step_cb(void *context);
 static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
 static void idle_timeout_cb(lv_timer_t *timer);
 
+/**
+ * @brief  判断当前编辑项是否为校准参数
+ */
+static uint8_t is_calibration_item(const set_item_t *item)
+{
+    return (item->set == app_config_set_calibration_4ma ||
+            item->set == app_config_set_calibration_20ma);
+}
+
 /*============================================================================*/
 /*                          公共函数实现                                       */
 /*============================================================================*/
@@ -481,6 +492,7 @@ void set_page_exit(void)
         lv_timer_del(g_idle_timer);
         g_idle_timer = NULL;
     }
+    if (g_is_cal_edit) { g_is_cal_edit = 0; app_current_exit_calibration(); }
     lv_async_call(async_exit_to_main_cb, NULL);
 }
 
@@ -1111,6 +1123,11 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     } else {
         g_set_nav.edit_value = item->get();    /* uint32 路径 */
     }
+    /* 校准参数: 进入编辑时立即将PWM输出设为当前值 */
+    g_is_cal_edit = is_calibration_item(item);
+    if (g_is_cal_edit) {
+        app_current_set_calibration(g_set_nav.edit_value);
+    }
     lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
     /* format 回调(文字类型)用强调色，纯数字(含decimal/float)用白色 */
     if (item->format) {
@@ -1419,6 +1436,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             } else {
                 g_set_nav.edit_value = item->max_val;
             }
+            if (g_is_cal_edit) app_current_set_calibration(g_set_nav.edit_value);
             set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
             if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         }
@@ -1446,6 +1464,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             } else {
                 g_set_nav.edit_value = item->min_val;
             }
+            if (g_is_cal_edit) app_current_set_calibration(g_set_nav.edit_value);
             set_edit_val_context_t *ctxi = lv_malloc(sizeof(set_edit_val_context_t));
             if (ctxi) { ctxi->new_value = g_set_nav.edit_value; lv_async_call(async_update_edit_val_cb, ctxi); }
         }
@@ -1458,6 +1477,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             item->set(g_set_nav.edit_value);
         }
         /* 保存由 app_config_set/setf 内部标记 dirty, app_config_process() 延迟写入 EEPROM */
+        if (g_is_cal_edit) { g_is_cal_edit = 0; app_current_exit_calibration(); }
         g_edit_value_label = NULL;  /* 防止屏幕删除后的悬空指针 */
         g_edit_item = NULL;
         /* 返回参数列表 (重新创建屏幕以显示更新后的值) */
@@ -1473,6 +1493,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
     case BUTTON_ID_SHIFT:
         if (event == BUTTON_EVENT_LONG) {
             /* 长按: 放弃编辑，返回参数列表 */
+            if (g_is_cal_edit) { g_is_cal_edit = 0; app_current_exit_calibration(); }
             g_edit_value_label = NULL;
             g_edit_item = NULL;
             {
@@ -1530,6 +1551,7 @@ static void idle_timeout_cb(lv_timer_t *timer)
         }
         g_edit_value_label = NULL;
         g_edit_item = NULL;
+        if (g_is_cal_edit) { g_is_cal_edit = 0; app_current_exit_calibration(); }
         ui_manager->settings_screen = NULL;
         g_set_nav.level = SET_LEVEL_CATEGORY;
         set_screen_load(ui_manager->main_screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);

@@ -48,6 +48,18 @@ uint32_t app_current_calc_ma(float flow_data);
  */
 void app_current_format_ma(float flow_data, char *buf, uint32_t buf_size);
 
+/**
+ * @brief  进入/更新校准模式
+ * @param  ccr_value: 直接输出到PWM的CCR值
+ * @note   编辑校准值时调用，PWM直接跟随编辑值，正常更新被跳过
+ */
+void app_current_set_calibration(uint32_t ccr_value);
+
+/**
+ * @brief  退出校准模式，恢复正常PWM控制
+ */
+void app_current_exit_calibration(void);
+
 #ifdef __cplusplus
 }
 #endif

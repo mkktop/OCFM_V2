@@ -20,6 +20,12 @@
 #define TIM_ARR    1999
 
 /*============================================================================*/
+/*                           私有变量                                          */
+/*============================================================================*/
+
+static uint8_t s_cal_mode = 0;       /**< 校准模式标志 (1=校准中, 跳过正常更新) */
+
+/*============================================================================*/
 /*                           公共函数实现                                      */
 /*============================================================================*/
 
@@ -44,6 +50,9 @@ void app_current_init(void)
  */
 void app_current_update(float flow_data)
 {
+    /* 校准模式下跳过正常更新，PWM 由 app_current_set_calibration() 控制 */
+    if (s_cal_mode) return;
+
     uint32_t ccr_4ma  = app_config_get_calibration_4ma();
     uint32_t ccr_20ma = app_config_get_calibration_20ma();
     float range_4ma  = app_config_get_range_4ma();
@@ -109,4 +118,25 @@ void app_current_format_ma(float flow_data, char *buf, uint32_t buf_size)
     snprintf(buf, buf_size, "%lu.%02lumA",
              (unsigned long)(outma / 100),
              (unsigned long)(outma % 100));
+}
+
+/**
+ * @brief  进入/更新校准模式
+ * @param  ccr_value: 直接输出到PWM的CCR值
+ * @note   在设置页面编辑校准值时调用，PWM直接跟随编辑值输出
+ *         正常的 app_current_update() 在校准模式下被跳过
+ */
+void app_current_set_calibration(uint32_t ccr_value)
+{
+    s_cal_mode = 1;
+    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, ccr_value);
+}
+
+/**
+ * @brief  退出校准模式，恢复正常PWM控制
+ * @note   在退出校准编辑页时调用
+ */
+void app_current_exit_calibration(void)
+{
+    s_cal_mode = 0;
 }
