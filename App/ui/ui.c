@@ -12,6 +12,7 @@
 #include "app_sensor.h"
 #include "app_config.h"
 #include "app_alarm.h"
+#include "app_flow_calc.h"
 
 ui_manager_t *ui_manager;
 
@@ -198,30 +199,38 @@ static void ui_update_timer_cb(lv_timer_t *timer)
     /* 第五步：更新趋势图数据 */
     if (ui_manager->trend_chart != NULL) {
         /* 将瞬时流量从 L/s 转换为 m³/h，精度×100存入图表 */
-        float flow_m3h = g_app_model.instant_flow * 3.6f;
+        float flow_m3h = flow_calc_get_instant_lps() * 3.6f;
         int32_t flow_val = (int32_t)(flow_m3h * 100);
         ui_manager->trend_tick_counter++;
-        bool pushed = false;
-
-        /* 更新历史最大值 */
-        if (flow_m3h > ui_manager->trend_max_flow) {
-            ui_manager->trend_max_flow = flow_m3h;
-            lv_label_set_text_fmt(ui_manager->trend_max_label,
-                                  "MAX: %.2f m\xC2\xB3/h", ui_manager->trend_max_flow);
-        }
 
         /* 每10秒推入10秒采样序列 */
         if (ui_manager->trend_tick_counter % 10 == 0) {
             lv_chart_set_next_value(ui_manager->trend_chart,
                                     ui_manager->trend_series_10s, flow_val);
-            pushed = true;
+            lv_chart_refresh(ui_manager->trend_chart);
+
+            /* 从图表数据点中重新计算最大值 */
+            {
+                int32_t max_val = INT32_MIN;
+                int32_t *y_array = lv_chart_get_y_array(ui_manager->trend_chart,
+                                                         ui_manager->trend_series_10s);
+                uint16_t point_cnt = lv_chart_get_point_count(ui_manager->trend_chart);
+                for (uint16_t i = 0; i < point_cnt; i++) {
+                    if (y_array[i] != LV_CHART_POINT_NONE && y_array[i] > max_val)
+                        max_val = y_array[i];
+                }
+                float max_flow = (max_val == INT32_MIN) ? 0.0f : (float)max_val / 100.0f;
+                ui_manager->trend_max_flow = max_flow;
+                lv_label_set_text_fmt(ui_manager->trend_max_label,
+                                      "MAX: %.2f m\xC2\xB3/h", max_flow);
+            }
         }
 
         /* 每300秒(5分钟)推入5分钟采样序列 */
         if (ui_manager->trend_tick_counter % 300 == 0) {
             lv_chart_set_next_value(ui_manager->trend_chart,
                                     ui_manager->trend_series_5min, flow_val);
-            pushed = true;
+            lv_chart_refresh(ui_manager->trend_chart);
         }
 
     }
@@ -750,15 +759,45 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     lv_obj_set_style_bg_color(tile, lv_color_hex(0x1E272E), 0);
     lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
 
+    /* 计算Y轴量程 */
+    float range4 = app_config_get_range_4ma();
+    float range20 = app_config_get_range_20ma();
+    int32_t y_min = (int32_t)(range4 * 100);
+    int32_t y_max = (int32_t)(range20 * 100);
+
     /*--------------------------------------------------------------------*/
-    /* 第二部分：创建图表控件                                              */
+    /* 第二部分：Y轴标签 (手动创建，LVGL 9无内置坐标轴API)                */
+    /*--------------------------------------------------------------------*/
+
+    {
+        /* 图表区域: 左侧留36px给Y轴标签, 顶部留5px, 宽度320-36=284, 高度190 */
+        int32_t chart_x = 36;
+        int32_t chart_y = 5;
+        int32_t chart_h = 190;
+        const lv_font_t *axis_font = &lv_font_montserrat_10;
+
+        /* 5个Y轴标签: 从下到上 */
+        for (int i = 0; i <= 4; i++) {
+            float val = range4 + (range20 - range4) * i / 4.0f;
+            lv_obj_t *lbl = lv_label_create(tile);
+            lv_label_set_text_fmt(lbl, "%.1f", val);
+            lv_obj_set_style_text_font(lbl, axis_font, 0);
+            lv_obj_set_style_text_color(lbl, lv_color_hex(0xAAAAAA), 0);
+            /* 对齐到对应的图表Y位置 */
+            int32_t y_pos = chart_y + chart_h - (i * chart_h / 4) - 5;
+            lv_obj_align(lbl, LV_ALIGN_TOP_LEFT, 0, y_pos);
+        }
+    }
+
+    /*--------------------------------------------------------------------*/
+    /* 第三部分：创建图表控件                                              */
     /*--------------------------------------------------------------------*/
 
     lv_obj_t *chart = lv_chart_create(tile);
 
-    /* 图表位于顶部，底部留40px给信息栏 */
-    lv_obj_set_size(chart, LV_PCT(100), lv_pct(83));
-    lv_obj_align(chart, LV_ALIGN_TOP_LEFT, 0, 0);
+    /* 图表区域: 左侧留36px给Y轴标签, 宽度284, 高度190, 紧贴底部信息栏 */
+    lv_obj_set_size(chart, 284, 190);
+    lv_obj_align(chart, LV_ALIGN_TOP_LEFT, 36, 5);
 
     /* 设置图表类型为折线图 */
     lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
@@ -770,34 +809,33 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, 29);
 
     /* Y轴范围使用4mA/20mA量程（×100缩放） */
-    int32_t y_min = (int32_t)(app_config_get_range_4ma() * 100);
-    int32_t y_max = (int32_t)(app_config_get_range_20ma() * 100);
     lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, y_min, y_max);
 
-    /* 仅保留3条水平参考线，去除垂直参考线 */
-    lv_chart_set_div_line_count(chart, 3, 0);
+    /* 3条水平参考线 + 4条垂直参考线 */
+    lv_chart_set_div_line_count(chart, 3, 4);
 
     /*--------------------------------------------------------------------*/
-    /* 第三部分：添加数据序列                                              */
+    /* 第四部分：添加数据序列（先添加的在底层，后添加的在顶层）            */
     /*--------------------------------------------------------------------*/
 
-    /* 10秒采样序列（蓝色，5分钟历史） */
+    /* 10秒采样序列（蓝色，5分钟历史） - 底层 */
     lv_chart_series_t *ser_10s = lv_chart_add_series(chart,
                                                       lv_color_hex(0x3498DB),
                                                       LV_CHART_AXIS_PRIMARY_Y);
 
-    /* 5分钟采样序列（橙色，150分钟历史） */
+    /* 5分钟采样序列（橙色，150分钟历史） - 顶层 */
     lv_chart_series_t *ser_5min = lv_chart_add_series(chart,
                                                        lv_color_hex(0xF39C12),
                                                        LV_CHART_AXIS_PRIMARY_Y);
 
     /*--------------------------------------------------------------------*/
-    /* 第四部分：图表样式配置                                              */
+    /* 第五部分：图表样式配置                                              */
     /*--------------------------------------------------------------------*/
 
     lv_obj_set_style_bg_color(chart, lv_color_hex(0x1E272E), 0);
     lv_obj_set_style_bg_opa(chart, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(chart, 0, 0);
+    lv_obj_set_style_size(chart, 2, 2, LV_PART_INDICATOR);
     lv_obj_set_style_pad_all(chart, 5, 0);
 
     /*--------------------------------------------------------------------*/
@@ -806,7 +844,7 @@ static void create_trend_chart_tile(lv_obj_t *tile)
 
     lv_obj_t *info_bar = lv_obj_create(tile);
     lv_obj_set_size(info_bar, LV_PCT(100), 40);
-    lv_obj_align(info_bar, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(info_bar, LV_ALIGN_BOTTOM_LEFT, 0, -5);
     lv_obj_set_style_bg_opa(info_bar, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(info_bar, 0, 0);
     lv_obj_set_style_pad_all(info_bar, 5, 0);

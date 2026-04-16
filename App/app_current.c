@@ -124,12 +124,23 @@ void app_current_format_ma(float flow_data, char *buf, uint32_t buf_size)
 }
 
 /**
- * @brief  进入/更新校准模式
+ * @brief  进入/更新校准模式 (显示屏路径)
  * @param  ccr_value: 直接输出到PWM的CCR值
- * @note   在设置页面编辑校准值时调用，PWM直接跟随编辑值输出
- *         正常的 app_current_update() 在校准模式下被跳过
+ * @note   显示屏校准由UI自己管理退出，不受tick超时影响
  */
 void app_current_set_calibration(uint32_t ccr_value)
+{
+    s_cal_mode = 1;
+    s_cal_tick = 0;  /* 显示屏校准不启用tick超时 */
+    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, ccr_value);
+}
+
+/**
+ * @brief  进入/更新校准模式 (Modbus路径)
+ * @param  ccr_value: 直接输出到PWM的CCR值
+ * @note   10秒无新的校准写入则自动退出
+ */
+void app_current_set_calibration_modbus(uint32_t ccr_value)
 {
     s_cal_mode = 1;
     s_cal_tick = HAL_GetTick();

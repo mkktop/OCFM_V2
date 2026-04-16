@@ -172,13 +172,13 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
     if (cid == CONFIG_ID_CALIBRATION_4MA) {
         if (val16 < 805 || val16 > 1495) return;
         app_config_set(cid, (uint32_t)val16);
-        app_current_set_calibration(val16);
+        app_current_set_calibration_modbus(val16);
         return;
     }
     if (cid == CONFIG_ID_CALIBRATION_20MA) {
         if (val16 < 3049 || val16 > 5662) return;
         app_config_set(cid, (uint32_t)val16);
-        app_current_set_calibration(val16);
+        app_current_set_calibration_modbus(val16);
         return;
     }
 

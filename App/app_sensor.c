@@ -58,6 +58,7 @@ static struct {
 } g_temp_state;
 
 static uint8_t sensor_prev_online = 0;  /**< 上次传感器在线状态 */
+static uint8_t sensor_first_sync_done = 0;  /**< 首次上线同步标志 */
 
 /*============================================================================*/
 /*                           私有函数声明                                      */
@@ -96,8 +97,7 @@ void app_sensor_init(void)
     /* 注册参数变更同步回调 */
     app_sensor_register_config_callback();
 
-    /* 同步EEPROM中的配置参数到传感器 */
-    sync_all_params_to_sensor();
+    /* 首次同步延迟到传感器上线后再执行 */
 }
 
 /**
@@ -129,6 +129,13 @@ void app_sensor_poll(void)
             app_log_send(LOG_TYPE_SYSTEM,
                          g_sensor_data.is_online ? "SENSOR ONLINE" : "SENSOR OFFLINE");
             sensor_prev_online = g_sensor_data.is_online;
+
+            /* 传感器首次上线时，同步所有配置参数 */
+            if (g_sensor_data.is_online && !sensor_first_sync_done)
+            {
+                sensor_first_sync_done = 1;
+                sync_all_params_to_sensor();
+            }
         }
 
         if (g_sensor_data.is_online)
