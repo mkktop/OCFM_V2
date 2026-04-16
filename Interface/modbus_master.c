@@ -493,19 +493,23 @@ void modbus_master_send_frame(modbus_master_t *master, uint8_t *data, uint16_t l
 
     /*
      * 步骤3：等待发送完成
-     * 轮询检查UART状态，直到发送完成
-     * 注意：这里使用忙等待，适合Modbus这种对时序要求严格的场景
+     * 先等DMA传输完成，再等UART移位寄存器发完最后一个字节
      */
     while (HAL_UART_GetState(master->huart) == HAL_UART_STATE_BUSY_TX)
     {
-        /* 可以在此添加超时保护，防止死循环 */
+        /* 等待DMA将所有数据写入UART TDR */
     }
 
-    HAL_Delay(1);  /* 确保最后一个字节完全发送 */
+    /* 等待UART移位寄存器发送完成 (TC=Transmission Complete)
+     * DMA完成 ≠ 发送完成，DMA完成时最后几个字节可能还在移位寄存器中
+     * 必须等TC标志才能切换RS485方向，否则尾部字节会被截断 */
+    while (__HAL_UART_GET_FLAG(master->huart, UART_FLAG_TC) == RESET)
+    {
+    }
 
     /*
      * 步骤4：切换RS485到接收模式
-     * 发送完成后立即切换，准备接收从机响应
+     * 确保最后一个停止位已发出后才切换方向
      */
     HAL_GPIO_WritePin(UART1_CTRL_GPIO_Port, UART1_CTRL_Pin, GPIO_PIN_RESET);
 }

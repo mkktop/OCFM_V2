@@ -542,12 +542,15 @@ void modbus_slave_send(modbus_slave_t *slave, uint8_t *data, uint16_t length)
     /* 使用DMA发送数据 */
     HAL_UART_Transmit_DMA(slave->huart, data, length);
 
-    /* 等待发送完成 */
+    /* 等待DMA传输完成 */
     while (HAL_UART_GetState(slave->huart) == HAL_UART_STATE_BUSY_TX)
     {
     }
 
-    HAL_Delay(1);
+    /* 等待UART移位寄存器发送完成，防止尾部字节截断 */
+    while (__HAL_UART_GET_FLAG(slave->huart, UART_FLAG_TC) == RESET)
+    {
+    }
 
     /*
      * 切换RS485到接收模式

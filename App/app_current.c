@@ -24,6 +24,9 @@
 /*============================================================================*/
 
 static uint8_t s_cal_mode = 0;       /**< 校准模式标志 (1=校准中, 跳过正常更新) */
+static uint32_t s_cal_tick = 0;      /**< 校准模式进入时间戳 */
+
+#define CAL_TIMEOUT_MS  10000        /**< 校准模式超时: 10秒无更新自动退出 */
 
 /*============================================================================*/
 /*                           公共函数实现                                      */
@@ -129,14 +132,27 @@ void app_current_format_ma(float flow_data, char *buf, uint32_t buf_size)
 void app_current_set_calibration(uint32_t ccr_value)
 {
     s_cal_mode = 1;
+    s_cal_tick = HAL_GetTick();
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, ccr_value);
 }
 
 /**
  * @brief  退出校准模式，恢复正常PWM控制
- * @note   在退出校准编辑页时调用
+ * @note   在退出校准编辑页或超时时调用
  */
 void app_current_exit_calibration(void)
 {
     s_cal_mode = 0;
+    s_cal_tick = 0;
+}
+
+/**
+ * @brief  校准模式超时检测，需周期调用
+ * @note   10秒无新的校准写入则自动退出
+ */
+void app_current_calibration_tick(void)
+{
+    if (s_cal_mode && s_cal_tick && (HAL_GetTick() - s_cal_tick >= CAL_TIMEOUT_MS)) {
+        app_current_exit_calibration();
+    }
 }

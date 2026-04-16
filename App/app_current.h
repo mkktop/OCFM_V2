@@ -60,6 +60,12 @@ void app_current_set_calibration(uint32_t ccr_value);
  */
 void app_current_exit_calibration(void);
 
+/**
+ * @brief  校准模式超时检测 (周期调用)
+ * @note   10秒无新的校准写入则自动退出校准模式
+ */
+void app_current_calibration_tick(void);
+
 #ifdef __cplusplus
 }
 #endif

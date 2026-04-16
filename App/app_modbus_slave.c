@@ -13,6 +13,7 @@
 #include "app_sensor.h"
 #include "rtc_time.h"
 #include "app_log.h"
+#include "app_current.h"
 #include "global.h"
 #include "usart.h"
 #include <string.h>
@@ -166,6 +167,21 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
 
     /* 单寄存器值 (uint16) */
     uint16_t val16 = modbus_slave_get_holding_register(start_addr);
+
+    /* 校准值: 范围限制 + 进入校准模式实时输出 PWM */
+    if (cid == CONFIG_ID_CALIBRATION_4MA) {
+        if (val16 < 805 || val16 > 1495) return;
+        app_config_set(cid, (uint32_t)val16);
+        app_current_set_calibration(val16);
+        return;
+    }
+    if (cid == CONFIG_ID_CALIBRATION_20MA) {
+        if (val16 < 3049 || val16 > 5662) return;
+        app_config_set(cid, (uint32_t)val16);
+        app_current_set_calibration(val16);
+        return;
+    }
+
     app_config_set(cid, (uint32_t)val16);
 }
 
@@ -180,6 +196,9 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
 void app_modbus_slave_update(void)
 {
     SensorData_t *sensor = app_sensor_get_data();
+
+    /* 校准模式超时检测 */
+    app_current_calibration_tick();
 
     /* 物位 (水位) - 0x0001 */
     if (sensor != NULL && sensor->is_online)
