@@ -141,7 +141,7 @@ void app_alarm_update(float instant_flow_m3h, uint8_t sensor_online)
 
     /* ========== 上上限报警 (继电器3) ========== */
     /* 触发条件: 流量 >= AAH
-     * 恢复条件: 流量 < AH (无独立回差) */
+     * 恢复条件: 流量 < AAH - DH (与AH共用回差DH) */
     if (alarm_states[ALARM_TYPE_AAH] == ALARM_STATE_NORMAL) {
         if (instant_flow_m3h >= aah) {
             alarm_states[ALARM_TYPE_AAH] = ALARM_STATE_ACTIVE;
@@ -153,8 +153,7 @@ void app_alarm_update(float instant_flow_m3h, uint8_t sensor_online)
             }
         }
     } else {
-        /* 上上限报警恢复依赖于上限报警阈值 */
-        if (instant_flow_m3h < ah) {
+        if (instant_flow_m3h < (aah - dh)) {
             alarm_states[ALARM_TYPE_AAH] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AAH, 0);
             {
@@ -194,7 +193,7 @@ void app_alarm_update(float instant_flow_m3h, uint8_t sensor_online)
 
     /* ========== 下下限报警 (继电器4) ========== */
     /* 触发条件: 流量 <= AAL
-     * 恢复条件: 流量 > AL (无独立回差) */
+     * 恢复条件: 流量 > AAL + DL (与AL共用回差DL) */
     if (alarm_states[ALARM_TYPE_AAL] == ALARM_STATE_NORMAL) {
         if (instant_flow_m3h <= aal) {
             alarm_states[ALARM_TYPE_AAL] = ALARM_STATE_ACTIVE;
@@ -206,8 +205,7 @@ void app_alarm_update(float instant_flow_m3h, uint8_t sensor_online)
             }
         }
     } else {
-        /* 下下限报警恢复依赖于下限报警阈值 */
-        if (instant_flow_m3h > al) {
+        if (instant_flow_m3h > (aal + dl)) {
             alarm_states[ALARM_TYPE_AAL] = ALARM_STATE_NORMAL;
             relay_set(ALARM_TYPE_AAL, 0);
             {

@@ -46,7 +46,8 @@ static const char *get_flow_unit_str(void)
  */
 static void ui_config_change_cb(config_id_t id)
 {
-    if (id == CONFIG_ID_RANGE_4MA || id == CONFIG_ID_RANGE_20MA)
+    if (id == CONFIG_ID_RANGE_4MA || id == CONFIG_ID_RANGE_20MA ||
+        id == CONFIG_ID_FACTORY_RESET)
     {
         ui_trend_update_range();
     }

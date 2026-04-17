@@ -387,6 +387,24 @@ uint8_t app_config_setf(config_id_t id, float value)
         return CONFIG_ERR_RANGE;
     }
 
+    /* 关联校验: AAH >= AH, AAL <= AL */
+    if (id == CONFIG_ID_ALARM_AAH && value < g_config.alarm_ah)
+    {
+        return CONFIG_ERR_RANGE;
+    }
+    if (id == CONFIG_ID_ALARM_AAL && value > g_config.alarm_al)
+    {
+        return CONFIG_ERR_RANGE;
+    }
+    if (id == CONFIG_ID_ALARM_AH && value > g_config.alarm_aah)
+    {
+        return CONFIG_ERR_RANGE;
+    }
+    if (id == CONFIG_ID_ALARM_AL && value < g_config.alarm_aal)
+    {
+        return CONFIG_ERR_RANGE;
+    }
+
     switch (id)
     {
         case CONFIG_ID_RANGE_4MA:  g_config.range_4ma  = value; break;
