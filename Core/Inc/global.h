@@ -338,6 +338,6 @@ typedef enum
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         1           /* 语言 (中文) */
 #define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */
-#define DEFAULT_PASSWORD_ENABLE  1           /* 密码锁 (默认启用) */
+#define DEFAULT_PASSWORD_ENABLE  0           /* 密码锁 (默认关闭) */
 
 #endif

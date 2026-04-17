@@ -786,6 +786,7 @@ static void create_trend_chart_tile(lv_obj_t *tile)
             /* 对齐到对应的图表Y位置 */
             int32_t y_pos = chart_y + chart_h - (i * chart_h / 4) - 5;
             lv_obj_align(lbl, LV_ALIGN_TOP_LEFT, 0, y_pos);
+            ui_manager->trend_y_labels[i] = lbl;
         }
     }
 
@@ -815,18 +816,18 @@ static void create_trend_chart_tile(lv_obj_t *tile)
     lv_chart_set_div_line_count(chart, 3, 4);
 
     /*--------------------------------------------------------------------*/
-    /* 第四部分：添加数据序列（先添加的在底层，后添加的在顶层）            */
+    /* 第四部分：添加数据序列（LVGL按链表逆序绘制，先添加的在最上层）      */
     /*--------------------------------------------------------------------*/
 
-    /* 10秒采样序列（蓝色，5分钟历史） - 底层 */
-    lv_chart_series_t *ser_10s = lv_chart_add_series(chart,
-                                                      lv_color_hex(0x3498DB),
-                                                      LV_CHART_AXIS_PRIMARY_Y);
-
-    /* 5分钟采样序列（橙色，150分钟历史） - 顶层 */
+    /* 5分钟采样序列（橙色） - 先添加=链表头=最后绘制=顶层 */
     lv_chart_series_t *ser_5min = lv_chart_add_series(chart,
                                                        lv_color_hex(0xF39C12),
                                                        LV_CHART_AXIS_PRIMARY_Y);
+
+    /* 10秒采样序列（蓝色） - 后添加=链表尾=先绘制=底层 */
+    lv_chart_series_t *ser_10s = lv_chart_add_series(chart,
+                                                      lv_color_hex(0x3498DB),
+                                                      LV_CHART_AXIS_PRIMARY_Y);
 
     /*--------------------------------------------------------------------*/
     /* 第五部分：图表样式配置                                              */
@@ -1148,9 +1149,19 @@ void ui_trend_update_range(void)
 {
     if (ui_manager == NULL || ui_manager->trend_chart == NULL) return;
 
-    int32_t y_min = (int32_t)(app_config_get_range_4ma() * 100);
-    int32_t y_max = (int32_t)(app_config_get_range_20ma() * 100);
+    float range4 = app_config_get_range_4ma();
+    float range20 = app_config_get_range_20ma();
+    int32_t y_min = (int32_t)(range4 * 100);
+    int32_t y_max = (int32_t)(range20 * 100);
     lv_chart_set_axis_range(ui_manager->trend_chart, LV_CHART_AXIS_PRIMARY_Y, y_min, y_max);
+
+    /* 同步更新Y轴刻度标签 */
+    for (int i = 0; i <= 4; i++) {
+        if (ui_manager->trend_y_labels[i] != NULL) {
+            float val = range4 + (range20 - range4) * i / 4.0f;
+            lv_label_set_text_fmt(ui_manager->trend_y_labels[i], "%.1f", val);
+        }
+    }
 }
 
 /*============================================================================*/

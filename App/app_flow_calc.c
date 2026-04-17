@@ -465,8 +465,6 @@ void flow_calc_load_total(void)
  */
 void flow_calc_update(float water_level_m)
 {
-    float instant_flow_m3h;
-
     /* 传感器离线时累计时长不递增 */
     if (water_level_m <= 0.0f) {
         s_instant_flow_lps = 0.0f;
@@ -483,7 +481,7 @@ void flow_calc_update(float water_level_m)
 
     /* 累加累计流量: L/s * 1s = L, 除以1000转m³
      * 注意：使用double精度计算，避免float除法丢失精度 */
-    s_total_flow_m3 += (double)s_instant_flow / 1000.0;
+    s_total_flow_m3 += (double)s_instant_flow_lps / 1000.0;
 
     /* 单位转换 */
     if (app_config_get_instant_unit() != FLOW_UNIT_L_S) {

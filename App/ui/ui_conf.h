@@ -38,6 +38,7 @@ typedef struct{
     lv_chart_series_t *trend_series_10s;  ///< 10秒采样序列 (30点=5分钟历史)
     lv_chart_series_t *trend_series_5min; ///< 5分钟采样序列 (30点=150分钟历史)
     lv_obj_t *trend_max_label;           ///< 底部最大值标签
+    lv_obj_t *trend_y_labels[5];         ///< Y轴刻度标签 (0%~100%)
     uint32_t trend_tick_counter;         ///< 秒计数器
     float trend_max_flow;                ///< 历史最大瞬时流量 (m³/h)
     uint8_t prev_sensor_online;          ///< 上一次传感器在线状态（用于检测变化）
