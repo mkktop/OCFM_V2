@@ -32,19 +32,29 @@ static const reg_map_t reg_map[] = {
     {REG_WUWEI,            0},
     {REG_DISTANCE,         1},
     {REG_TEMPERATURE,      2},
-    {REG_INSTANT_FLOW,     3},   /* 占2个索引: 3,4 */
-    {REG_SUM_FLOW,         5},   /* 占4个索引: 5,6,7,8 */
+    {REG_INSTANT_FLOW,     3},   /* float 占2个索引: 3,4 */
+    {0x0005,               4},   /* 瞬时流量低字 */
+    {REG_SUM_FLOW,         5},   /* double 占4个索引: 5,6,7,8 */
+    {0x0007,               6},   /* 累计流量字2 */
+    {0x0008,               7},   /* 累计流量字3 */
+    {0x0009,               8},   /* 累计流量字4 */
     {REG_RELAY1_STATUS,    9},
     {REG_RELAY2_STATUS,    10},
     {REG_RELAY3_STATUS,    11},
     {REG_RELAY4_STATUS,    12},
-    /* 报警值区 (0x000E-0x0017) */
-    {REG_AH,               13},  /* 占2个: 13,14 */
-    {REG_DH,               15},  /* 占2个: 15,16 */
-    {REG_AL,               17},  /* 占2个: 17,18 */
-    {REG_DL,               19},  /* 占2个: 19,20 */
-    {REG_AAH,              21},  /* 占2个: 21,22 */
-    {REG_AAL,              23},  /* 占2个: 23,24 */
+    /* 报警值区 (0x000E-0x0019) */
+    {REG_AH,               13},  /* float 占2个: 13,14 */
+    {0x000F,               14},  /* AH低字 */
+    {REG_DH,               15},  /* float 占2个: 15,16 */
+    {0x0011,               16},  /* DH低字 */
+    {REG_AL,               17},  /* float 占2个: 17,18 */
+    {0x0013,               18},  /* AL低字 */
+    {REG_DL,               19},  /* float 占2个: 19,20 */
+    {0x0015,               20},  /* DL低字 */
+    {REG_AAH,              21},  /* float 占2个: 21,22 */
+    {0x0017,               22},  /* AAH低字 */
+    {REG_AAL,              23},  /* float 占2个: 23,24 */
+    {0x0019,               24},  /* AAL低字 */
     /* 传感器参数区 (0x0065-0x006F) */
     {REG_RANGE_MAX,        25},
     {REG_HEIGHT,           26},
@@ -57,20 +67,15 @@ static const reg_map_t reg_map[] = {
     {REG_ADDRESS,          33},
     {REG_BAUDE_RATE,       34},
     {REG_STOP_BITS,        35},
-    /* 从机参数区 (0x0101-0x0107) */
+    /* 从机参数区 (0x0101-0x0108) */
     {REG_CANALS__TYPE,     36},
     {REG_CHANNEL_ID,       37},
     {REG_INSTANT_UNIT,     38},
     {REG_SUM_POINT,        39},
-    {REG_RANGE_4MA,        40},  /* 占2个: 40,41 */
-    {REG_RANGE_20MA,       42},  /* 占2个: 42,43 */
-    /* 出厂校准区 (0x1002-0x1006) */
-    {REG_DEAD_ZONE,        44},
-    {REG_DIS_OFFSET,       45},
-    {REG_CALIBRATION_4MA,  46},
-    {REG_CALIBRATION_20MA, 47},
-    {REG_FACTORY_SETTING,  48},
-    {REG_CLEAR_TOTAL,      49},
+    {REG_RANGE_4MA,        40},  /* float 占2个: 40,41 */
+    {0x0106,               41},  /* 4mA量程低字 */
+    {REG_RANGE_20MA,       42},  /* float 占2个: 42,43 */
+    {0x0108,               43},  /* 20mA量程低字 */
     /* RTC时间设置区 (0x0200-0x0206) */
     {REG_RTC_YEAR,         50},
     {REG_RTC_MONTH,        51},
@@ -79,6 +84,13 @@ static const reg_map_t reg_map[] = {
     {REG_RTC_MINUTE,       54},
     {REG_RTC_SECOND,       55},
     {REG_RTC_WEEKDAY,      56},
+    /* 出厂校准区 (0x1001-0x1006) */
+    {REG_DEAD_ZONE,        44},
+    {REG_DIS_OFFSET,       45},
+    {REG_CALIBRATION_4MA,  46},
+    {REG_CALIBRATION_20MA, 47},
+    {REG_FACTORY_SETTING,  48},
+    {REG_CLEAR_TOTAL,      49},
 };
 
 #define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))

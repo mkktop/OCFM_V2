@@ -318,7 +318,7 @@ typedef enum
 
 // Modbus从机参数默认值
 #define DEFAULT_MODBUS_ADDR      1           /* Modbus地址 */
-#define DEFAULT_MODBUS_BAUD      1           /* 波特率索引 */
+#define DEFAULT_MODBUS_BAUD      2           /* 波特率索引 (2=9600) */
 #define DEFAULT_MODBUS_STOP      1           /* 停止位索引 */
 
 // 报警参数默认值
