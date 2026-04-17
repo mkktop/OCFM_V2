@@ -47,6 +47,59 @@ static void format_total_time(uint32_t total_sec, char *buf, size_t buf_size)
              (unsigned long)seconds);
 }
 
+static uint32_t count_integer_digits_from_string(const char *str)
+{
+    uint32_t digits = 0;
+
+    if (*str == '-') {
+        str++;
+    }
+
+    while (*str >= '0' && *str <= '9') {
+        digits++;
+        str++;
+    }
+
+    return digits > 0 ? digits : 1;
+}
+
+static uint32_t limit_instant_flow_decimals(uint32_t point_num, uint32_t integer_digits)
+{
+    uint32_t max_decimals = point_num;
+
+    if (integer_digits > 8) {
+        max_decimals = 0;
+    } else if (integer_digits > 7 && max_decimals > 1) {
+        max_decimals = 1;
+    } else if (integer_digits > 6 && max_decimals > 2) {
+        max_decimals = 2;
+    }
+
+    return max_decimals;
+}
+
+static void format_instant_flow(float value, uint32_t point_num, char *buf, size_t buf_size)
+{
+    char fmt[8];
+    uint32_t decimals = point_num;
+    uint32_t limited_decimals;
+
+    do {
+        snprintf(fmt, sizeof(fmt), "%%.%luf", (unsigned long)decimals);
+        snprintf(buf, buf_size, fmt, value);
+
+        limited_decimals = limit_instant_flow_decimals(
+            point_num,
+            count_integer_digits_from_string(buf));
+
+        if (limited_decimals >= decimals) {
+            break;
+        }
+
+        decimals = limited_decimals;
+    } while (1);
+}
+
 /**
  * @brief 更新应用数据模型
  * @details 每秒调用一次，更新：
@@ -90,9 +143,9 @@ void app_model_update(void)
     char fmt[8];
 
     /* 瞬时流量 */
-    snprintf(fmt, sizeof(fmt), "%%.%luf", (unsigned long)point_num);
-    snprintf(g_app_model.instant_flow_str, sizeof(g_app_model.instant_flow_str),
-             fmt, g_app_model.instant_flow);
+    format_instant_flow(g_app_model.instant_flow, point_num,
+                        g_app_model.instant_flow_str,
+                        sizeof(g_app_model.instant_flow_str));
 
     /* 累计流量 */
     snprintf(fmt, sizeof(fmt), "%%.%luf", (unsigned long)sum_point);
