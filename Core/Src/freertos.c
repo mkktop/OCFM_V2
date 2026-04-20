@@ -344,6 +344,7 @@ void modbus_slave_task_func(void *argument)
   {
     /* 非阻塞处理Modbus请求 */
     modbus_slave_task(&sensor_slave);
+    app_modbus_slave_process_pending();
 
     /* 每1秒更新一次寄存器数据 */
     if (++update_counter >= 100)

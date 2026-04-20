@@ -529,6 +529,14 @@ uint8_t app_config_set_change_callback(void (*cb)(config_id_t id))
 {
     for (uint8_t i = 0; i < CONFIG_MAX_CHANGE_CB; i++)
     {
+        if (g_config_change_cbs[i] == cb)
+        {
+            return 0;
+        }
+    }
+
+    for (uint8_t i = 0; i < CONFIG_MAX_CHANGE_CB; i++)
+    {
         if (g_config_change_cbs[i] == NULL)
         {
             g_config_change_cbs[i] = cb;

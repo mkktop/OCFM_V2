@@ -37,6 +37,12 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity);
  */
 void app_modbus_slave_update(void);
 
+/**
+ * @brief 处理挂起的通信参数更新
+ * @note 在 Modbus 从机任务循环中调用，安全应用波特率/停止位/地址变更
+ */
+void app_modbus_slave_process_pending(void);
+
 #ifdef __cplusplus
 }
 #endif

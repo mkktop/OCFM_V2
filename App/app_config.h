@@ -186,7 +186,7 @@ typedef void (*config_change_callback_t)(config_id_t id);
  * @brief 注册参数变更回调
  * @param cb: 回调函数指针，参数变更时被调用
  * @retval 0: 成功, 1: 已满
- * @note 最多支持2个监听者
+ * @note 最多支持4个监听者，重复注册同一回调视为成功
  */
 uint8_t app_config_set_change_callback(config_change_callback_t cb);
 

@@ -192,9 +192,20 @@ void modbus_slave_init(modbus_slave_t *slave, UART_HandleTypeDef *huart)
     /* 清零寄存器 */
     memset(holding_registers, 0, sizeof(holding_registers));
 
+    modbus_slave_restart_rx(slave, huart);
+}
+
+void modbus_slave_restart_rx(modbus_slave_t *slave, UART_HandleTypeDef *huart)
+{
+    slave->huart = huart;
+    slave->rx_length = 0;
+    slave->state = MODBUS_SLAVE_STATE_IDLE;
+
     /* 清零接收标志 */
     rx_complete_flag = 0;
     rx_complete_length = 0;
+
+    memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
 
     /*
      * 启动DMA+空闲中断接收模式
@@ -258,6 +269,23 @@ void modbus_slave_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size)
  */
 void modbus_slave_task(modbus_slave_t *slave)
 {
+    /*
+     * UART错误自动恢复
+     * DMA模式下，任何UART错误(FE/ORE/NE)都会导致HAL中止DMA接收，
+     * 使RxState变为READY。此处检测到异常后重新启动DMA+空闲中断接收。
+     */
+    if (slave->huart != NULL && slave->huart->RxState != HAL_UART_STATE_BUSY_RX)
+    {
+        __HAL_UART_CLEAR_OREFLAG(slave->huart);
+        slave->huart->ErrorCode = HAL_UART_ERROR_NONE;
+
+        rx_complete_flag = 0;
+        rx_complete_length = 0;
+        slave->rx_length = 0;
+        memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
+        HAL_UARTEx_ReceiveToIdle_DMA(slave->huart, dma_rx_buffer, sizeof(dma_rx_buffer));
+    }
+
     /* 检查是否收到完整的Modbus请求帧 */
     if (!rx_complete_flag)
     {

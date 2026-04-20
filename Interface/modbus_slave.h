@@ -68,6 +68,14 @@ void modbus_slave_set_write_callback(modbus_write_callback_t callback);
 void modbus_slave_init(modbus_slave_t *slave, UART_HandleTypeDef *huart);
 
 /**
+ * @brief 轻量重启Modbus从机接收
+ * @param slave 从机结构体指针
+ * @param huart 串口句柄指针
+ * @note 用于运行时重配UART后恢复DMA+空闲中断接收，不清空寄存器和从机地址
+ */
+void modbus_slave_restart_rx(modbus_slave_t *slave, UART_HandleTypeDef *huart);
+
+/**
  * @brief 设置从机ID
  * @param slave 从机结构体指针
  * @param id 从机ID (1-247)

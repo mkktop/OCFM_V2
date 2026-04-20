@@ -33,6 +33,9 @@ static const struct {
     {RELAY4_CTRL_GPIO_Port, RELAY4_CTRL_Pin},
 };
 
+static volatile uint8_t s_pending_uart_reconfigure = 0;
+static volatile uint8_t s_pending_slave_addr_update = 0;
+
 /*============================================================================*/
 /*                           寄存器地址 -> config_id 映射                       */
 /*============================================================================*/
@@ -104,6 +107,34 @@ static config_id_t reg_to_config_id(uint16_t reg_addr)
 /*                           下行：处理主站写入                                  */
 /*============================================================================*/
 
+static void apply_uint16_config_register(uint16_t reg_addr)
+{
+    config_id_t cid = reg_to_config_id(reg_addr);
+    uint16_t val16;
+
+    if (cid >= CONFIG_ID_COUNT) {
+        return;
+    }
+
+    val16 = modbus_slave_get_holding_register(reg_addr);
+
+    if (cid == CONFIG_ID_CALIBRATION_4MA) {
+        if (val16 < 805 || val16 > 1495) return;
+        app_config_set(cid, (uint32_t)val16);
+        app_current_set_calibration_modbus(val16);
+        return;
+    }
+
+    if (cid == CONFIG_ID_CALIBRATION_20MA) {
+        if (val16 < 3049 || val16 > 5662) return;
+        app_config_set(cid, (uint32_t)val16);
+        app_current_set_calibration_modbus(val16);
+        return;
+    }
+
+    app_config_set(cid, (uint32_t)val16);
+}
+
 /**
  * @brief 写入回调：处理主站对寄存器的写入
  * @param start_addr 起始寄存器地址
@@ -112,6 +143,13 @@ static config_id_t reg_to_config_id(uint16_t reg_addr)
  */
 void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
 {
+    uint16_t end_addr;
+
+    if (quantity == 0) {
+        return;
+    }
+
+    end_addr = start_addr + quantity - 1;
     /* 继电器状态寄存器 (0x000A-0x000D) 为只读，不允许写入 */
 
     /* RTC时间设置寄存器 (0x0200-0x0206): 任意一个写入后立即更新RTC */
@@ -154,7 +192,9 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
     config_id_t cid = reg_to_config_id(start_addr);
     if (cid >= CONFIG_ID_COUNT)
     {
-        return;
+        if (start_addr > REG_STOP_BITS || end_addr < REG_ADDRESS) {
+            return;
+        }
     }
 
     /* float 寄存器 (IEEE 754, 占2个寄存器) */
@@ -165,24 +205,23 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
         return;
     }
 
+    if (start_addr <= REG_ADDRESS && end_addr >= REG_ADDRESS) {
+        apply_uint16_config_register(REG_ADDRESS);
+    }
+    if (start_addr <= REG_BAUDE_RATE && end_addr >= REG_BAUDE_RATE) {
+        apply_uint16_config_register(REG_BAUDE_RATE);
+    }
+    if (start_addr <= REG_STOP_BITS && end_addr >= REG_STOP_BITS) {
+        apply_uint16_config_register(REG_STOP_BITS);
+    }
+
+    /* 写入范围覆盖了从机参数寄存器，已在上方逐个处理 */
+    if (end_addr >= REG_ADDRESS && start_addr <= REG_STOP_BITS) {
+        return;
+    }
+
     /* 单寄存器值 (uint16) */
-    uint16_t val16 = modbus_slave_get_holding_register(start_addr);
-
-    /* 校准值: 范围限制 + 进入校准模式实时输出 PWM */
-    if (cid == CONFIG_ID_CALIBRATION_4MA) {
-        if (val16 < 805 || val16 > 1495) return;
-        app_config_set(cid, (uint32_t)val16);
-        app_current_set_calibration_modbus(val16);
-        return;
-    }
-    if (cid == CONFIG_ID_CALIBRATION_20MA) {
-        if (val16 < 3049 || val16 > 5662) return;
-        app_config_set(cid, (uint32_t)val16);
-        app_current_set_calibration_modbus(val16);
-        return;
-    }
-
-    app_config_set(cid, (uint32_t)val16);
+    apply_uint16_config_register(start_addr);
 }
 
 /*============================================================================*/
@@ -361,6 +400,7 @@ static void reconfigure_uart2(void)
 {
     uint32_t baudrate = baudrate_index_to_value(app_config_get_modbus_baudrate());
     uint32_t stopbits, parity;
+
     stopbits_index_to_hal(app_config_get_modbus_stopbits(), &stopbits, &parity);
 
     /* 停止DMA接收 */
@@ -374,9 +414,8 @@ static void reconfigure_uart2(void)
     /* 重新初始化UART */
     HAL_UART_Init(&huart2);
 
-    /* 重启DMA接收 (通过重新初始化从机) */
-    extern modbus_slave_t sensor_slave;
-    modbus_slave_init(&sensor_slave, &huart2);
+    /* 重启DMA接收，不清空寄存器和从机地址 */
+    modbus_slave_restart_rx(&sensor_slave, &huart2);
 }
 
 /**
@@ -384,14 +423,28 @@ static void reconfigure_uart2(void)
  */
 static void on_config_change(config_id_t id)
 {
-    extern modbus_slave_t sensor_slave;
-
-    if (id == CONFIG_ID_MODBUS_BAUDRATE || id == CONFIG_ID_MODBUS_STOPBITS)
+    if (id == CONFIG_ID_MODBUS_BAUDRATE ||
+        id == CONFIG_ID_MODBUS_STOPBITS ||
+        id == CONFIG_ID_FACTORY_RESET)
     {
+        s_pending_uart_reconfigure = 1;
+    }
+
+    if (id == CONFIG_ID_MODBUS_ADDR || id == CONFIG_ID_FACTORY_RESET)
+    {
+        s_pending_slave_addr_update = 1;
+    }
+}
+
+void app_modbus_slave_process_pending(void)
+{
+    if (s_pending_uart_reconfigure) {
+        s_pending_uart_reconfigure = 0;
         reconfigure_uart2();
     }
-    else if (id == CONFIG_ID_MODBUS_ADDR)
-    {
+
+    if (s_pending_slave_addr_update) {
+        s_pending_slave_addr_update = 0;
         modbus_slave_set_id(&sensor_slave, (uint8_t)app_config_get_modbus_addr());
     }
 }
