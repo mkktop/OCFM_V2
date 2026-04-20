@@ -351,7 +351,8 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         case CONFIG_ID_MODBUS_STOPBITS: g_config.modbusStopBits = value; break;
         /* 其他参数 */
         case CONFIG_ID_DIS_OFFSET:      g_config.dis_offset = value;      break;
-        case CONFIG_ID_CANALS_TYPE:     g_config.canals_type = value;     break;
+        case CONFIG_ID_CANALS_TYPE:     g_config.canals_type = value;
+                                        g_config.channel_id = 1;          break;
         case CONFIG_ID_CHANNEL_ID:      g_config.channel_id = value;      break;
         case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break;
         case CONFIG_ID_SUM_POINT:       g_config.sum_point = value;       break;

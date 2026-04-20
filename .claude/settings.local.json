@@ -52,7 +52,8 @@
       "Bash(python -)",
       "Read(//d/d/UGit/OCFM_Host/OCFM_Host/**)",
       "Read(//d/d/UGit/OCFM_Host/**)",
-      "Bash(cmd /c dir \"D:\\\\UGit\\\\OCFM_Host\\\\OCFM_Host\\\\Assets\")"
+      "Bash(cmd /c dir \"D:\\\\UGit\\\\OCFM_Host\\\\OCFM_Host\\\\Assets\")",
+      "Bash(xargs -I {} git branch -D \"{}\")"
     ]
   }
 }
