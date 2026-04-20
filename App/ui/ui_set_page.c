@@ -294,10 +294,43 @@ static const char *format_decimal(uint32_t val)
     return decimal_buf;
 }
 
+/* ---------- 通道编号动态范围 ---------- */
+
+/**
+ * @brief  根据当前水渠类型获取通道编号最大值
+ */
+static uint32_t get_channel_id_max(void)
+{
+    switch (app_config_get_canals_type()) {
+        case 2:  return 5;    /* 三角堰 */
+        case 3:  return 4;    /* 矩形堰 */
+        default: return 16;   /* 巴歇尔槽 */
+    }
+}
+
+/**
+ * @brief  获取当前编辑项的有效最大值
+ * @note   channel_id 的最大值取决于水渠类型
+ */
+static uint32_t get_effective_max(const set_item_t *item)
+{
+    if (item->set == app_config_set_channel_id) {
+        return get_channel_id_max();
+    }
+    return item->max_val;
+}
+
+static const char *format_channel_id(uint32_t val)
+{
+    (void)val;
+    decimal_buf[0] = '\0';  /* 由 edit_value 自行显示 */
+    return decimal_buf;
+}
+
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {LANG_P_CANAL_TYPE,      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
-    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,    1},
+    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,   1,  0,  format_channel_id},
     {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          0, 3,     1,  0,  format_decimal},
     {LANG_P_CLEAR_TOTAL,     "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
 };
@@ -1081,7 +1114,7 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
         snprintf(range_buf, sizeof(range_buf), "Range: %s ~ %s", min_buf, max_buf);
     } else {
         snprintf(range_buf, sizeof(range_buf), "Range: %lu ~ %lu",
-                 (unsigned long)item->min_val, (unsigned long)item->max_val);
+                 (unsigned long)item->min_val, (unsigned long)get_effective_max(item));
     }
     lv_label_set_text(range_label, range_buf);
     lv_obj_set_style_text_color(range_label, lv_color_hex(COLOR_ACCENT), 0);
@@ -1423,7 +1456,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
             if (ctxf) { ctxf->new_valuef = new_val; lv_async_call(async_update_edit_val_cb, ctxf); }
         } else if (item->format) {
             /* format类型: 循环设置 */
-            if (g_set_nav.edit_value >= item->max_val) {
+            if (g_set_nav.edit_value >= get_effective_max(item)) {
                 g_set_nav.edit_value = item->min_val;
             } else {
                 g_set_nav.edit_value += g_step_list[g_step_index];
@@ -1452,7 +1485,7 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
         } else if (item->format) {
             /* format类型: 循环设置 */
             if (g_set_nav.edit_value <= item->min_val) {
-                g_set_nav.edit_value = item->max_val;
+                g_set_nav.edit_value = get_effective_max(item);
             } else {
                 g_set_nav.edit_value -= g_step_list[g_step_index];
             }

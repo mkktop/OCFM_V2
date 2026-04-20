@@ -334,7 +334,7 @@ typedef enum
 #define DEFAULT_DIS_OFFSET       10           /* 偏移量 */
 #define DEFAULT_CANALS_TYPE      1           /* 水渠类型 (巴歇尔槽) */
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
-#define DEFAULT_INSTANT_UNIT     1           /* 瞬时流量单位 (L/s) */
+#define DEFAULT_INSTANT_UNIT     4           /* 瞬时流量单位 (m³/h) */
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         1           /* 语言 (中文) */
 #define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */

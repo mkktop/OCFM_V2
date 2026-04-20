@@ -353,7 +353,15 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         case CONFIG_ID_DIS_OFFSET:      g_config.dis_offset = value;      break;
         case CONFIG_ID_CANALS_TYPE:     g_config.canals_type = value;
                                         g_config.channel_id = 1;          break;
-        case CONFIG_ID_CHANNEL_ID:      g_config.channel_id = value;      break;
+        case CONFIG_ID_CHANNEL_ID:  {
+                /* 通道编号上限取决于当前水渠类型 */
+                uint32_t ch_max = 16;
+                if (g_config.canals_type == 2) ch_max = 5;       /* 三角堰 */
+                else if (g_config.canals_type == 3) ch_max = 4;   /* 矩形堰 */
+                if (value > ch_max) return CONFIG_ERR_RANGE;
+                g_config.channel_id = value;
+            }
+            break;
         case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break;
         case CONFIG_ID_SUM_POINT:       g_config.sum_point = value;       break;
         case CONFIG_ID_LANGUAGE:        g_config.language = value;        break;
