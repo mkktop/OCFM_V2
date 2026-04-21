@@ -117,6 +117,7 @@ typedef struct {
     int8_t selected_index;      /**< 当前高亮项索引                  */
     uint32_t edit_value;        /**< 编辑中的临时值 (uint32路径)     */
     float edit_valuef;          /**< 编辑中的临时值 (float路径)      */
+    double edit_valued;         /**< 编辑中的临时值 (double路径)     */
     lv_obj_t *current_screen;   /**< 当前显示的屏幕                  */
 } set_nav_state_t;
 
@@ -286,6 +287,22 @@ static uint32_t clear_total_flow_get(void) { return 0; }
 static void clear_total_flow_set(uint32_t v) { if (v == 1) flow_calc_reset_total(); }
 static const char *format_yes_no(uint32_t val) { return val == 1 ? lang_get(LANG_F_YES) : lang_get(LANG_F_NO); }
 
+/* ---------- 累计流量设置 (double 路径) ---------- */
+static char total_flow_fmt_buf[24];
+static float total_flow_getf(void) { return (float)flow_calc_get_total(); }
+static void total_flow_setf(float v) { flow_calc_set_total((double)v); }
+static uint32_t total_flow_get_dummy(void) { return 0; }
+static const char *format_total_flow(uint32_t val) {
+    (void)val;
+    snprintf(total_flow_fmt_buf, sizeof(total_flow_fmt_buf),
+             "%.*lf", (int)app_config_get_sum_point(), flow_calc_get_total());
+    return total_flow_fmt_buf;
+}
+static uint8_t is_total_flow_item(const set_item_t *item)
+{
+    return (item->setf == total_flow_setf);
+}
+
 /* ---------- 小数位数 (循环) ---------- */
 static char decimal_buf[4];
 static const char *format_decimal(uint32_t val)
@@ -331,6 +348,8 @@ static const char *format_channel_id(uint32_t val)
 static const set_item_t system_items[] = {
     {LANG_P_CANAL_TYPE,      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
     {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,   1,  0,  format_channel_id},
+    {LANG_P_TOTAL_FLOW,      "m\xC2\xB3", total_flow_get_dummy, NULL, 0, 0, 0, 0, format_total_flow,
+                                       total_flow_getf, total_flow_setf, 0.0f, 999999999999.0f, 0.001f, 3},
     {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          0, 3,     1,  0,  format_decimal},
     {LANG_P_CLEAR_TOTAL,     "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
 };
@@ -395,7 +414,8 @@ static volatile uint8_t g_set_busy;
 static lv_obj_t *g_edit_value_label = NULL;   /* 编辑页面大字值标签指针 */
 static const set_item_t *g_edit_item = NULL;   /* 当前编辑的参数项指针 */
 static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
-static float g_stepf_list[8];                 /* float步进值列表 */
+static float g_stepf_list[13];                /* float步进值列表 */
+static double g_stepd_list[15];               /* double步进值列表 (累计流量) */
 static uint8_t g_step_count;                  /* 当前参数的步进级数 */
 static uint8_t g_step_index;                  /* 当前选中的步进索引 */
 static uint32_t g_last_key_tick;              /* 最后一次按键操作的 tick */
@@ -428,6 +448,7 @@ typedef struct {
 typedef struct {
     uint32_t new_value;         /**< 新的编辑值 (uint32路径)         */
     float new_valuef;           /**< 新的编辑值 (float路径)          */
+    double new_valued;          /**< 新的编辑值 (double路径)         */
 } set_edit_val_context_t;
 
 /** 步进切换上下文 */
@@ -857,7 +878,7 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
     lv_obj_set_scrollbar_mode(list, LV_SCROLLBAR_MODE_OFF);
 
     /* --- 为每个参数创建一行 --- */
-    char val_buf[16];
+    char val_buf[24];
     for (uint8_t i = 0; i < cat->count; i++) {
         const set_item_t *item = &cat->items[i];
 
@@ -1050,11 +1071,19 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
     g_edit_item = item;
 
     /* 根据参数最大值生成步进列表，初始使用最小步进 */
-    if (item->getf) {
+    if (is_total_flow_item(item)) {
+        /* double 路径: 累计流量专用步进 */
+        g_step_count = 0;
+        double s = 0.001;
+        while (s <= 100000000000.0 && g_step_count < 15) {
+            g_stepd_list[g_step_count++] = s;
+            s *= 10.0;
+        }
+    } else if (item->getf) {
         /* float 路径: 根据 max_valf 动态生成步进列表 */
         g_step_count = 0;
         float s = 0.001f;
-        while (s <= item->max_valf && g_step_count < 8) {
+        while (s <= item->max_valf && g_step_count < 13) {
             g_stepf_list[g_step_count++] = s;
             s *= 10.0f;
         }
@@ -1102,9 +1131,14 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 
     /* 范围提示 (显示允许的最小值 ~ 最大值) */
     lv_obj_t *range_label = lv_label_create(content);
-    char range_buf[32];
-    char min_buf[16], max_buf[16];
-    if (item->getf) {
+    char range_buf[48];
+    char min_buf[24], max_buf[24];
+    if (is_total_flow_item(item)) {
+        uint32_t sp = app_config_get_sum_point();
+        snprintf(min_buf, sizeof(min_buf), "%.*f", (int)sp, 0.0);
+        snprintf(max_buf, sizeof(max_buf), "%.*f", (int)sp, 999999999999.999);
+        snprintf(range_buf, sizeof(range_buf), "Range: %s ~ %s", min_buf, max_buf);
+    } else if (item->getf) {
         snprintf(min_buf, sizeof(min_buf), "%.*f", (int)item->f_decimals, item->min_valf);
         snprintf(max_buf, sizeof(max_buf), "%.*f", (int)item->f_decimals, item->max_valf);
         snprintf(range_buf, sizeof(range_buf), "Range: %s ~ %s", min_buf, max_buf);
@@ -1151,7 +1185,9 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
 
     /* 可编辑的值 (大字体，通过 UP/DOWN 经异步回调更新) */
     g_edit_value_label = lv_label_create(content);
-    if (item->getf) {
+    if (is_total_flow_item(item)) {
+        g_set_nav.edit_valued = flow_calc_get_total();  /* double 路径 */
+    } else if (item->getf) {
         g_set_nav.edit_valuef = item->getf();  /* float 路径 */
     } else {
         g_set_nav.edit_value = item->get();    /* uint32 路径 */
@@ -1162,11 +1198,17 @@ static lv_obj_t *create_edit_screen(uint8_t cat_idx, uint8_t item_idx)
         app_current_set_calibration(g_set_nav.edit_value);
     }
     lv_label_set_recolor(g_edit_value_label, true); /* 启用 recolor 以高亮步进位 */
-    /* format 回调(文字类型)用强调色，纯数字(含decimal/float)用白色 */
-    if (item->format) {
+    /* 字体和颜色选择 */
+    if (is_total_flow_item(item)) {
+        /* 累计流量 (double, 大范围) 用 26px，与首页一致 */
+        lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
+        lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_26, 0);
+    } else if (item->format && !item->getf) {
+        /* 纯 format 类型 (如水渠类型、语言) 用强调色 + 24px */
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_STEP_HL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, lang_get_font_24(), 0);
     } else {
+        /* 普通 uint32 / float 用 48px 大字 */
         lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
         lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
     }
@@ -1234,18 +1276,87 @@ static void update_edit_value_display(void)
 {
     if (g_edit_value_label == NULL) return;
 
-    /* 有 format 回调时直接显示文本，不做数字高亮 */
-    if (g_edit_item && g_edit_item->format) {
+    /* 有 format 回调且无 getf 时直接显示文本，不做数字高亮 */
+    if (g_edit_item && g_edit_item->format && !g_edit_item->getf) {
         lv_label_set_text(g_edit_value_label, g_edit_item->format(g_set_nav.edit_value));
         return;
     }
 
-    /* ---------- float 路径: 将 float 转为整数字符串 + 小数点 ---------- */
+    /* ---------- double 路径 (累计流量): 按位高亮 ---------- */
+    if (g_edit_item && is_total_flow_item(g_edit_item)) {
+        uint32_t dp = app_config_get_sum_point();
+        double dval = g_set_nav.edit_valued;
+        double multiplier = 1.0;
+        for (uint8_t i = 0; i < dp; i++) multiplier *= 10.0;
+
+        uint64_t ivalue = (uint64_t)(dval * multiplier + 0.5);
+        uint64_t istep = (uint64_t)(g_stepd_list[g_step_index] * multiplier + 0.5);
+        int pos_from_right = 0;
+        while (istep > 1) { pos_from_right++; istep /= 10; }
+
+        char val_str[24];
+        snprintf(val_str, sizeof(val_str), "%llu", (unsigned long long)ivalue);
+        int len = (int)strlen(val_str);
+
+        int max_int_digits = 0;
+        {
+            uint64_t imax = (uint64_t)(g_edit_item->max_valf);
+            while (imax > 0) { max_int_digits++; imax /= 10; }
+        }
+        if (max_int_digits < 1) max_int_digits = 1;
+        int min_len = max_int_digits + (int)dp;
+        if (len < min_len) {
+            int pad = min_len - len;
+            memmove(&val_str[pad], val_str, len + 1);
+            memset(val_str, '0', pad);
+            len = min_len;
+        }
+
+        int int_digits = len - (int)dp;
+        int digit_pos = len - 1 - pos_from_right;
+        if (digit_pos < 0 || digit_pos >= len) {
+            char buf[40];
+            int bi = 0;
+            for (int i = 0; i < len; i++) {
+                if (dp > 0 && i == int_digits) buf[bi++] = '.';
+                buf[bi++] = val_str[i];
+            }
+            buf[bi] = '\0';
+            lv_label_set_text(g_edit_value_label, buf);
+            return;
+        }
+
+        char buf[48];
+        int bi = 0;
+        for (int i = 0; i < len; i++) {
+            if (dp > 0 && i == int_digits) buf[bi++] = '.';
+            if (i == digit_pos) {
+                bi += snprintf(buf + bi, sizeof(buf) - bi, "#%06x %c#",
+                               (unsigned int)COLOR_STEP_HL, val_str[i]);
+            } else {
+                buf[bi++] = val_str[i];
+            }
+        }
+        buf[bi] = '\0';
+        lv_label_set_text(g_edit_value_label, buf);
+        return;
+    }
+
+    /* ---------- float 路径 ---------- */
     if (g_edit_item && g_edit_item->getf) {
         float fval = g_set_nav.edit_valuef;
         uint8_t dp = g_edit_item->f_decimals;
+
+        /* 大范围参数 (如累计流量): 缩放后超出 int32 范围，跳过步进高亮 */
         float multiplier = 1.0f;
         for (uint8_t i = 0; i < dp; i++) multiplier *= 10.0f;
+        if (fval * multiplier > 2000000000.0f) {
+            char buf[24];
+            snprintf(buf, sizeof(buf), "%.*f", (int)dp, fval);
+            lv_label_set_text(g_edit_value_label, buf);
+            return;
+        }
+
         int32_t ivalue = (int32_t)(fval * multiplier + (fval >= 0 ? 0.5f : -0.5f));
         if (ivalue < 0) ivalue = 0;
 
@@ -1447,7 +1558,14 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
 
     switch (button_id) {
     case BUTTON_ID_UP:
-        if (item->getf) {
+        if (is_total_flow_item(item)) {
+            double step = g_stepd_list[g_step_index];
+            double new_val = g_set_nav.edit_valued + step;
+            if (new_val > (double)item->max_valf) new_val = (double)item->max_valf;
+            g_set_nav.edit_valued = new_val;
+            set_edit_val_context_t *ctxd = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxd) { ctxd->new_valued = new_val; lv_async_call(async_update_edit_val_cb, ctxd); }
+        } else if (item->getf) {
             float step = g_stepf_list[g_step_index];
             float new_val = g_set_nav.edit_valuef + step;
             if (new_val > item->max_valf) new_val = item->max_valf;
@@ -1475,7 +1593,14 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
         }
         break;
     case BUTTON_ID_DOWN:
-        if (item->getf) {
+        if (is_total_flow_item(item)) {
+            double step = g_stepd_list[g_step_index];
+            double new_val = g_set_nav.edit_valued - step;
+            if (new_val < 0.0) new_val = 0.0;
+            g_set_nav.edit_valued = new_val;
+            set_edit_val_context_t *ctxd = lv_malloc(sizeof(set_edit_val_context_t));
+            if (ctxd) { ctxd->new_valued = new_val; lv_async_call(async_update_edit_val_cb, ctxd); }
+        } else if (item->getf) {
             float step = g_stepf_list[g_step_index];
             float new_val = g_set_nav.edit_valuef - step;
             if (new_val < item->min_valf) new_val = item->min_valf;
@@ -1504,7 +1629,9 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
         break;
     case BUTTON_ID_OK:
         /* 保存: 写入配置结构体 + 持久化到 EEPROM */
-        if (item->setf) {
+        if (is_total_flow_item(item)) {
+            flow_calc_set_total(g_set_nav.edit_valued);
+        } else if (item->setf) {
             item->setf(g_set_nav.edit_valuef);
         } else {
             item->set(g_set_nav.edit_value);
@@ -1740,7 +1867,9 @@ static void async_select_parameter_cb(void *context)
 static void async_update_edit_val_cb(void *context)
 {
     set_edit_val_context_t *ctx = (set_edit_val_context_t *)context;
-    if (g_edit_item && g_edit_item->getf) {
+    if (g_edit_item && is_total_flow_item(g_edit_item)) {
+        g_set_nav.edit_valued = ctx->new_valued;
+    } else if (g_edit_item && g_edit_item->getf) {
         g_set_nav.edit_valuef = ctx->new_valuef;
     } else {
         g_set_nav.edit_value = ctx->new_value;

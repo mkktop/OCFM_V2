@@ -188,6 +188,14 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
         return;
     }
 
+    /* 累计流量 (double, 占4个寄存器) */
+    if (start_addr == REG_SUM_FLOW && quantity >= 4)
+    {
+        double dval = modbus_slave_get_double(start_addr);
+        flow_calc_set_total(dval);
+        return;
+    }
+
     /* 映射到 config_id */
     config_id_t cid = reg_to_config_id(start_addr);
     if (cid >= CONFIG_ID_COUNT)

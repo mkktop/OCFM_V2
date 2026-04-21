@@ -53,7 +53,12 @@
       "Read(//d/d/UGit/OCFM_Host/OCFM_Host/**)",
       "Read(//d/d/UGit/OCFM_Host/**)",
       "Bash(cmd /c dir \"D:\\\\UGit\\\\OCFM_Host\\\\OCFM_Host\\\\Assets\")",
-      "Bash(xargs -I {} git branch -D \"{}\")"
+      "Bash(xargs -I {} git branch -D \"{}\")",
+      "Bash(python -c \"import struct; val=12345.678; b=struct.pack\\('>d',val\\); print\\('Sent:', val, '-> hex:', b.hex\\(\\).upper\\(\\)\\); val2=12344.846; b2=struct.pack\\('>d',val2\\); print\\('Shown:', val2, '-> hex:', b2.hex\\(\\).upper\\(\\)\\)\")",
+      "Bash(python -c \"import struct; h=int\\('40C81C6B8BD4A587',16\\); val=struct.unpack\\('>d',struct.pack\\('>Q',h\\)\\)[0]; print\\('Your command value:', val\\)\")",
+      "Bash(python -c \"import struct; b=struct.pack\\('>d',12345.678\\); print\\('Correct hex:', ' '.join\\('%02X'%c for c in b\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(dir /b)"
     ]
   }
 }

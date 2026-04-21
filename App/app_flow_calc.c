@@ -556,6 +556,14 @@ void flow_calc_reset_total(void)
     s_eeprom_save_pending = 1;      /* 延迟写入EEPROM (由flow_calc_process在主循环执行) */
 }
 
+void flow_calc_set_total(double value)
+{
+    if (value < 0.0 || value >= 1e12) return;
+    s_total_flow_m3 = value;
+    flow_calc_save_total();
+    s_eeprom_save_pending = 1;
+}
+
 /**
  * @brief  获取累计时长
  * @retval 累计时长 (秒)

@@ -60,6 +60,7 @@ typedef enum {
     LANG_P_CHANNEL_ID,
     LANG_P_SUM_DECIMAL,
     LANG_P_CLEAR_TOTAL,
+    LANG_P_TOTAL_FLOW,
 
     /* 参数名称 - 时间设置 */
     LANG_P_YEAR,

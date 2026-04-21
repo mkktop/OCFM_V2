@@ -41,6 +41,12 @@ double flow_calc_get_total(void);
 void flow_calc_reset_total(void);
 
 /**
+ * @brief  设置累计流量值
+ * @param  value: 累计流量 (m³), 须 >= 0
+ */
+void flow_calc_set_total(double value);
+
+/**
  * @brief  获取累计时长
  * @retval 累计时长 (秒)
  */

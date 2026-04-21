@@ -81,6 +81,7 @@ static const char * const g_strings[LANG_COUNT][2] = {
     [LANG_P_CHANNEL_ID]     = { "Channel ID",   "\xe9\x80\x9a\xe9\x81\x93\xe7\xbc\x96\xe5\x8f\xb7" }, /* 通道编号 */
     [LANG_P_SUM_DECIMAL]    = { "Sum Decimal",  "\xe7\xb4\xaf\xe8\xae\xa1\xe5\xb0\x8f\xe6\x95\xb0" }, /* 累计小数 */
     [LANG_P_CLEAR_TOTAL]    = { "Clear Total",  "\xe6\xb8\x85\xe9\x9b\xb6\xe7\xb4\xaf\xe8\xae\xa1" }, /* 清零累计 */
+    [LANG_P_TOTAL_FLOW]    = { "Total Flow",   "\xe7\xb4\xaf\xe8\xae\xa1\xe6\xb5\x81\xe9\x87\x8f" }, /* 累计流量 */
 
     /* 参数名称 - 时间设置 */
     [LANG_P_YEAR]           = { "Year",         "\xe5\xb9\xb4" },                            /* 年 */
