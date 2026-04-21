@@ -339,8 +339,7 @@ static uint32_t get_effective_max(const set_item_t *item)
 
 static const char *format_channel_id(uint32_t val)
 {
-    (void)val;
-    decimal_buf[0] = '\0';  /* 由 edit_value 自行显示 */
+    snprintf(decimal_buf, sizeof(decimal_buf), "%lu", (unsigned long)val);
     return decimal_buf;
 }
 

@@ -79,6 +79,8 @@ LVGL 9.x API 与 8.x 差异较大，本项目的关键API：
 3. 修正生成文件的 `fallback` 指向 `my_font_montserrat_16/24`
 4. 修正 `noto_sans_sc_16.c` 的 `line_height=20`, `base_line=4`
 
+少量新增字符时，可使用 `merge_glyphs.py` 脚本直接将字形数据合并到现有字体文件，避免重新生成整个字体。需修改脚本中的 `new_glyphs` 数组和 `list_length` 计数。
+
 ### 异步UI操作
 **从按键回调等非LVGL上下文修改UI时，必须使用 `lv_async_call()`**，否则触发 rendering_in_progress 断言。
 
@@ -95,6 +97,12 @@ app_model_update() (1秒定时器) → lv_subject_set_*() → Observer 自动刷
 2. `App/ui/ui_conf.h` 添加对应的 subject
 3. `App/ui/ui.c` 的 `ui_create()` 初始化 subject，`ui_update_timer_cb()` 同步数据
 4. 用 `lv_subject_add_observer_obj()` 绑定到UI控件
+
+## 多语言系统 (`App/ui/ui_lang.c/h`)
+
+设置菜单支持中英文切换，通过 `lang_id_t` 枚举（~55项）索引双语字符串查找表。`SystemConfig_t.language` 字段控制当前语言（0=英文, 1=中文，默认中文）。
+
+**语言相关的字体切换：** `lang_get_font_14/16/18/20/24()` 根据当前语言自动返回对应字体——中文模式返回 CJK 字体（`noto_sans_sc_*`），英文模式返回 Montserrat 字体。新增翻译项时在 `lang_id_t` 枚举追加ID，在 `ui_lang.c` 的查找表对应位置添加中英文字符串。
 
 ## 按键处理架构
 
@@ -149,9 +157,20 @@ TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。线性插值：`ratio = (flow - 
 ### Modbus寄存器映射 (`Core/Inc/global.h`)
 寄存器地址和类型全部定义在 global.h 中。主要分组：实时数据(0x0001-0x000D)、报警值(0x000E-0x0018)、传感器参数(0x0065-0x006F)、从机参数(0x0101-0x0107)、工厂校准(0x1001-0x1006)、RTC时间(0x0200-0x0206)。写回调在 `App/app_modbus_slave.c` 的 `app_modbus_slave_on_write()` 中处理。
 
+### 异步日志与数据记录
+- **日志系统** (`App/app_log.c/h` + `Drivers/File/log_manager.c/h`)：`app_log_send()` 线程安全，可从任意上下文调用。日志按类型分三类（System/User/Alarm），存储路径 `/LOGS/{SYS|USER|ALARM}/YYYY/MM/DD.log`，默认90天保留。所有文件I/O在 `log_task` 中统一执行。
+- **数据记录** (`Drivers/File/data_recorder.c/h`)：按 `DATA_RECORD_INTERVAL_MS`（60秒）间隔记录CSV数据。支持时间范围查询、聚合统计（均值/最大/最小/流量增量/报警计数）、CSV/JSON导出，默认365天保留。
+
+### 未实现的硬件功能
+以下外设已在硬件表和CubeMX中配置，但应用层代码尚未实现：
+- **UART4 / 4G模块 (ML307)** — 无应用层驱动代码
+- **SPI2 / LoRa模块 (SX1278)** — 无应用层驱动代码
+
 ## UI页面结构
 
 **主屏幕** — 垂直瓦片视图 (Tileview)，3页：详情页 / 趋势图页(双系列: 10s采样+5min采样) / 累计流量记录页
+
+**趋势图细节：** 10秒采样序列30点（5分钟历史）+ 5分钟采样序列30点（150分钟历史）。Y轴按历史最大流量自动缩放。数据在 `ui_update_timer_cb()` 中每秒递增计数器，每10秒/300秒分别推入对应序列。
 
 **设置页面** — 三级菜单：分类列表 → 参数列表 → 数值编辑（SHIFT键切换步进 1/10/100/1000/10000）。15秒无操作自动返回主屏幕。进入设置前可选密码验证（固定密码1234）。
 
