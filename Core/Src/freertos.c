@@ -39,6 +39,7 @@
 #include "../Interface/modbus_slave.h"
 #include "../App/app_modbus_slave.h"
 #include "data_recorder.h"
+#include "../App/ui/ui_history.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,7 +72,7 @@ const osThreadAttr_t main_task_attributes = {
 osThreadId_t log_taskHandle;
 const osThreadAttr_t log_task_attributes = {
   .name = "log_task",
-  .stack_size = 1024 * 4,
+  .stack_size = 2048 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for button_scan_tas */
@@ -237,6 +238,9 @@ void log_task_func(void *argument)
 
     /* 处理异步日志队列 (所有文件I/O统一在log_task上下文) */
     app_log_process();
+
+    /* 处理历史记录查询请求 (文件I/O在log_task上下文执行) */
+    history_query_process();
 
     /* 定时记录数据到CSV */
     if (HAL_GetTick() - last_record_tick >= DATA_RECORD_INTERVAL_MS)

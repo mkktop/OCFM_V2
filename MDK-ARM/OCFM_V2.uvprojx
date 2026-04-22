@@ -5032,6 +5032,11 @@
               <FileType>1</FileType>
               <FilePath>..\App\ui\ui_password.c</FilePath>
             </File>
+            <File>
+              <FileName>ui_history.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\ui\ui_history.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

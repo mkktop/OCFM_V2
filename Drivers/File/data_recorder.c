@@ -287,10 +287,12 @@ static uint32_t query_day_file(uint16_t year, uint8_t month, uint8_t day,
                                 void* user_data)
 {
     char filepath[64];
-    char buffer[RECORD_LINE_MAX_LEN];
+    char line_buf[RECORD_LINE_MAX_LEN];
+    char chunk[64];
     DataRecord record;
     uint32_t count = 0;
     uint32_t bytes_read;
+    uint16_t line_pos = 0;
     uint8_t result;
 
     make_day_path(year, month, day, filepath, sizeof(filepath));
@@ -306,50 +308,52 @@ static uint32_t query_day_file(uint16_t year, uint8_t month, uint8_t day,
     }
 
     /* 跳过CSV头 */
-    file_read(buffer, strlen(g_csv_header), &bytes_read);
+    file_read(chunk, strlen(g_csv_header), &bytes_read);
 
-    /* 逐行读取 */
+    /* 逐行读取: 用小缓冲区逐块读入，按换行符拼装完整行 */
     while (1) {
-        result = file_read(buffer, sizeof(buffer) - 1, &bytes_read);
-        
+        result = file_read(chunk, sizeof(chunk), &bytes_read);
         if (result != FILE_OK || bytes_read == 0) {
             break;
         }
-        
-        buffer[bytes_read] = '\0';
 
-        /* 找到完整的一行 */
-        char* line_end = strchr(buffer, '\n');
-        if (line_end) {
-            line_end[0] = '\0';
-
-            /* 解析记录 */
-            if (data_parse_csv_line(buffer, &record) == FILE_OK) {
-                /* 应用过滤条件 */
-                uint8_t pass = 1;
-
-                if (filter) {
-                    uint32_t record_time = record.hour * 100 + record.minute;
-                    uint32_t start_time = filter->start_hour * 100 + filter->start_min;
-                    uint32_t end_time = filter->end_hour * 100 + filter->end_min;
-
-                    if (record_time < start_time || record_time > end_time) {
-                        pass = 0;
-                    }
-
-                    /* 报警过滤 */
-                    if (filter->filter_alarm_only &&
-                        !(record.flags & filter->flags_mask)) {
-                        pass = 0;
-                    }
+        for (uint32_t i = 0; i < bytes_read; i++) {
+            if (chunk[i] == '\n') {
+                line_buf[line_pos] = '\0';
+                /* 去除尾部 \r */
+                if (line_pos > 0 && line_buf[line_pos - 1] == '\r') {
+                    line_buf[line_pos - 1] = '\0';
                 }
 
-                if (pass) {
-                    if (callback) {
-                        callback(&record, user_data);
+                /* 解析记录 */
+                if (data_parse_csv_line(line_buf, &record) == FILE_OK) {
+                    uint8_t pass = 1;
+
+                    if (filter) {
+                        uint32_t record_time = record.hour * 100 + record.minute;
+                        uint32_t start_time = filter->start_hour * 100 + filter->start_min;
+                        uint32_t end_time = filter->end_hour * 100 + filter->end_min;
+
+                        if (record_time < start_time || record_time > end_time) {
+                            pass = 0;
+                        }
+
+                        if (filter->filter_alarm_only &&
+                            !(record.flags & filter->flags_mask)) {
+                            pass = 0;
+                        }
                     }
-                    count++;
+
+                    if (pass) {
+                        if (callback) {
+                            callback(&record, user_data);
+                        }
+                        count++;
+                    }
                 }
+                line_pos = 0;
+            } else if (line_pos < sizeof(line_buf) - 1) {
+                line_buf[line_pos++] = chunk[i];
             }
         }
     }
@@ -746,37 +750,123 @@ void data_recorder_deinit(void)
  * @return FILE_OK:成功 FILE_ERROR:失败
  * @note 解析格式: YYYY-MM-DD HH:MM:SS,water_level,instant_flow,total_flow,temperature,flags
  */
+/**
+ * @brief 跳到下一个字段 (跳过当前字段到逗号或行尾)
+ */
+static const char* skip_to_comma(const char *p)
+{
+    while (*p && *p != ',' && *p != '\r' && *p != '\n') p++;
+    if (*p == ',') p++;
+    return p;
+}
+
+/**
+ * @brief 手动解析浮点数
+ */
+static float parse_float(const char *s, const char **next)
+{
+    int neg = 0;
+    if (*s == '-') { neg = 1; s++; }
+    else if (*s == '+') { s++; }
+
+    double integer = 0.0;
+    while (*s >= '0' && *s <= '9') {
+        integer = integer * 10.0 + (*s - '0');
+        s++;
+    }
+
+    float frac = 0.0f;
+    if (*s == '.') {
+        s++;
+        float div = 10.0f;
+        while (*s >= '0' && *s <= '9') {
+            frac += (float)(*s - '0') / div;
+            div *= 10.0f;
+            s++;
+        }
+    }
+
+    if (next) *next = s;
+    float result = (float)integer + frac;
+    return neg ? -result : result;
+}
+
+/**
+ * @brief 手动解析双精度浮点数
+ */
+static double parse_double(const char *s, const char **next)
+{
+    int neg = 0;
+    if (*s == '-') { neg = 1; s++; }
+    else if (*s == '+') { s++; }
+
+    double integer = 0.0;
+    while (*s >= '0' && *s <= '9') {
+        integer = integer * 10.0 + (*s - '0');
+        s++;
+    }
+
+    double frac = 0.0;
+    if (*s == '.') {
+        s++;
+        double div = 10.0;
+        while (*s >= '0' && *s <= '9') {
+            frac += (*s - '0') / div;
+            div *= 10.0;
+            s++;
+        }
+    }
+
+    if (next) *next = s;
+    double result = (double)integer + frac;
+    return neg ? -result : result;
+}
+
 uint8_t data_parse_csv_line(const char* line, DataRecord* record)
 {
-    int ret;
-    unsigned int flags;
-    int year, month, day, hour, minute, second;
-
     if (!line || !record) {
         return FILE_ERROR;
     }
 
-    /* 解析CSV行: timestamp,water_level,instant_flow,total_flow,total_time,temperature,flags */
-    ret = sscanf(line, "%d-%d-%d %d:%d:%d,%f,%f,%lf,%lu,%f,%u",
-                 &year, &month, &day, &hour, &minute, &second,
-                 &record->water_level,
-                 &record->instant_flow,
-                 &record->total_flow,
-                 &record->total_time,
-                 &record->temperature,
-                 &flags);
+    const char *p = line;
 
-    if (ret != 12) {
-        return FILE_ERROR;
+    /* 解析日期时间: YYYY-MM-DD HH:MM:SS */
+    record->year   = (uint16_t)atoi(p);  p = skip_to_comma(skip_to_comma(skip_to_comma(skip_to_comma(skip_to_comma(skip_to_comma(p)))))); /* skip to first , */
+
+    /* 重新解析，逐字段跳过分隔符 */
+    p = line;
+    record->year   = (uint16_t)atoi(p);  while (*p && *p != '-') p++; if (!*p) return FILE_ERROR; p++;
+    record->month  = (uint8_t)atoi(p);   while (*p && *p != '-') p++; if (!*p) return FILE_ERROR; p++;
+    record->day    = (uint8_t)atoi(p);   while (*p && *p != ' ') p++; if (!*p) return FILE_ERROR; p++;
+    record->hour   = (uint8_t)atoi(p);   while (*p && *p != ':') p++; if (!*p) return FILE_ERROR; p++;
+    record->minute = (uint8_t)atoi(p);   while (*p && *p != ':') p++; if (!*p) return FILE_ERROR; p++;
+    record->second = (uint8_t)atoi(p);   while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
+
+    /* water_level */
+    record->water_level = parse_float(p, &p); while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
+
+    /* instant_flow */
+    record->instant_flow = parse_float(p, &p); while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
+
+    /* total_flow (double → byte-by-byte copy to avoid unaligned write on packed struct) */
+    {
+        double tf = parse_double(p, &p);
+        uint8_t *dst = (uint8_t *)&record->total_flow;
+        const uint8_t *src = (const uint8_t *)&tf;
+        uint8_t i;
+        for (i = 0; i < sizeof(double); i++) dst[i] = src[i];
     }
+    while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
 
-    record->year = (uint16_t)year;
-    record->month = (uint8_t)month;
-    record->day = (uint8_t)day;
-    record->hour = (uint8_t)hour;
-    record->minute = (uint8_t)minute;
-    record->second = (uint8_t)second;
-    record->flags = (uint16_t)flags;
+    /* total_time */
+    record->total_time = (uint32_t)atol(p); while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
+
+    /* temperature */
+    record->temperature = parse_float(p, &p); while (*p && *p != ',') p++;
+    p++; /* skip comma or end */
+
+    /* flags */
+    record->flags = (uint16_t)atoi(p);
 
     return FILE_OK;
 }

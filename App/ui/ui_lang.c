@@ -126,6 +126,15 @@ static const char * const g_strings[LANG_COUNT][2] = {
     [LANG_F_WEEKDAY_THU]    = { "Thursday",     "\xe5\x91\xa8\xe5\x9b\x9b" },              /* 周四 */
     [LANG_F_WEEKDAY_FRI]    = { "Friday",       "\xe5\x91\xa8\xe4\xba\x94" },              /* 周五 */
     [LANG_F_WEEKDAY_SAT]    = { "Saturday",     "\xe5\x91\xa8\xe5\x85\xad" },              /* 周六 */
+
+    /* 历史记录页 */
+    [LANG_HIST_TITLE]       = { "History",      "\xe5\x8e\x86\xe5\x8f\xb2\xe6\x9f\xa5\xe8\xaf\xa2" }, /* 历史查询 */
+    [LANG_HIST_INST_FLOW]   = { "Inst",         "\xe7\x9e\xac\xe6\x97\xb6" },              /* 瞬时 */
+    [LANG_HIST_TOTAL_FLOW]  = { "Total",        "\xe7\xb4\xaf\xe8\xae\xa1" },              /* 累计 */
+    [LANG_HIST_NO_DATA]     = { "No Data",      "\xe6\x97\xa0\xe6\x95\xb0\xe6\x8d\xae" },  /* 无数据 */
+    [LANG_HIST_LOADING]     = { "Loading...",   "\xe5\x8a\xa0\xe8\xbd\xbd\xe4\xb8\xad" },  /* 加载中 */
+    [LANG_HIST_RECORD]      = { "Record",       "\xe8\xae\xb0\xe5\xbd\x95" },              /* 记录 */
+    [LANG_HIST_HOUR]        = { "H",            "\xe6\x97\xb6" },                            /* 时 */
 };
 
 /*============================================================================*/

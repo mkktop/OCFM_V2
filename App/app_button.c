@@ -9,6 +9,7 @@
 #include "global.h"
 #include "ui/ui_set_page.h"
 #include "ui/ui_password.h"
+#include "ui/ui_history.h"
 #include "app_config.h"
 
 /**
@@ -70,7 +71,7 @@ void app_main_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
                                       break;
             case BUTTON_ID_UP:    printf("[Button] UP Long\r\n"); break;
             case BUTTON_ID_DOWN:  printf("[Button] DOWN Long\r\n"); break;
-            case BUTTON_ID_SHIFT: printf("[Button] SHIFT Long\r\n"); break;
+            case BUTTON_ID_SHIFT: history_screen_enter(); break;
             default: break;
         }
     }
@@ -108,23 +109,7 @@ void app_password_screen_button_handler(ButtonId_e button_id, ButtonEvent_e even
  */
 void app_history_screen_button_handler(ButtonId_e button_id, ButtonEvent_e event)
 {
-    if (event == BUTTON_EVENT_SHORT) {
-        switch (button_id) {
-            case BUTTON_ID_OK:    printf("[HistoryPage] OK Short\r\n"); break;
-            case BUTTON_ID_UP:    printf("[HistoryPage] UP Short\r\n"); break;
-            case BUTTON_ID_DOWN:  printf("[HistoryPage] DOWN Short\r\n"); break;
-            case BUTTON_ID_SHIFT: printf("[HistoryPage] SHIFT Short\r\n"); break;
-            default: break;
-        }
-    } else if (event == BUTTON_EVENT_LONG) {
-        switch (button_id) {
-            case BUTTON_ID_OK:    printf("[HistoryPage] OK Long\r\n"); break;
-            case BUTTON_ID_UP:    printf("[HistoryPage] UP Long\r\n"); break;
-            case BUTTON_ID_DOWN:  printf("[HistoryPage] DOWN Long\r\n"); break;
-            case BUTTON_ID_SHIFT: printf("[HistoryPage] SHIFT Long\r\n"); break;
-            default: break;
-        }
-    }
+    history_button_handler((uint8_t)button_id, (uint8_t)event);
 }
 
 /**

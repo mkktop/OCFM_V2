@@ -1,47 +1,47 @@
 /**
  * @file file_driver.c
- * @brief FATFSÎÄ¼þÏµÍ³Çý¶¯ÊµÏÖ
- * @details ·â×°FATFS³£ÓÃ²Ù×÷£¬Ìá¹©¼ò½àµÄÎÄ¼þ·ÃÎÊAPI
+ * @brief FATFSï¿½Ä¼ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
+ * @details ï¿½ï¿½×°FATFSï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½API
  */
 
 #include "file_driver.h"
 
 /**
- * @brief ÎÄ¼þ¶ÔÏó
+ * @brief ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 static FIL g_fil;
 
 /**
- * @brief SD¿¨¹ÒÔØ±êÖ¾
+ * @brief SDï¿½ï¿½ï¿½ï¿½ï¿½Ø±ï¿½Ö¾
  */
 static uint8_t g_mounted = 0;
 
 /**
- * @brief ÎÄ¼þ´ò¿ª±êÖ¾
+ * @brief ï¿½Ä¼ï¿½ï¿½ò¿ª±ï¿½Ö¾
  */
 static uint8_t g_opened = 0;
 
 /**
- * @brief ³õÊ¼»¯ÎÄ¼þÏµÍ³
- * @return FILE_OK:³É¹¦ FILE_ERROR:Ê§°Ü
- * @note ¹ÒÔØSD¿¨µ½FATFSÎÄ¼þÏµÍ³£¬Ö»Ðèµ÷ÓÃÒ»´Î
+ * @brief ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ä¼ï¿½ÏµÍ³
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_ERROR:Ê§ï¿½ï¿½
+ * @note ï¿½ï¿½ï¿½ï¿½SDï¿½ï¿½ï¿½ï¿½FATFSï¿½Ä¼ï¿½ÏµÍ³ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
  */
 uint8_t file_init(void)
 {
-    // ¼ì²éÊÇ·ñÒÑ¹ÒÔØ£¬ÈôÒÑ¹ÒÔØÔòÌø¹ý
+    // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ñ¹ï¿½ï¿½Ø£ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (g_mounted) {
         printf("file_init: already mounted, skip\r\n");
         return FILE_OK;
     }
-    // ¹ÒÔØSD¿¨µ½FATFSÎÄ¼þÏµÍ³ 
+    // ï¿½ï¿½ï¿½ï¿½SDï¿½ï¿½ï¿½ï¿½FATFSï¿½Ä¼ï¿½ÏµÍ³ 
     printf("file_init: starting f_mount...\r\n");
     FRESULT res = f_mount(&SDFatFS, SDPath, 1);
     printf("file_init: f_mount result = %d\r\n", res);
-    // ¼ì²é¹ÒÔØ½á¹û
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ø½ï¿½ï¿½
     if (res == FR_OK) {
         g_mounted = 1;
         
-        /* ¼ì²é SD ¿¨×´Ì¬ */
+        /* ï¿½ï¿½ï¿½ SD ï¿½ï¿½×´Ì¬ */
         printf("file_init: checking SD card status...\r\n");
         DWORD free_clusters, free_sectors, total_sectors;
         FATFS *fs;
@@ -63,10 +63,10 @@ uint8_t file_init(void)
 }
 
 /**
- * @brief ´ò¿ªÎÄ¼þ
- * @param filename ÎÄ¼þÃû£¨º¬Â·¾¶£©
- * @param mode ´ò¿ªÄ£Ê½ FILE_MODE_READ / FILE_MODE_WRITE / FILE_MODE_APPEND / FILE_MODE_OPEN
- * @return FILE_OK:³É¹¦ FILE_NOT_MOUNTED:Î´¹ÒÔØ FILE_ERROR:´ò¿ªÊ§°Ü
+ * @brief ï¿½ï¿½ï¿½Ä¼ï¿½
+ * @param filename ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
+ * @param mode ï¿½ï¿½Ä£Ê½ FILE_MODE_READ / FILE_MODE_WRITE / FILE_MODE_APPEND / FILE_MODE_OPEN
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_NOT_MOUNTED:Î´ï¿½ï¿½ï¿½ï¿½ FILE_ERROR:ï¿½ï¿½Ê§ï¿½ï¿½
  */
 uint8_t file_open(const char *filename, uint8_t mode)
 {
@@ -74,6 +74,12 @@ uint8_t file_open(const char *filename, uint8_t mode)
         if (file_init() != FILE_OK) {
             return FILE_NOT_MOUNTED;
         }
+    }
+
+    if (g_opened) {
+        printf("file_open: WARNING already open, closing first\r\n");
+        f_close(&g_fil);
+        g_opened = 0;
     }
 
     BYTE fatfs_mode = 0;
@@ -87,7 +93,9 @@ uint8_t file_open(const char *filename, uint8_t mode)
         fatfs_mode = FA_OPEN_EXISTING | FA_READ;
     }
 
+    printf("file_open: f_open %s mode=%u\r\n", filename, fatfs_mode);
     FRESULT res = f_open(&g_fil, filename, fatfs_mode);
+    printf("file_open: result = %d\r\n", res);
     if (res == FR_OK) {
         g_opened = 1;
         return FILE_OK;
@@ -96,9 +104,9 @@ uint8_t file_open(const char *filename, uint8_t mode)
 }
 
 /**
- * @brief ¹Ø±ÕÎÄ¼þ
- * @return FILE_OK:³É¹¦
- * @note Ð´ÈëÎÄ¼þºó±ØÐëµ÷ÓÃ´Ëº¯ÊýÈ·±£Êý¾ÝÐ´ÈëSD¿¨
+ * @brief ï¿½Ø±ï¿½ï¿½Ä¼ï¿½
+ * @return FILE_OK:ï¿½É¹ï¿½
+ * @note Ð´ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´Ëºï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½SDï¿½ï¿½
  */
 uint8_t file_close(void)
 {
@@ -110,11 +118,11 @@ uint8_t file_close(void)
 }
 
 /**
- * @brief Ð´ÈëÊý¾Ýµ½ÎÄ¼þ
- * @param data Êý¾Ý»º³åÇø
- * @param len ÒªÐ´ÈëµÄ×Ö½ÚÊý
- * @param written Êµ¼ÊÐ´ÈëµÄ×Ö½ÚÊý£¨¿ÉÎªNULL£©
- * @return FILE_OK:³É¹¦ FILE_NOT_OPENED:ÎÄ¼þÎ´´ò¿ª FILE_WRITE_ERROR:Ð´ÈëÊ§°Ü
+ * @brief Ð´ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½Ä¼ï¿½
+ * @param data ï¿½ï¿½ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param len ÒªÐ´ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
+ * @param written Êµï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªNULLï¿½ï¿½
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_NOT_OPENED:ï¿½Ä¼ï¿½Î´ï¿½ï¿½ FILE_WRITE_ERROR:Ð´ï¿½ï¿½Ê§ï¿½ï¿½
  */
 uint8_t file_write(const void *data, uint32_t len, uint32_t *written)
 {
@@ -139,11 +147,11 @@ uint8_t file_write(const void *data, uint32_t len, uint32_t *written)
 }
 
 /**
- * @brief ´ÓÎÄ¼þ¶ÁÈ¡Êý¾Ý
- * @param buf Êý¾Ý»º³åÇø
- * @param len Òª¶ÁÈ¡µÄ×Ö½ÚÊý
- * @param read Êµ¼Ê¶ÁÈ¡µÄ×Ö½ÚÊý£¨¿ÉÎªNULL£©
- * @return FILE_OK:³É¹¦ FILE_NOT_OPENED:ÎÄ¼þÎ´´ò¿ª FILE_READ_ERROR:¶ÁÈ¡Ê§°Ü
+ * @brief ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
+ * @param buf ï¿½ï¿½ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param len Òªï¿½ï¿½È¡ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
+ * @param read Êµï¿½Ê¶ï¿½È¡ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªNULLï¿½ï¿½
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_NOT_OPENED:ï¿½Ä¼ï¿½Î´ï¿½ï¿½ FILE_READ_ERROR:ï¿½ï¿½È¡Ê§ï¿½ï¿½
  */
 uint8_t file_read(void *buf, uint32_t len, uint32_t *read)
 {
@@ -161,9 +169,9 @@ uint8_t file_read(void *buf, uint32_t len, uint32_t *read)
 }
 
 /**
- * @brief É¾³ýÎÄ¼þ
- * @param filename ÎÄ¼þÃû£¨º¬Â·¾¶£©
- * @return FILE_OK:³É¹¦ FILE_NOT_MOUNTED:Î´¹ÒÔØ FILE_ERROR:É¾³ýÊ§°Ü
+ * @brief É¾ï¿½ï¿½ï¿½Ä¼ï¿½
+ * @param filename ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_NOT_MOUNTED:Î´ï¿½ï¿½ï¿½ï¿½ FILE_ERROR:É¾ï¿½ï¿½Ê§ï¿½ï¿½
  */
 uint8_t file_delete(const char *filename)
 {
@@ -178,9 +186,9 @@ uint8_t file_delete(const char *filename)
 }
 
 /**
- * @brief ¼ì²éÎÄ¼þÊÇ·ñ´æÔÚ
- * @param filename ÎÄ¼þÃû£¨º¬Â·¾¶£©
- * @return 1:´æÔÚ 0:²»´æÔÚ»òÎ´¹ÒÔØ
+ * @brief ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
+ * @param filename ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
+ * @return 1:ï¿½ï¿½ï¿½ï¿½ 0:ï¿½ï¿½ï¿½ï¿½ï¿½Ú»ï¿½Î´ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t file_exists(const char *filename)
 {
@@ -199,9 +207,9 @@ uint8_t file_exists(const char *filename)
 }
 
 /**
- * @brief ´´½¨Ä¿Â¼
- * @param path Ä¿Â¼Â·¾¶
- * @return FILE_OK:³É¹¦ FILE_NOT_MOUNTED:Î´¹ÒÔØ FILE_ERROR:´´½¨Ê§°Ü
+ * @brief ï¿½ï¿½ï¿½ï¿½Ä¿Â¼
+ * @param path Ä¿Â¼Â·ï¿½ï¿½
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_NOT_MOUNTED:Î´ï¿½ï¿½ï¿½ï¿½ FILE_ERROR:ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½
  */
 uint8_t file_create_dir(const char *path)
 {
@@ -225,10 +233,10 @@ uint8_t file_create_dir(const char *path)
 }
 
 /**
- * @brief ÁÐ³öÄ¿Â¼ÄÚÈÝ
- * @param path Ä¿Â¼Â·¾¶£¬´«Èë"/"ÁÐ³ö¸ùÄ¿Â¼
- * @return FILE_OK:³É¹¦ FILE_NOT_MOUNTED:Î´¹ÒÔØ FILE_ERROR:´ò¿ªÄ¿Â¼Ê§°Ü
- * @note Í¨¹ý´®¿Ú´òÓ¡Ä¿Â¼ÄÚÈÝ
+ * @brief ï¿½Ð³ï¿½Ä¿Â¼ï¿½ï¿½ï¿½ï¿½
+ * @param path Ä¿Â¼Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"/"ï¿½Ð³ï¿½ï¿½ï¿½Ä¿Â¼
+ * @return FILE_OK:ï¿½É¹ï¿½ FILE_NOT_MOUNTED:Î´ï¿½ï¿½ï¿½ï¿½ FILE_ERROR:ï¿½ï¿½Ä¿Â¼Ê§ï¿½ï¿½
+ * @note Í¨ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ó¡Ä¿Â¼ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t file_list_dir(const char *path)
 {

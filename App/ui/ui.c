@@ -1345,7 +1345,7 @@ void ui_create(void)
 
     /* 第八步：预留其他屏幕的内存空间（延迟创建） */
     ui_manager->settings_screen = NULL;  /* 设置页面由set_page动态创建 */
-    ui_manager->history_screen = init_screen();
+    ui_manager->history_screen = NULL;  /* 历史页面由ui_history动态创建 */
 
     /* 第九步：创建UI更新定时器（每秒刷新一次） */
     lv_timer_create(ui_update_timer_cb, 1000, NULL);

@@ -106,6 +106,15 @@ typedef enum {
     LANG_F_WEEKDAY_FRI,
     LANG_F_WEEKDAY_SAT,
 
+    /* 历史记录页 */
+    LANG_HIST_TITLE,           /* 历史查询 */
+    LANG_HIST_INST_FLOW,       /* 瞬时 */
+    LANG_HIST_TOTAL_FLOW,      /* 累计 */
+    LANG_HIST_NO_DATA,         /* 无数据 */
+    LANG_HIST_LOADING,         /* 加载中 */
+    LANG_HIST_RECORD,          /* 记录 */
+    LANG_HIST_HOUR,            /* 时 */
+
     LANG_COUNT
 } lang_id_t;
 
