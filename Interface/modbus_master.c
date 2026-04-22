@@ -171,9 +171,11 @@ void modbus_master_rx_idle_callback(UART_HandleTypeDef *huart, uint16_t size)
     /* 检查是否为Modbus主机使用的串口 */
     if (huart == sensor_master.huart)
     {
-        /* 将DMA缓冲区数据复制到主机接收缓冲区 */
-        memcpy(sensor_master.rx_buffer, dma_rx_buffer, size);
-        sensor_master.rx_length = size;
+        /* 防止溢出rx_buffer[80] */
+        uint16_t copy_len = (size > sizeof(sensor_master.rx_buffer))
+                            ? sizeof(sensor_master.rx_buffer) : size;
+        memcpy(sensor_master.rx_buffer, dma_rx_buffer, copy_len);
+        sensor_master.rx_length = copy_len;
 
         /* 记录接收完成信息 */
         rx_complete_length = size;
@@ -253,6 +255,23 @@ static void modbus_master_finish_cmd(modbus_master_t *master, uint8_t success);
  */
 void modbus_master_poll(modbus_master_t *master)
 {
+    /*
+     * UART错误自动恢复
+     * DMA模式下，任何UART错误(FE/ORE/NE)都会导致HAL中止DMA接收，
+     * 使RxState变为READY。此处检测到异常后重新启动DMA+空闲中断接收。
+     */
+    if (master->huart != NULL && master->huart->RxState != HAL_UART_STATE_BUSY_RX)
+    {
+        __HAL_UART_CLEAR_OREFLAG(master->huart);
+        master->huart->ErrorCode = HAL_UART_ERROR_NONE;
+
+        rx_complete_flag = 0;
+        rx_complete_length = 0;
+        master->rx_length = 0;
+        memset(dma_rx_buffer, 0, sizeof(dma_rx_buffer));
+        HAL_UARTEx_ReceiveToIdle_DMA(master->huart, dma_rx_buffer, sizeof(dma_rx_buffer));
+    }
+
     switch (master->state)
     {
         /*--------------------------------------------------------------------*/

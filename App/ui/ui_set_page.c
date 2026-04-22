@@ -374,8 +374,8 @@ static const set_item_t display_items[] = {
 static const set_item_t advanced_items[] = {
     {LANG_P_RANGE_MAX,       "m",   app_config_get_range_max,            app_config_set_range_max,        0, 20000, 1,   3},
     {LANG_P_ANTENNA_TYPE,    "",     app_config_get_antenna_type,        app_config_set_antenna_type,     0, 10,    1},
-    {LANG_P_4MA_CAL,         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 805, 1495, 1},
-    {LANG_P_20MA_CAL,        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma, 3049, 5662, 1},
+    {LANG_P_4MA_CAL,         "",     app_config_get_calibration_4ma,     app_config_set_calibration_4ma, 500, 2000, 1},
+    {LANG_P_20MA_CAL,        "",     app_config_get_calibration_20ma,    app_config_set_calibration_20ma, 3000, 7000, 1},
     {LANG_P_DIST_OFFSET,     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
     {LANG_P_PASSWORD,        "",     app_config_get_password_enable,      app_config_set_password_enable,   0, 1,     1,  0,  format_yes_no},
     {LANG_P_FACTORY_RESET,   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1,  0,  format_yes_no},
@@ -1749,7 +1749,7 @@ static void async_enter_category_cb(void *context)
     ui_manager->settings_screen = screen;
     update_category_selection();
 
-    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
+    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_FADE_IN, ANIM_TIME);
     g_set_busy = 0;
 
     lv_free(ctx);
@@ -1778,7 +1778,7 @@ static void async_enter_parameter_cb(void *context)
     ui_manager->settings_screen = screen;
     update_parameter_selection();
 
-    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
+    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_FADE_IN, ANIM_TIME);
     g_set_busy = 0;
 
     lv_free(ctx);
@@ -1806,7 +1806,7 @@ static void async_enter_edit_cb(void *context)
     g_set_nav.current_screen = screen;
     ui_manager->settings_screen = screen;
 
-    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
+    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_FADE_IN, ANIM_TIME);
     g_set_busy = 0;
 
     lv_free(ctx);
