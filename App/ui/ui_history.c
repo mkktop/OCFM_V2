@@ -35,6 +35,8 @@
 #define IDLE_CHECK_PERIOD_MS    1000        /**< 空闲检测周期 (1秒) */
 #define HIST_WINDOW_SIZE        21          /**< 滑动窗口大小 (21*33=693字节) */
 #define HIST_VISIBLE_COUNT      3           /**< 可见记录数(上/当前/下) */
+#define HIST_EDGE_MARGIN        2           /**< 预加载触发边缘 */
+#define HIST_ANCHOR_INDEX       5           /**< 重新加载后当前项目标位置 */
 
 #define YEAR_MIN    2024
 #define YEAR_MAX    2030
@@ -91,10 +93,11 @@ static volatile uint32_t g_hist_pending_query_seq;
 /* LVGL控件指针 (仅LVGL上下文访问) */
 static lv_obj_t *g_hist_screen;
 static lv_obj_t *g_date_labels[FIELD_COUNT];
-static lv_obj_t *g_record_labels[HIST_VISIBLE_COUNT * 2];  /**< 每条记录2行 */
+static lv_obj_t *g_record_labels[HIST_VISIBLE_COUNT * 4];  /**< 每条记录2行，每行左右2个Label */
 static lv_obj_t *g_record_conts[HIST_VISIBLE_COUNT];       /**< 每条记录容器 */
 static lv_obj_t *g_status_label;
 static lv_obj_t *g_top_date_label;
+static lv_obj_t *g_top_count_label;
 static lv_obj_t *g_no_data_label;
 
 static lv_timer_t *g_idle_timer;
@@ -136,6 +139,9 @@ static void history_cancel_query(void);
 static uint8_t history_take_query(uint32_t *query_seq);
 static uint8_t history_query_is_current(uint32_t query_seq);
 static uint8_t history_commit_query_result(uint32_t query_seq, const hist_cache_t *cache);
+static int16_t history_calc_collect_start(int16_t current_absolute,
+                                          int16_t previous_collect_start,
+                                          uint16_t previous_total_count);
 static void reset_idle_timer(void);
 static void idle_timeout_cb(lv_timer_t *timer);
 static void poll_timer_cb(lv_timer_t *timer);
@@ -284,7 +290,7 @@ void history_button_handler(uint8_t button_id, uint8_t event)
                 g_hist_cache.current_absolute--;
                 /* 窗口前沿有未加载数据时才触发预加载 */
                 if (g_hist_cache.collect_start > 0 &&
-                    g_hist_cache.current_absolute <= g_hist_cache.collect_start + 2) {
+                    g_hist_cache.current_absolute <= g_hist_cache.collect_start + HIST_EDGE_MARGIN) {
                     g_hist_state = HIST_STATE_LOADING;
                     history_request_query();
                 }
@@ -300,7 +306,7 @@ void history_button_handler(uint8_t button_id, uint8_t event)
                 /* 窗口后沿有未加载数据时才触发预加载 */
                 if (g_hist_cache.collect_start + HIST_WINDOW_SIZE < (int16_t)g_hist_cache.total_count &&
                     g_hist_cache.current_absolute >=
-                        g_hist_cache.collect_start + HIST_WINDOW_SIZE - 3) {
+                        g_hist_cache.collect_start + HIST_WINDOW_SIZE - 1 - HIST_EDGE_MARGIN) {
                     g_hist_state = HIST_STATE_LOADING;
                     history_request_query();
                 }
@@ -364,6 +370,8 @@ void history_query_process(void)
     uint8_t query_day = g_hist_day;
     uint8_t query_hour = g_hist_hour;
     int16_t query_current = g_hist_cache.current_absolute;
+    int16_t query_collect_start = g_hist_cache.collect_start;
+    uint16_t query_total_count = g_hist_cache.total_count;
 
     printf("[HIST] query: %04u-%02u-%02u %02u:00~%02u:59\r\n",
            query_year, query_month, query_day, query_hour, query_hour);
@@ -390,9 +398,9 @@ void history_query_process(void)
     /* 单遍扫描: 同时计数并收集当前窗口 */
     int16_t center = query_current;
     if (center < 0) center = 0;
-    new_cache.collect_start = center - (HIST_WINDOW_SIZE / 2);
-    if (new_cache.collect_start < 0)
-        new_cache.collect_start = 0;
+    new_cache.collect_start = history_calc_collect_start(center,
+                                                         query_collect_start,
+                                                         query_total_count);
     new_cache.window_center = center - new_cache.collect_start;
     new_cache.current_absolute = center;
 
@@ -585,10 +593,22 @@ static lv_obj_t *create_browser_screen(void)
     lv_obj_set_flex_flow(top_bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(top_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_left(top_bar, 10, 0);
+    lv_obj_set_style_pad_right(top_bar, 10, 0);
 
     g_top_date_label = lv_label_create(top_bar);
     lv_obj_set_style_text_color(g_top_date_label, lv_color_hex(COLOR_ACCENT), 0);
     lv_obj_set_style_text_font(g_top_date_label, lang_get_font_16(), 0);
+
+    lv_obj_t *top_spacer = lv_obj_create(top_bar);
+    ui_container_style_init(top_spacer);
+    lv_obj_set_style_bg_opa(top_spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(top_spacer, LV_OPA_TRANSP, 0);
+    lv_obj_set_flex_grow(top_spacer, 1);
+    lv_obj_set_height(top_spacer, 1);
+
+    g_top_count_label = lv_label_create(top_bar);
+    lv_obj_set_style_text_color(g_top_count_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    lv_obj_set_style_text_font(g_top_count_label, &lv_font_montserrat_14, 0);
 
     /* --- 记录区域 --- */
     lv_obj_t *record_area = lv_obj_create(screen);
@@ -604,30 +624,48 @@ static lv_obj_t *create_browser_screen(void)
     for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
         g_record_conts[i] = lv_obj_create(record_area);
         ui_container_style_init(g_record_conts[i]);
-        lv_obj_set_size(g_record_conts[i], LV_PCT(96), LV_SIZE_CONTENT);
-        lv_obj_set_style_pad_hor(g_record_conts[i], 8, 0);
+        lv_obj_set_size(g_record_conts[i], LV_PCT(96), 58);
+        lv_obj_set_style_pad_hor(g_record_conts[i], 10, 0);
         lv_obj_set_style_pad_ver(g_record_conts[i], 5, 0);
         lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
         lv_obj_set_style_radius(g_record_conts[i], 4, 0);
         lv_obj_set_flex_flow(g_record_conts[i], LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_style_pad_row(g_record_conts[i], 1, 0);
+        lv_obj_set_style_pad_row(g_record_conts[i], 2, 0);
 
         /* 左侧强调边框 (默认透明, 当前行显示) */
         lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_LEFT | LV_BORDER_SIDE_BOTTOM, 0);
         lv_obj_set_style_border_width(g_record_conts[i], 0, 0);
 
         /* 第一行: 时间 + 瞬时流量 */
-        g_record_labels[i * 2] = lv_label_create(g_record_conts[i]);
-        lv_label_set_recolor(g_record_labels[i * 2], true);
-        lv_obj_set_style_text_font(g_record_labels[i * 2], lang_get_font_16(), 0);
-        lv_obj_set_style_text_color(g_record_labels[i * 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        for (int row = 0; row < 2; row++) {
+            lv_obj_t *line = lv_obj_create(g_record_conts[i]);
+            ui_container_style_init(line);
+            lv_obj_set_size(line, LV_PCT(100), row == 0 ? 22 : 20);
+            lv_obj_set_style_bg_opa(line, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_opa(line, LV_OPA_TRANSP, 0);
+            lv_obj_set_flex_flow(line, LV_FLEX_FLOW_ROW);
+            lv_obj_set_flex_align(line, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+            int base = i * 4 + row * 2;
+
+            g_record_labels[base] = lv_label_create(line);
+            lv_obj_set_style_text_font(g_record_labels[base], row == 0 ? lang_get_font_16() : lang_get_font_14(), 0);
+            lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+
+            lv_obj_t *spacer = lv_obj_create(line);
+            ui_container_style_init(spacer);
+            lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);
+            lv_obj_set_flex_grow(spacer, 1);
+            lv_obj_set_height(spacer, 1);
+
+            g_record_labels[base + 1] = lv_label_create(line);
+            lv_obj_set_style_text_font(g_record_labels[base + 1], row == 0 ? lang_get_font_16() : lang_get_font_14(), 0);
+            lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        }
 
         /* 第二行: 累计流量 */
-        g_record_labels[i * 2 + 1] = lv_label_create(g_record_conts[i]);
-        lv_label_set_recolor(g_record_labels[i * 2 + 1], true);
-        lv_obj_set_style_text_font(g_record_labels[i * 2 + 1], lang_get_font_16(), 0);
-        lv_obj_set_style_text_color(g_record_labels[i * 2 + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
     }
 
     /* --- 状态栏 --- */
@@ -715,6 +753,23 @@ static void update_browser_display(void)
         lv_label_set_text(g_top_date_label, buf);
     }
 
+    if (g_top_count_label) {
+        char buf[20];
+        if (g_hist_state == HIST_STATE_LOADING) {
+            snprintf(buf, sizeof(buf), "--/--");
+            lv_obj_set_style_text_color(g_top_count_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        } else if (g_hist_cache.total_count == 0) {
+            snprintf(buf, sizeof(buf), "0/0");
+            lv_obj_set_style_text_color(g_top_count_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        } else {
+            snprintf(buf, sizeof(buf), "%u/%u",
+                     g_hist_cache.current_absolute + 1,
+                     g_hist_cache.total_count);
+            lv_obj_set_style_text_color(g_top_count_label, lv_color_hex(COLOR_ACCENT), 0);
+        }
+        lv_label_set_text(g_top_count_label, buf);
+    }
+
     /* 状态栏 */
     if (g_status_label) {
         if (g_hist_state == HIST_STATE_LOADING) {
@@ -722,12 +777,7 @@ static void update_browser_display(void)
         } else if (g_hist_cache.total_count == 0) {
             lv_label_set_text(g_status_label, lang_get(LANG_HIST_NO_DATA));
         } else {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%s %u/%u",
-                     lang_get(LANG_HIST_RECORD),
-                     g_hist_cache.current_absolute + 1,
-                     g_hist_cache.total_count);
-            lv_label_set_text(g_status_label, buf);
+            lv_label_set_text(g_status_label, lang_get(LANG_HIST_RECORD));
         }
     }
 
@@ -737,6 +787,7 @@ static void update_browser_display(void)
         int16_t abs_idx = center + (i - HIST_VISIBLE_COUNT / 2); /* -1, 0, +1 */
         int win_idx = abs_idx - g_hist_cache.collect_start;
         int is_current = (i == HIST_VISIBLE_COUNT / 2);
+        int base = i * 4;
 
         if (g_hist_cache.total_count > 0 &&
             abs_idx >= 0 &&
@@ -744,55 +795,63 @@ static void update_browser_display(void)
             win_idx >= 0 && win_idx < HIST_WINDOW_SIZE) {
 
             DataRecord *rec = &g_hist_cache.records[win_idx];
-            char line1[64], line2[64];
-            const char *accent = "#%06x ";
-            unsigned int ac = (unsigned int)COLOR_ACCENT;
+            char time_buf[16], inst_buf[32], total_name[24], total_buf[32];
 
             /* 第一行: 时间 + 瞬时流量 (数值用强调色) */
             if (is_current) {
-                snprintf(line1, sizeof(line1),
-                         "%s %02u:%02u  %s #%06x %.3f# %s",
+                snprintf(time_buf, sizeof(time_buf),
+                         "%s %02u:%02u",
                          LV_SYMBOL_RIGHT,
-                         rec->hour, rec->minute,
-                         lang_get(LANG_HIST_INST_FLOW),
-                         ac, rec->instant_flow,
-                         HIST_FLOW_UNIT_STR);
+                         rec->hour, rec->minute);
             } else {
-                snprintf(line1, sizeof(line1),
-                         "  %02u:%02u  %s #%06x %.3f# %s",
-                         rec->hour, rec->minute,
-                         lang_get(LANG_HIST_INST_FLOW),
-                         ac, rec->instant_flow,
-                         HIST_FLOW_UNIT_STR);
+                snprintf(time_buf, sizeof(time_buf),
+                         "  %02u:%02u",
+                         rec->hour, rec->minute);
             }
-            lv_label_set_text(g_record_labels[i * 2], line1);
+            snprintf(inst_buf, sizeof(inst_buf), "%.3f %s",
+                     rec->instant_flow, HIST_FLOW_UNIT_STR);
+            lv_label_set_text(g_record_labels[base], time_buf);
+            lv_label_set_text(g_record_labels[base + 1], inst_buf);
 
             /* 第二行: 累计流量 (数值用强调色) */
-            snprintf(line2, sizeof(line2),
-                     "    %s #%06x %.3f# m\xC2\xB3",
-                     lang_get(LANG_HIST_TOTAL_FLOW),
-                     ac, rec->total_flow);
-            lv_label_set_text(g_record_labels[i * 2 + 1], line2);
+            snprintf(total_name, sizeof(total_name), "%s",
+                     lang_get(LANG_HIST_TOTAL_FLOW));
+            snprintf(total_buf, sizeof(total_buf), "%.3f m\xC2\xB3",
+                     rec->total_flow);
+            lv_label_set_text(g_record_labels[base + 2], total_name);
+            lv_label_set_text(g_record_labels[base + 3], total_buf);
 
             /* 高亮当前行: 左侧强调色边框 + 背景 */
             if (is_current) {
                 lv_obj_set_style_bg_color(g_record_conts[i], lv_color_hex(COLOR_ROW_SEL), 0);
                 lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_COVER, 0);
+                lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_LEFT, 0);
                 lv_obj_set_style_border_color(g_record_conts[i], lv_color_hex(COLOR_ACCENT), 0);
+                lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_COVER, 0);
                 lv_obj_set_style_border_width(g_record_conts[i], 3, 0);
-                lv_obj_set_style_text_color(g_record_labels[i * 2], lv_color_hex(COLOR_TEXT_SEL), 0);
-                lv_obj_set_style_text_color(g_record_labels[i * 2 + 1], lv_color_hex(COLOR_TEXT_SEL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_SEL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_ACCENT), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_SEL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_ACCENT), 0);
             } else {
                 lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
+                lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_BOTTOM, 0);
                 lv_obj_set_style_border_color(g_record_conts[i], lv_color_hex(0x2A353B), 0);
+                lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_COVER, 0);
                 lv_obj_set_style_border_width(g_record_conts[i], 1, 0);
-                lv_obj_set_style_text_color(g_record_labels[i * 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-                lv_obj_set_style_text_color(g_record_labels[i * 2 + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_TEXT_NORMAL), 0);
             }
         } else {
-            lv_label_set_text(g_record_labels[i * 2], "");
-            lv_label_set_text(g_record_labels[i * 2 + 1], "");
+            for (int j = 0; j < 4; j++) {
+                lv_label_set_text(g_record_labels[base + j], "");
+                lv_obj_set_style_text_color(g_record_labels[base + j], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+            }
             lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_NONE, 0);
+            lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
             lv_obj_set_style_border_width(g_record_conts[i], 0, 0);
         }
     }
@@ -800,7 +859,7 @@ static void update_browser_display(void)
     /* 无数据时在屏幕中央显示大字提示 */
     if (g_hist_cache.total_count == 0 && g_hist_state == HIST_STATE_BROWSER) {
         if (g_no_data_label == NULL) {
-            g_no_data_label = lv_label_create(lv_screen_active());
+            g_no_data_label = lv_label_create(g_hist_screen ? g_hist_screen : lv_screen_active());
             lv_label_set_recolor(g_no_data_label, true);
             lv_obj_set_style_text_font(g_no_data_label, lang_get_font_24(), 0);
             lv_obj_set_style_text_color(g_no_data_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
@@ -824,6 +883,32 @@ static void hist_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, u
     uint8_t auto_del = (ui_manager->active_screen != ui_manager->main_screen);
     lv_screen_load_anim(new_screen, anim, time, 0, auto_del);
     ui_manager->active_screen = new_screen;
+}
+
+static int16_t history_calc_collect_start(int16_t current_absolute,
+                                          int16_t previous_collect_start,
+                                          uint16_t previous_total_count)
+{
+    int16_t collect_start = 0;
+    int16_t tail_anchor = HIST_WINDOW_SIZE - 1 - HIST_ANCHOR_INDEX;
+
+    if (current_absolute < 0) current_absolute = 0;
+
+    if (previous_total_count == 0) {
+        collect_start = current_absolute - (HIST_WINDOW_SIZE / 2);
+    } else if (previous_collect_start > 0 &&
+               current_absolute <= previous_collect_start + HIST_EDGE_MARGIN) {
+        collect_start = current_absolute - tail_anchor;
+    } else if (previous_collect_start + HIST_WINDOW_SIZE < (int16_t)previous_total_count &&
+               current_absolute >=
+                   previous_collect_start + HIST_WINDOW_SIZE - 1 - HIST_EDGE_MARGIN) {
+        collect_start = current_absolute - HIST_ANCHOR_INDEX;
+    } else {
+        collect_start = current_absolute - (HIST_WINDOW_SIZE / 2);
+    }
+
+    if (collect_start < 0) collect_start = 0;
+    return collect_start;
 }
 
 static uint32_t history_next_query_seq(void)
@@ -901,12 +986,14 @@ static void history_clear_widget_refs(void)
     g_hist_screen = NULL;
     g_status_label = NULL;
     g_top_date_label = NULL;
+    g_top_count_label = NULL;
     g_no_data_label = NULL;
     for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
     for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
         g_record_conts[i] = NULL;
-        g_record_labels[i * 2] = NULL;
-        g_record_labels[i * 2 + 1] = NULL;
+        for (int j = 0; j < 4; j++) {
+            g_record_labels[i * 4 + j] = NULL;
+        }
     }
 }
 
