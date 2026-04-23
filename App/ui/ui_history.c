@@ -91,6 +91,7 @@ static lv_obj_t *g_record_labels[HIST_VISIBLE_COUNT * 2];  /**< 每条记录2行
 static lv_obj_t *g_record_conts[HIST_VISIBLE_COUNT];       /**< 每条记录容器 */
 static lv_obj_t *g_status_label;
 static lv_obj_t *g_top_date_label;
+static lv_obj_t *g_no_data_label;
 
 static lv_timer_t *g_idle_timer;
 static lv_timer_t *g_poll_timer;           /**< 数据就绪轮询定时器 */
@@ -186,6 +187,7 @@ void history_screen_exit(void)
     g_hist_screen = NULL;
     g_status_label = NULL;
     g_top_date_label = NULL;
+    g_no_data_label = NULL;
     for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
     for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
         g_record_conts[i] = NULL;
@@ -793,10 +795,27 @@ static void update_browser_display(void)
                 lv_obj_set_style_text_color(g_record_labels[i * 2 + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
             }
         } else {
-            /* 无数据行 */
             lv_label_set_text(g_record_labels[i * 2], "");
             lv_label_set_text(g_record_labels[i * 2 + 1], "");
             lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_width(g_record_conts[i], 0, 0);
+        }
+    }
+
+    /* 无数据时在屏幕中央显示大字提示 */
+    if (g_hist_cache.total_count == 0 && g_hist_state == HIST_STATE_BROWSER) {
+        if (g_no_data_label == NULL) {
+            g_no_data_label = lv_label_create(lv_screen_active());
+            lv_label_set_recolor(g_no_data_label, true);
+            lv_obj_set_style_text_font(g_no_data_label, lang_get_font_24(), 0);
+            lv_obj_set_style_text_color(g_no_data_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+            lv_obj_align(g_no_data_label, LV_ALIGN_CENTER, 0, 0);
+        }
+        lv_label_set_text(g_no_data_label, lang_get(LANG_HIST_NO_DATA));
+    } else {
+        if (g_no_data_label) {
+            lv_obj_del(g_no_data_label);
+            g_no_data_label = NULL;
         }
     }
 }
@@ -915,6 +934,7 @@ static void idle_timeout_cb(lv_timer_t *timer)
         g_hist_screen = NULL;
         g_status_label = NULL;
         g_top_date_label = NULL;
+        g_no_data_label = NULL;
         for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
         for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
             g_record_conts[i] = NULL;
