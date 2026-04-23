@@ -650,7 +650,7 @@ static lv_obj_t *create_browser_screen(void)
             int base = i * 4 + row * 2;
 
             g_record_labels[base] = lv_label_create(line);
-            lv_obj_set_style_text_font(g_record_labels[base], row == 0 ? lang_get_font_16() : lang_get_font_14(), 0);
+            lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
             lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
 
             lv_obj_t *spacer = lv_obj_create(line);
@@ -661,7 +661,7 @@ static lv_obj_t *create_browser_screen(void)
             lv_obj_set_height(spacer, 1);
 
             g_record_labels[base + 1] = lv_label_create(line);
-            lv_obj_set_style_text_font(g_record_labels[base + 1], row == 0 ? lang_get_font_16() : lang_get_font_14(), 0);
+            lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_16(), 0);
             lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
         }
 
@@ -681,7 +681,7 @@ static lv_obj_t *create_browser_screen(void)
 
     g_status_label = lv_label_create(status_bar);
     lv_obj_set_style_text_color(g_status_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_obj_set_style_text_font(g_status_label, lang_get_font_14(), 0);
+    lv_obj_set_style_text_font(g_status_label, lang_get_font_16(), 0);
     lv_label_set_text(g_status_label, lang_get(LANG_HIST_LOADING));
 
     /* 右侧导航提示 */
