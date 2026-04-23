@@ -269,7 +269,7 @@ void log_task_func(void *argument)
       /* 记录一条数据到CSV */
       data_record_flow(
           water_level,
-          flow_calc_get_instant_lps() / 1000.0f,
+          flow_calc_get_instant_lps() * 3.6f,
           flow_calc_get_total(),
           flow_calc_get_total_time(),
           temperature,

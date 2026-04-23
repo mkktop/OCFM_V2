@@ -18,9 +18,10 @@
 #include "ui_conf.h"
 #include "ui_lang.h"
 #include "lvgl.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include "../../Drivers/Button/button_driver.h"
 #include "../../Drivers/File/data_recorder.h"
-#include "app_config.h"
 #include "rtc_time.h"
 #include <stdio.h>
 #include <string.h>
@@ -37,6 +38,7 @@
 
 #define YEAR_MIN    2024
 #define YEAR_MAX    2030
+#define HIST_FLOW_UNIT_STR      "m\xC2\xB3/h"
 
 /*============================================================================*/
 /*                            模块状态                                          */
@@ -83,6 +85,8 @@ static volatile uint8_t g_hist_data_ready;  /**< 数据就绪标志 (volatile, �
 
 /* 查询请求 (button task -> log_task) */
 static volatile uint8_t g_hist_query_pending;
+static volatile uint32_t g_hist_query_seq;
+static volatile uint32_t g_hist_pending_query_seq;
 
 /* LVGL控件指针 (仅LVGL上下文访问) */
 static lv_obj_t *g_hist_screen;
@@ -124,12 +128,19 @@ static void async_exit_to_main_cb(void *ctx);
 
 /* 辅助 */
 static void hist_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
+static void history_start_timers(void);
+static void history_stop_timers(void);
+static void history_clear_widget_refs(void);
+static void history_request_query(void);
+static void history_cancel_query(void);
+static uint8_t history_take_query(uint32_t *query_seq);
+static uint8_t history_query_is_current(uint32_t query_seq);
+static uint8_t history_commit_query_result(uint32_t query_seq, const hist_cache_t *cache);
 static void reset_idle_timer(void);
 static void idle_timeout_cb(lv_timer_t *timer);
 static void poll_timer_cb(lv_timer_t *timer);
 static uint8_t get_days_in_month(uint16_t year, uint8_t month);
 static void clamp_day(void);
-static const char *get_flow_unit_str(void);
 
 /*============================================================================*/
 /*                          公共API                                             */
@@ -153,14 +164,8 @@ void history_screen_enter(void)
 
     g_hist_state = HIST_STATE_DATE_PICKER;
     g_enter_tick = lv_tick_get();
-    reset_idle_timer();
-
-    /* 创建数据就绪轮询定时器 */
-    if (g_poll_timer == NULL) {
-        g_poll_timer = lv_timer_create(poll_timer_cb, POLL_PERIOD_MS, NULL);
-    }
-    lv_timer_set_period(g_poll_timer, POLL_PERIOD_MS);
-    lv_timer_ready(g_poll_timer);
+    g_hist_query_pending = 0;
+    g_hist_data_ready = 0;
 
     g_hist_busy = 1;
     lv_async_call(async_enter_date_picker_cb, NULL);
@@ -170,30 +175,10 @@ void history_screen_exit(void)
 {
     g_exit_tick = lv_tick_get();
     g_hist_busy = 1;
-    if (g_idle_timer) {
-        lv_timer_del(g_idle_timer);
-        g_idle_timer = NULL;
-    }
-    if (g_poll_timer) {
-        lv_timer_del(g_poll_timer);
-        g_poll_timer = NULL;
-    }
     g_hist_state = HIST_STATE_IDLE;
-    g_hist_query_pending = 0;
-    g_hist_data_ready = 0;
+    history_cancel_query();
     memset(&g_hist_cache, 0, sizeof(g_hist_cache));
-
-    /* 清空控件指针 */
-    g_hist_screen = NULL;
-    g_status_label = NULL;
-    g_top_date_label = NULL;
-    g_no_data_label = NULL;
-    for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
-    for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
-        g_record_conts[i] = NULL;
-        g_record_labels[i * 2] = NULL;
-        g_record_labels[i * 2 + 1] = NULL;
-    }
+    history_clear_widget_refs();
 
     lv_async_call(async_exit_to_main_cb, NULL);
 }
@@ -276,10 +261,9 @@ void history_button_handler(uint8_t button_id, uint8_t event)
         case BUTTON_ID_OK:
             /* 确认日期时间，触发查询 */
             g_hist_state = HIST_STATE_LOADING;
-            g_hist_query_pending = 1;
-            g_hist_data_ready = 0;
             memset(&g_hist_cache, 0, sizeof(g_hist_cache));
             g_hist_cache.current_absolute = 0;
+            history_request_query();
 
             g_hist_busy = 1;
             lv_async_call(async_enter_browser_cb, NULL);
@@ -301,9 +285,8 @@ void history_button_handler(uint8_t button_id, uint8_t event)
                 /* 窗口前沿有未加载数据时才触发预加载 */
                 if (g_hist_cache.collect_start > 0 &&
                     g_hist_cache.current_absolute <= g_hist_cache.collect_start + 2) {
-                    g_hist_query_pending = 1;
-                    g_hist_data_ready = 0;
                     g_hist_state = HIST_STATE_LOADING;
+                    history_request_query();
                 }
                 g_hist_busy = 1;
                 lv_async_call(async_update_browser_cb, NULL);
@@ -318,9 +301,8 @@ void history_button_handler(uint8_t button_id, uint8_t event)
                 if (g_hist_cache.collect_start + HIST_WINDOW_SIZE < (int16_t)g_hist_cache.total_count &&
                     g_hist_cache.current_absolute >=
                         g_hist_cache.collect_start + HIST_WINDOW_SIZE - 3) {
-                    g_hist_query_pending = 1;
-                    g_hist_data_ready = 0;
                     g_hist_state = HIST_STATE_LOADING;
+                    history_request_query();
                 }
                 g_hist_busy = 1;
                 lv_async_call(async_update_browser_cb, NULL);
@@ -351,92 +333,105 @@ void history_button_handler(uint8_t button_id, uint8_t event)
 /*                    log_task 调用的查询处理                                    */
 /*============================================================================*/
 
-/**
- * @brief 查询回调: 收集记录到滑动窗口
- */
-static uint32_t s_collect_index;
-static void hist_collect_cb(const DataRecord *record, void *user_data)
+typedef struct {
+    hist_cache_t *cache;
+    uint32_t scan_index;
+} hist_query_ctx_t;
+
+static void hist_query_cb(const DataRecord *record, void *user_data)
 {
-    hist_cache_t *cache = (hist_cache_t *)user_data;
-    if (s_collect_index >= (uint32_t)cache->collect_start &&
-        s_collect_index < (uint32_t)(cache->collect_start + HIST_WINDOW_SIZE)) {
-        uint8_t idx = (uint8_t)(s_collect_index - cache->collect_start);
+    hist_query_ctx_t *ctx = (hist_query_ctx_t *)user_data;
+    hist_cache_t *cache = ctx->cache;
+    uint32_t record_index = ctx->scan_index++;
+
+    if (record_index >= (uint32_t)cache->collect_start &&
+        record_index < (uint32_t)(cache->collect_start + HIST_WINDOW_SIZE)) {
+        uint8_t idx = (uint8_t)(record_index - cache->collect_start);
         cache->records[idx] = *record;
     }
-    s_collect_index++;
-}
 
-/**
- * @brief 查询回调: 仅计数
- */
-static void hist_count_cb(const DataRecord *record, void *user_data)
-{
-    (void)record;
-    hist_cache_t *cache = (hist_cache_t *)user_data;
     cache->total_count++;
 }
 
 void history_query_process(void)
 {
-    if (!g_hist_query_pending) return;
-    g_hist_query_pending = 0;
+    uint32_t query_seq = 0;
+    if (!history_take_query(&query_seq)) return;
+    if (!history_query_is_current(query_seq)) return;
+
+    uint16_t query_year = g_hist_year;
+    uint8_t query_month = g_hist_month;
+    uint8_t query_day = g_hist_day;
+    uint8_t query_hour = g_hist_hour;
+    int16_t query_current = g_hist_cache.current_absolute;
 
     printf("[HIST] query: %04u-%02u-%02u %02u:00~%02u:59\r\n",
-           g_hist_year, g_hist_month, g_hist_day, g_hist_hour, g_hist_hour);
+           query_year, query_month, query_day, query_hour, query_hour);
 
     /* 构建查询过滤: 选定日期的选定小时范围 */
     DataQueryFilter filter;
     memset(&filter, 0, sizeof(filter));
-    filter.start_year  = g_hist_year;
-    filter.start_month = g_hist_month;
-    filter.start_day   = g_hist_day;
-    filter.start_hour  = g_hist_hour;
+    filter.start_year  = query_year;
+    filter.start_month = query_month;
+    filter.start_day   = query_day;
+    filter.start_hour  = query_hour;
     filter.start_min   = 0;
-    filter.end_year    = g_hist_year;
-    filter.end_month   = g_hist_month;
-    filter.end_day     = g_hist_day;
-    filter.end_hour    = g_hist_hour;
+    filter.end_year    = query_year;
+    filter.end_month   = query_month;
+    filter.end_day     = query_day;
+    filter.end_hour    = query_hour;
     filter.end_min     = 59;
     filter.filter_alarm_only = 0;
 
-    /* 第一遍: 计数 */
-    g_hist_cache.total_count = 0;
-    data_query(&filter, hist_count_cb, &g_hist_cache);
+    hist_cache_t new_cache;
+    memset(&new_cache, 0, sizeof(new_cache));
+    new_cache.current_absolute = query_current;
 
-    printf("[HIST] total_count=%u\r\n", g_hist_cache.total_count);
+    /* 单遍扫描: 同时计数并收集当前窗口 */
+    int16_t center = query_current;
+    if (center < 0) center = 0;
+    new_cache.collect_start = center - (HIST_WINDOW_SIZE / 2);
+    if (new_cache.collect_start < 0)
+        new_cache.collect_start = 0;
+    new_cache.window_center = center - new_cache.collect_start;
+    new_cache.current_absolute = center;
 
-    if (g_hist_cache.total_count == 0) {
-        g_hist_data_ready = 1;
-        g_hist_state = HIST_STATE_BROWSER;
-        printf("[HIST] no data, state=BROWSER\r\n");
+    hist_query_ctx_t query_ctx = {
+        .cache = &new_cache,
+        .scan_index = 0,
+    };
+    data_query(&filter, hist_query_cb, &query_ctx);
+
+    if (!history_query_is_current(query_seq)) {
+        printf("[HIST] query canceled after scan\r\n");
         return;
     }
 
-    /* 计算窗口位置 */
-    int16_t center = g_hist_cache.current_absolute;
-    if (center >= (int16_t)g_hist_cache.total_count)
-        center = (int16_t)g_hist_cache.total_count - 1;
+    printf("[HIST] total_count=%u\r\n", new_cache.total_count);
+
+    if (new_cache.total_count == 0) {
+        if (history_commit_query_result(query_seq, &new_cache)) {
+            printf("[HIST] no data, state=BROWSER\r\n");
+        } else {
+            printf("[HIST] query canceled before no-data commit\r\n");
+        }
+        return;
+    }
+
+    /* 扫描后修正当前索引，窗口起点保持为本次扫描使用的位置 */
+    center = new_cache.current_absolute;
+    if (center >= (int16_t)new_cache.total_count)
+        center = (int16_t)new_cache.total_count - 1;
     if (center < 0) center = 0;
 
-    g_hist_cache.collect_start = center - (HIST_WINDOW_SIZE / 2);
-    if (g_hist_cache.collect_start < 0)
-        g_hist_cache.collect_start = 0;
-    if (g_hist_cache.collect_start + HIST_WINDOW_SIZE > (int16_t)g_hist_cache.total_count)
-        g_hist_cache.collect_start = (int16_t)g_hist_cache.total_count - HIST_WINDOW_SIZE;
-    if (g_hist_cache.collect_start < 0)
-        g_hist_cache.collect_start = 0;
+    new_cache.window_center = center - new_cache.collect_start;
+    new_cache.current_absolute = center;
 
-    g_hist_cache.window_center = center - g_hist_cache.collect_start;
-    g_hist_cache.current_absolute = center;
-
-    /* 第二遍: 收集窗口内记录 */
-    memset(g_hist_cache.records, 0, sizeof(g_hist_cache.records));
-    s_collect_index = 0;
-    data_query(&filter, hist_collect_cb, &g_hist_cache);
-
-    g_hist_data_ready = 1;
-    g_hist_state = HIST_STATE_BROWSER;
-    printf("[HIST] data ready, state=BROWSER\r\n");
+    if (history_commit_query_result(query_seq, &new_cache)) {
+        printf("[HIST] data ready, state=BROWSER\r\n");
+    } else {
+        printf("[HIST] query canceled before data commit\r\n");
+    }
 }
 
 /*============================================================================*/
@@ -761,14 +756,14 @@ static void update_browser_display(void)
                          rec->hour, rec->minute,
                          lang_get(LANG_HIST_INST_FLOW),
                          ac, rec->instant_flow,
-                         get_flow_unit_str());
+                         HIST_FLOW_UNIT_STR);
             } else {
                 snprintf(line1, sizeof(line1),
                          "  %02u:%02u  %s #%06x %.3f# %s",
                          rec->hour, rec->minute,
                          lang_get(LANG_HIST_INST_FLOW),
                          ac, rec->instant_flow,
-                         get_flow_unit_str());
+                         HIST_FLOW_UNIT_STR);
             }
             lv_label_set_text(g_record_labels[i * 2], line1);
 
@@ -831,6 +826,113 @@ static void hist_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, u
     ui_manager->active_screen = new_screen;
 }
 
+static uint32_t history_next_query_seq(void)
+{
+    uint32_t next = g_hist_query_seq + 1;
+    if (next == 0) next = 1;
+    g_hist_query_seq = next;
+    return next;
+}
+
+static void history_request_query(void)
+{
+    vTaskSuspendAll();
+    g_hist_pending_query_seq = history_next_query_seq();
+    g_hist_data_ready = 0;
+    g_hist_query_pending = 1;
+    (void)xTaskResumeAll();
+}
+
+static void history_cancel_query(void)
+{
+    vTaskSuspendAll();
+    (void)history_next_query_seq();
+    g_hist_query_pending = 0;
+    g_hist_data_ready = 0;
+    (void)xTaskResumeAll();
+}
+
+static uint8_t history_take_query(uint32_t *query_seq)
+{
+    uint8_t has_query = 0;
+
+    vTaskSuspendAll();
+    if (g_hist_query_pending) {
+        if (query_seq) *query_seq = g_hist_pending_query_seq;
+        g_hist_query_pending = 0;
+        has_query = 1;
+    }
+    (void)xTaskResumeAll();
+
+    return has_query;
+}
+
+static uint8_t history_query_is_current(uint32_t query_seq)
+{
+    uint8_t is_current;
+
+    vTaskSuspendAll();
+    is_current = (g_hist_state == HIST_STATE_LOADING &&
+                  g_hist_query_seq == query_seq);
+    (void)xTaskResumeAll();
+
+    return is_current;
+}
+
+static uint8_t history_commit_query_result(uint32_t query_seq, const hist_cache_t *cache)
+{
+    uint8_t committed = 0;
+
+    vTaskSuspendAll();
+    if (g_hist_state == HIST_STATE_LOADING &&
+        g_hist_query_seq == query_seq) {
+        memcpy(&g_hist_cache, cache, sizeof(g_hist_cache));
+        g_hist_data_ready = 1;
+        g_hist_state = HIST_STATE_BROWSER;
+        committed = 1;
+    }
+    (void)xTaskResumeAll();
+
+    return committed;
+}
+
+static void history_clear_widget_refs(void)
+{
+    g_hist_screen = NULL;
+    g_status_label = NULL;
+    g_top_date_label = NULL;
+    g_no_data_label = NULL;
+    for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
+    for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
+        g_record_conts[i] = NULL;
+        g_record_labels[i * 2] = NULL;
+        g_record_labels[i * 2 + 1] = NULL;
+    }
+}
+
+static void history_start_timers(void)
+{
+    reset_idle_timer();
+
+    if (g_poll_timer == NULL) {
+        g_poll_timer = lv_timer_create(poll_timer_cb, POLL_PERIOD_MS, NULL);
+    }
+    lv_timer_set_period(g_poll_timer, POLL_PERIOD_MS);
+    lv_timer_ready(g_poll_timer);
+}
+
+static void history_stop_timers(void)
+{
+    if (g_idle_timer) {
+        lv_timer_del(g_idle_timer);
+        g_idle_timer = NULL;
+    }
+    if (g_poll_timer) {
+        lv_timer_del(g_poll_timer);
+        g_poll_timer = NULL;
+    }
+}
+
 static void reset_idle_timer(void)
 {
     g_last_key_tick = lv_tick_get();
@@ -848,9 +950,14 @@ static void reset_idle_timer(void)
 static void async_enter_date_picker_cb(void *ctx)
 {
     (void)ctx;
+    if (g_hist_state == HIST_STATE_IDLE) return;
+
+    history_start_timers();
+    history_clear_widget_refs();
     lv_obj_t *screen = create_date_picker_screen();
     if (!screen) { g_hist_busy = 0; return; }
 
+    g_hist_screen = screen;
     ui_manager->history_screen = screen;
     hist_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
     g_hist_busy = 0;
@@ -859,6 +966,8 @@ static void async_enter_date_picker_cb(void *ctx)
 static void async_update_date_cb(void *ctx)
 {
     (void)ctx;
+    if (g_hist_state == HIST_STATE_IDLE) return;
+
     update_date_picker_display();
     g_hist_busy = 0;
 }
@@ -866,9 +975,14 @@ static void async_update_date_cb(void *ctx)
 static void async_enter_browser_cb(void *ctx)
 {
     (void)ctx;
+    if (g_hist_state == HIST_STATE_IDLE) return;
+
+    history_start_timers();
+    history_clear_widget_refs();
     lv_obj_t *screen = create_browser_screen();
     if (!screen) { g_hist_busy = 0; return; }
 
+    g_hist_screen = screen;
     ui_manager->history_screen = screen;
     hist_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, ANIM_TIME);
     g_hist_busy = 0;
@@ -877,6 +991,8 @@ static void async_enter_browser_cb(void *ctx)
 static void async_update_browser_cb(void *ctx)
 {
     (void)ctx;
+    if (g_hist_state == HIST_STATE_IDLE) return;
+
     update_browser_display();
     g_hist_busy = 0;
 }
@@ -884,6 +1000,8 @@ static void async_update_browser_cb(void *ctx)
 static void async_exit_to_main_cb(void *ctx)
 {
     (void)ctx;
+    history_stop_timers();
+    history_clear_widget_refs();
     ui_manager->history_screen = NULL;
     hist_screen_load(ui_manager->main_screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
     g_hist_busy = 0;
@@ -920,30 +1038,7 @@ static void idle_timeout_cb(lv_timer_t *timer)
 {
     (void)timer;
     if (lv_tick_get() - g_last_key_tick >= IDLE_TIMEOUT_MS) {
-        if (g_idle_timer) {
-            lv_timer_del(g_idle_timer);
-            g_idle_timer = NULL;
-        }
-        if (g_poll_timer) {
-            lv_timer_del(g_poll_timer);
-            g_poll_timer = NULL;
-        }
-        g_hist_state = HIST_STATE_IDLE;
-        g_hist_query_pending = 0;
-        g_hist_data_ready = 0;
-        g_hist_screen = NULL;
-        g_status_label = NULL;
-        g_top_date_label = NULL;
-        g_no_data_label = NULL;
-        for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
-        for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
-            g_record_conts[i] = NULL;
-            g_record_labels[i * 2] = NULL;
-            g_record_labels[i * 2 + 1] = NULL;
-        }
-        ui_manager->history_screen = NULL;
-        hist_screen_load(ui_manager->main_screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
-        g_hist_busy = 0;
+        history_screen_exit();
     }
 }
 
@@ -966,19 +1061,4 @@ static void clamp_day(void)
 {
     uint8_t max_day = get_days_in_month(g_hist_year, g_hist_month);
     if (g_hist_day > max_day) g_hist_day = max_day;
-}
-
-static const char *get_flow_unit_str(void)
-{
-    switch (app_config_get_instant_unit()) {
-        case FLOW_UNIT_L_S:    return "L/s";
-        case FLOW_UNIT_L_MIN:  return "L/min";
-        case FLOW_UNIT_L_H:    return "L/h";
-        case FLOW_UNIT_M3_H:   return "m\xC2\xB3/h";
-        case FLOW_UNIT_M3_S:   return "m\xC2\xB3/s";
-        case FLOW_UNIT_M3_MIN: return "m\xC2\xB3/min";
-        case FLOW_UNIT_T_H:    return "T/h";
-        case FLOW_UNIT_G_H:    return "G/h";
-        default:               return "L/s";
-    }
 }
