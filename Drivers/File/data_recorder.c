@@ -848,14 +848,8 @@ uint8_t data_parse_csv_line(const char* line, DataRecord* record)
     /* instant_flow */
     record->instant_flow = parse_float(p, &p); while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
 
-    /* total_flow (double → byte-by-byte copy to avoid unaligned write on packed struct) */
-    {
-        double tf = parse_double(p, &p);
-        uint8_t *dst = (uint8_t *)&record->total_flow;
-        const uint8_t *src = (const uint8_t *)&tf;
-        uint8_t i;
-        for (i = 0; i < sizeof(double); i++) dst[i] = src[i];
-    }
+    /* total_flow */
+    record->total_flow = parse_double(p, &p);
     while (*p && *p != ',') p++; if (!*p) return FILE_ERROR; p++;
 
     /* total_time */

@@ -59,7 +59,7 @@ extern "C" {
 /**
  * @brief 数据记录结构体
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint16_t year;          /**< 年 */
     uint8_t  month;         /**< 月 */
     uint8_t  day;           /**< 日 */
