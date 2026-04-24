@@ -55,7 +55,7 @@
 /*                            动画配置                                          */
 /*============================================================================*/
 
-#define ANIM_TIME           200         /* 屏幕切换动画时长 (ms)       */
+#define ANIM_TIME           140         /* 屏幕切换动画时长 (ms)       */
 
 /*============================================================================*/
 /*                           数据结构定义                                      */
@@ -412,6 +412,8 @@ static int8_t g_category_index;
 static volatile uint8_t g_set_busy;
 static lv_obj_t *g_edit_value_label = NULL;   /* 编辑页面大字值标签指针 */
 static const set_item_t *g_edit_item = NULL;   /* 当前编辑的参数项指针 */
+static int8_t g_category_style_index = -1;    /* Last styled category row */
+static int8_t g_parameter_style_index = -1;   /* Last styled parameter row */
 static uint32_t g_step_list[5];               /* 步进值列表 (1,10,100,1000,10000) */
 static float g_stepf_list[13];                /* float步进值列表 */
 static double g_stepd_list[15];               /* double步进值列表 (累计流量) */
@@ -469,6 +471,8 @@ static void update_category_selection(void);
 static void update_parameter_selection(void);
 static void update_edit_value_display(void);
 static uint8_t generate_step_list(uint32_t max_val);
+static void update_category_row(lv_obj_t *list, int8_t row_idx, uint8_t selected);
+static void update_parameter_row(lv_obj_t *list, int8_t row_idx, uint8_t selected);
 
 /* --- 按键处理函数 (仅限按键任务上下文调用，不含LVGL操作) --- */
 static void handle_category_key(uint8_t button_id);
@@ -622,6 +626,7 @@ static lv_obj_t *create_category_screen(void)
 
     /* 关键: 在调用 update_category_selection() 之前设置 current_screen */
     g_set_nav.current_screen = screen;
+    g_category_style_index = -1;
 
     /* --- 顶栏 --- */
     lv_obj_t *top_bar = lv_obj_create(screen);
@@ -722,33 +727,49 @@ static void update_category_selection(void)
     lv_obj_t *list = lv_obj_get_child(screen, 1);
     if (list == NULL) return;
 
-    for (uint8_t i = 0; i < CATEGORY_COUNT; i++) {
-        lv_obj_t *row = lv_obj_get_child(list, i);
-        if (row == NULL) continue;
+    int8_t selected = g_set_nav.selected_index;
+    if (selected < 0 || selected >= (int8_t)CATEGORY_COUNT) return;
 
-        /* 行子对象布局: [0]名称 [1]弹性空间 [2]箭头 [3]参数数量 */
-        lv_obj_t *name_lbl = lv_obj_get_child(row, 0);
-        lv_obj_t *arrow_lbl = lv_obj_get_child(row, 2);
-        lv_obj_t *cnt_lbl = lv_obj_get_child(row, 3);
-
-        if (i == (uint8_t)g_set_nav.selected_index) {
-            /* 高亮选中行 */
-            lv_obj_set_style_bg_color(row, lv_color_hex(COLOR_ROW_SEL), 0);
-            lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-            lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
-            lv_obj_set_style_text_color(arrow_lbl, lv_color_hex(COLOR_ACCENT), 0);
-            if (cnt_lbl) lv_obj_set_style_text_color(cnt_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
-        } else {
-            /* 普通行 */
-            lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
-            lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-            lv_obj_set_style_text_color(arrow_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-            if (cnt_lbl) lv_obj_set_style_text_color(cnt_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    if (g_category_style_index < 0) {
+        for (uint8_t i = 0; i < CATEGORY_COUNT; i++) {
+            update_category_row(list, (int8_t)i, i == (uint8_t)selected);
         }
+    } else if (g_category_style_index != selected) {
+        update_category_row(list, g_category_style_index, 0);
+        update_category_row(list, selected, 1);
+    } else {
+        update_category_row(list, selected, 1);
     }
+    g_category_style_index = selected;
 
-    /* 自动滚动到选中行可见位置 */
-    lv_obj_scroll_to_view(lv_obj_get_child(list, g_set_nav.selected_index), LV_ANIM_ON);
+    lv_obj_t *row = lv_obj_get_child(list, selected);
+    if (row) lv_obj_scroll_to_view(row, LV_ANIM_OFF);
+}
+
+static void update_category_row(lv_obj_t *list, int8_t row_idx, uint8_t selected)
+{
+    if (list == NULL || row_idx < 0 || row_idx >= (int8_t)CATEGORY_COUNT) return;
+
+    lv_obj_t *row = lv_obj_get_child(list, row_idx);
+    if (row == NULL) return;
+
+    lv_obj_t *name_lbl = lv_obj_get_child(row, 0);
+    lv_obj_t *arrow_lbl = lv_obj_get_child(row, 2);
+    lv_obj_t *cnt_lbl = lv_obj_get_child(row, 3);
+    if (name_lbl == NULL || arrow_lbl == NULL) return;
+
+    if (selected) {
+        lv_obj_set_style_bg_color(row, lv_color_hex(COLOR_ROW_SEL), 0);
+        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+        lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
+        lv_obj_set_style_text_color(arrow_lbl, lv_color_hex(COLOR_ACCENT), 0);
+        if (cnt_lbl) lv_obj_set_style_text_color(cnt_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
+    } else {
+        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        lv_obj_set_style_text_color(arrow_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        if (cnt_lbl) lv_obj_set_style_text_color(cnt_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    }
 }
 
 /**
@@ -832,6 +853,7 @@ static lv_obj_t *create_parameter_screen(uint8_t cat_idx)
 
     /* 关键: 在调用 update_parameter_selection() 之前设置 current_screen */
     g_set_nav.current_screen = screen;
+    g_parameter_style_index = -1;
 
     /* --- 顶栏 (与分类列表结构相同) --- */
     lv_obj_t *top_bar = lv_obj_create(screen);
@@ -955,31 +977,49 @@ static void update_parameter_selection(void)
     lv_obj_t *list = lv_obj_get_child(screen, 1);
     if (list == NULL) return;
 
-    for (uint8_t i = 0; i < cat->count; i++) {
-        lv_obj_t *row = lv_obj_get_child(list, i);
-        if (row == NULL) continue;
+    int8_t selected = g_set_nav.selected_index;
+    if (selected < 0 || selected >= (int8_t)cat->count) return;
 
-        lv_obj_t *name_lbl = lv_obj_get_child(row, 0);
-        lv_obj_t *val_lbl = lv_obj_get_child(row, 2);
-        lv_obj_t *unit_lbl = (lv_obj_get_child_cnt(row) > 3) ? lv_obj_get_child(row, 3) : NULL;
-
-        if (i == (uint8_t)g_set_nav.selected_index) {
-            lv_obj_set_style_bg_color(row, lv_color_hex(COLOR_ROW_SEL), 0);
-            lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-            lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
-            lv_obj_set_style_text_color(val_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
-            if (unit_lbl) lv_obj_set_style_text_color(unit_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
-        } else {
-            lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
-            lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-            lv_obj_set_style_text_color(val_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-            if (unit_lbl) lv_obj_set_style_text_color(unit_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+    if (g_parameter_style_index < 0) {
+        for (uint8_t i = 0; i < cat->count; i++) {
+            update_parameter_row(list, (int8_t)i, i == (uint8_t)selected);
         }
+    } else if (g_parameter_style_index != selected) {
+        update_parameter_row(list, g_parameter_style_index, 0);
+        update_parameter_row(list, selected, 1);
+    } else {
+        update_parameter_row(list, selected, 1);
     }
+    g_parameter_style_index = selected;
 
-    int idx = g_set_nav.selected_index;
-    if (idx >= 0 && idx < (int)cat->count) {
-        lv_obj_scroll_to_view(lv_obj_get_child(list, idx), LV_ANIM_ON);
+    lv_obj_t *selected_row = lv_obj_get_child(list, selected);
+    if (selected_row) lv_obj_scroll_to_view(selected_row, LV_ANIM_OFF);
+}
+
+static void update_parameter_row(lv_obj_t *list, int8_t row_idx, uint8_t selected)
+{
+    const set_category_t *cat = &categories[g_category_index];
+    if (list == NULL || row_idx < 0 || row_idx >= (int8_t)cat->count) return;
+
+    lv_obj_t *row = lv_obj_get_child(list, row_idx);
+    if (row == NULL) return;
+
+    lv_obj_t *name_lbl = lv_obj_get_child(row, 0);
+    lv_obj_t *val_lbl = lv_obj_get_child(row, 2);
+    lv_obj_t *unit_lbl = (lv_obj_get_child_cnt(row) > 3) ? lv_obj_get_child(row, 3) : NULL;
+    if (name_lbl == NULL || val_lbl == NULL) return;
+
+    if (selected) {
+        lv_obj_set_style_bg_color(row, lv_color_hex(COLOR_ROW_SEL), 0);
+        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+        lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
+        lv_obj_set_style_text_color(val_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
+        if (unit_lbl) lv_obj_set_style_text_color(unit_lbl, lv_color_hex(COLOR_TEXT_SEL), 0);
+    } else {
+        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        lv_obj_set_style_text_color(val_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        if (unit_lbl) lv_obj_set_style_text_color(unit_lbl, lv_color_hex(COLOR_TEXT_NORMAL), 0);
     }
 }
 

@@ -30,7 +30,7 @@
 /*                            常量定义                                          */
 /*============================================================================*/
 
-#define ANIM_TIME               200         /**< 屏幕切换动画时长 (ms) */
+#define ANIM_TIME               140         /**< 屏幕切换动画时长 (ms) */
 #define IDLE_TIMEOUT_MS         15000       /**< 空闲超时时间 (15秒) */
 #define IDLE_CHECK_PERIOD_MS    1000        /**< 空闲检测周期 (1秒) */
 #define HIST_WINDOW_SIZE        21          /**< 滑动窗口大小 (21*33=693字节) */
@@ -99,6 +99,12 @@ static lv_obj_t *g_status_label;
 static lv_obj_t *g_top_date_label;
 static lv_obj_t *g_top_count_label;
 static lv_obj_t *g_no_data_label;
+static int8_t g_record_row_style[HIST_VISIBLE_COUNT];
+
+#define HIST_ROW_STYLE_INVALID  (-1)
+#define HIST_ROW_STYLE_EMPTY    0
+#define HIST_ROW_STYLE_NORMAL   1
+#define HIST_ROW_STYLE_CURRENT  2
 
 static lv_timer_t *g_idle_timer;
 static lv_timer_t *g_poll_timer;           /**< 数据就绪轮询定时器 */
@@ -108,7 +114,7 @@ static uint32_t g_exit_tick;            /**< 退出时刻 (用于屏蔽退出后
 
 #define ENTER_PROTECT_MS  2500          /**< 进入后屏蔽LONG退出的时间 */
 #define EXIT_PROTECT_MS   2500          /**< 退出后屏蔽松手重入的时间 */
-#define POLL_PERIOD_MS    200           /**< 数据就绪检测周期 */
+#define POLL_PERIOD_MS    50            /**< 数据就绪检测周期 */
 
 /*============================================================================*/
 /*                          前向声明                                            */
@@ -121,6 +127,7 @@ static lv_obj_t *create_browser_screen(void);
 /* 显示更新 (LVGL上下文) */
 static void update_date_picker_display(void);
 static void update_browser_display(void);
+static void history_apply_record_row_style(int row, int8_t style);
 
 /* 异步回调 */
 static void async_enter_date_picker_cb(void *ctx);
@@ -743,6 +750,63 @@ static void update_date_picker_display(void)
     }
 }
 
+static void history_apply_record_row_style(int row, int8_t style)
+{
+    if (row < 0 || row >= HIST_VISIBLE_COUNT || g_record_conts[row] == NULL) return;
+
+    int base = row * 4;
+
+    if (style == HIST_ROW_STYLE_CURRENT) {
+        lv_obj_set_style_bg_color(g_record_conts[row], lv_color_hex(COLOR_ROW_SEL), 0);
+        lv_obj_set_style_bg_opa(g_record_conts[row], LV_OPA_COVER, 0);
+        lv_obj_set_style_border_side(g_record_conts[row], LV_BORDER_SIDE_LEFT, 0);
+        lv_obj_set_style_border_color(g_record_conts[row], lv_color_hex(COLOR_ACCENT), 0);
+        lv_obj_set_style_border_opa(g_record_conts[row], LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(g_record_conts[row], 3, 0);
+
+        if (g_record_labels[base])     lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_SEL), 0);
+        if (g_record_labels[base + 1]) lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_ACCENT), 0);
+        if (g_record_labels[base + 2]) lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        if (g_record_labels[base + 3]) lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_TEXT_SEL), 0);
+        if (g_record_labels[base])     lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
+        if (g_record_labels[base + 1]) lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_20(), 0);
+        if (g_record_labels[base + 2]) lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
+        if (g_record_labels[base + 3]) lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
+    } else if (style == HIST_ROW_STYLE_NORMAL) {
+        lv_obj_set_style_bg_opa(g_record_conts[row], LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_side(g_record_conts[row], LV_BORDER_SIDE_BOTTOM, 0);
+        lv_obj_set_style_border_color(g_record_conts[row], lv_color_hex(0x2A353B), 0);
+        lv_obj_set_style_border_opa(g_record_conts[row], LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(g_record_conts[row], 1, 0);
+
+        if (g_record_labels[base])     lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        if (g_record_labels[base + 1]) lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+        if (g_record_labels[base + 2]) lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(0x8A9499), 0);
+        if (g_record_labels[base + 3]) lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(0x8A9499), 0);
+        for (int i = 0; i < 4; i++) {
+            if (g_record_labels[base + i]) {
+                lv_obj_set_style_text_font(g_record_labels[base + i], lang_get_font_16(), 0);
+            }
+        }
+    } else {
+        lv_obj_set_style_bg_opa(g_record_conts[row], LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_side(g_record_conts[row], LV_BORDER_SIDE_NONE, 0);
+        lv_obj_set_style_border_opa(g_record_conts[row], LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(g_record_conts[row], 0, 0);
+
+        for (int i = 0; i < 4; i++) {
+            if (g_record_labels[base + i]) {
+                lv_obj_set_style_text_font(g_record_labels[base + i], lang_get_font_16(), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + i], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+            }
+        }
+        if (g_record_labels[base + 2]) lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(0x8A9499), 0);
+        if (g_record_labels[base + 3]) lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(0x8A9499), 0);
+    }
+
+    g_record_row_style[row] = style;
+}
+
 static void update_browser_display(void)
 {
     /* 顶栏日期 */
@@ -843,53 +907,17 @@ static void update_browser_display(void)
             lv_label_set_text(g_record_labels[base + 2], total_name);
             lv_label_set_text(g_record_labels[base + 3], total_buf);
 
-            /* 高亮当前行: 左侧强调色边框 + 背景 */
-            if (is_current) {
-                lv_obj_set_style_bg_color(g_record_conts[i], lv_color_hex(COLOR_ROW_SEL), 0);
-                lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_COVER, 0);
-                lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_LEFT, 0);
-                lv_obj_set_style_border_color(g_record_conts[i], lv_color_hex(COLOR_ACCENT), 0);
-                lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_COVER, 0);
-                lv_obj_set_style_border_width(g_record_conts[i], 3, 0);
-                lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
-                lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_20(), 0);
-                lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
-                lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
-                lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_SEL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_ACCENT), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_TEXT_SEL), 0);
-            } else {
-                lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
-                lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_BOTTOM, 0);
-                lv_obj_set_style_border_color(g_record_conts[i], lv_color_hex(0x2A353B), 0);
-                lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_COVER, 0);
-                lv_obj_set_style_border_width(g_record_conts[i], 1, 0);
-                lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
-                lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_16(), 0);
-                lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
-                lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
-                lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(0x8A9499), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(0x8A9499), 0);
+            int8_t row_style = is_current ? HIST_ROW_STYLE_CURRENT : HIST_ROW_STYLE_NORMAL;
+            if (g_record_row_style[i] != row_style) {
+                history_apply_record_row_style(i, row_style);
             }
         } else {
             for (int j = 0; j < 4; j++) {
                 lv_label_set_text(g_record_labels[base + j], "");
             }
-            lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
-            lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_16(), 0);
-            lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
-            lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
-            lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-            lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-            lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(0x8A9499), 0);
-            lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(0x8A9499), 0);
-            lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
-            lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_NONE, 0);
-            lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
-            lv_obj_set_style_border_width(g_record_conts[i], 0, 0);
+            if (g_record_row_style[i] != HIST_ROW_STYLE_EMPTY) {
+                history_apply_record_row_style(i, HIST_ROW_STYLE_EMPTY);
+            }
         }
     }
 
@@ -1028,6 +1056,7 @@ static void history_clear_widget_refs(void)
     for (int i = 0; i < FIELD_COUNT; i++) g_date_labels[i] = NULL;
     for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
         g_record_conts[i] = NULL;
+        g_record_row_style[i] = HIST_ROW_STYLE_INVALID;
         for (int j = 0; j < 4; j++) {
             g_record_labels[i * 4 + j] = NULL;
         }
