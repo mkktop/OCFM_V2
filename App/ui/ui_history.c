@@ -597,7 +597,7 @@ static lv_obj_t *create_browser_screen(void)
 
     g_top_date_label = lv_label_create(top_bar);
     lv_obj_set_style_text_color(g_top_date_label, lv_color_hex(COLOR_ACCENT), 0);
-    lv_obj_set_style_text_font(g_top_date_label, lang_get_font_16(), 0);
+    lv_obj_set_style_text_font(g_top_date_label, lang_get_font_14(), 0);
 
     lv_obj_t *top_spacer = lv_obj_create(top_bar);
     ui_container_style_init(top_spacer);
@@ -624,7 +624,7 @@ static lv_obj_t *create_browser_screen(void)
     for (int i = 0; i < HIST_VISIBLE_COUNT; i++) {
         g_record_conts[i] = lv_obj_create(record_area);
         ui_container_style_init(g_record_conts[i]);
-        lv_obj_set_size(g_record_conts[i], LV_PCT(96), 58);
+        lv_obj_set_size(g_record_conts[i], LV_PCT(96), 62);
         lv_obj_set_style_pad_hor(g_record_conts[i], 10, 0);
         lv_obj_set_style_pad_ver(g_record_conts[i], 5, 0);
         lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
@@ -641,7 +641,7 @@ static lv_obj_t *create_browser_screen(void)
         for (int row = 0; row < 2; row++) {
             lv_obj_t *line = lv_obj_create(g_record_conts[i]);
             ui_container_style_init(line);
-            lv_obj_set_size(line, LV_PCT(100), row == 0 ? 22 : 20);
+            lv_obj_set_size(line, LV_PCT(100), row == 0 ? 24 : 20);
             lv_obj_set_style_bg_opa(line, LV_OPA_TRANSP, 0);
             lv_obj_set_style_border_opa(line, LV_OPA_TRANSP, 0);
             lv_obj_set_flex_flow(line, LV_FLEX_FLOW_ROW);
@@ -688,7 +688,7 @@ static lv_obj_t *create_browser_screen(void)
     lv_obj_t *nav_hint = lv_label_create(status_bar);
     lv_obj_set_style_text_font(nav_hint, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(nav_hint, lv_color_hex(COLOR_TEXT_NORMAL), 0);
-    lv_label_set_text(nav_hint, LV_SYMBOL_UP LV_SYMBOL_DOWN " " LV_SYMBOL_SHUFFLE ":Back");
+    lv_label_set_text(nav_hint, "OK/SHIFT:Back");
 
     update_browser_display();
     return screen;
@@ -747,9 +747,9 @@ static void update_browser_display(void)
 {
     /* 顶栏日期 */
     if (g_top_date_label) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u%s",
-                 g_hist_year, g_hist_month, g_hist_day, g_hist_hour, lang_get(LANG_HIST_HOUR));
+        char buf[40];
+        snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:00-%02u:59",
+                 g_hist_year, g_hist_month, g_hist_day, g_hist_hour, g_hist_hour);
         lv_label_set_text(g_top_date_label, buf);
     }
 
@@ -772,10 +772,21 @@ static void update_browser_display(void)
 
     /* 状态栏 */
     if (g_status_label) {
+        uint8_t can_prev = (g_hist_cache.total_count > 0 &&
+                            g_hist_cache.current_absolute > 0);
+        uint8_t can_next = (g_hist_cache.total_count > 0 &&
+                            g_hist_cache.current_absolute < (int16_t)(g_hist_cache.total_count - 1));
+
         if (g_hist_state == HIST_STATE_LOADING) {
             lv_label_set_text(g_status_label, lang_get(LANG_HIST_LOADING));
         } else if (g_hist_cache.total_count == 0) {
             lv_label_set_text(g_status_label, lang_get(LANG_HIST_NO_DATA));
+        } else if (can_prev && can_next) {
+            lv_label_set_text(g_status_label, LV_SYMBOL_UP " Prev  " LV_SYMBOL_DOWN " Next");
+        } else if (can_prev) {
+            lv_label_set_text(g_status_label, LV_SYMBOL_UP " Prev");
+        } else if (can_next) {
+            lv_label_set_text(g_status_label, LV_SYMBOL_DOWN " Next");
         } else {
             lv_label_set_text(g_status_label, lang_get(LANG_HIST_RECORD));
         }
@@ -795,13 +806,24 @@ static void update_browser_display(void)
             win_idx >= 0 && win_idx < HIST_WINDOW_SIZE) {
 
             DataRecord *rec = &g_hist_cache.records[win_idx];
-            char time_buf[16], inst_buf[32], total_name[24], total_buf[32];
+            char time_buf[24], inst_buf[32], total_name[24], total_buf[32];
 
             /* 第一行: 时间 + 瞬时流量 (数值用强调色) */
             if (is_current) {
                 snprintf(time_buf, sizeof(time_buf),
                          "%s %02u:%02u",
                          LV_SYMBOL_RIGHT,
+                         rec->hour, rec->minute);
+            } else if (i == 0 && abs_idx > 0) {
+                snprintf(time_buf, sizeof(time_buf),
+                         "%s %02u:%02u",
+                         LV_SYMBOL_UP,
+                         rec->hour, rec->minute);
+            } else if (i == HIST_VISIBLE_COUNT - 1 &&
+                       abs_idx < (int16_t)g_hist_cache.total_count - 1) {
+                snprintf(time_buf, sizeof(time_buf),
+                         "%s %02u:%02u",
+                         LV_SYMBOL_DOWN,
                          rec->hour, rec->minute);
             } else {
                 snprintf(time_buf, sizeof(time_buf),
@@ -829,26 +851,41 @@ static void update_browser_display(void)
                 lv_obj_set_style_border_color(g_record_conts[i], lv_color_hex(COLOR_ACCENT), 0);
                 lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_COVER, 0);
                 lv_obj_set_style_border_width(g_record_conts[i], 3, 0);
+                lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
+                lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_20(), 0);
+                lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
+                lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
                 lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_SEL), 0);
                 lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_ACCENT), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_SEL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_ACCENT), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_TEXT_SEL), 0);
             } else {
                 lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
                 lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_BOTTOM, 0);
                 lv_obj_set_style_border_color(g_record_conts[i], lv_color_hex(0x2A353B), 0);
                 lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_COVER, 0);
                 lv_obj_set_style_border_width(g_record_conts[i], 1, 0);
+                lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
+                lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_16(), 0);
+                lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
+                lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
                 lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
                 lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(COLOR_TEXT_NORMAL), 0);
-                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(0x8A9499), 0);
+                lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(0x8A9499), 0);
             }
         } else {
             for (int j = 0; j < 4; j++) {
                 lv_label_set_text(g_record_labels[base + j], "");
-                lv_obj_set_style_text_color(g_record_labels[base + j], lv_color_hex(COLOR_TEXT_NORMAL), 0);
             }
+            lv_obj_set_style_text_font(g_record_labels[base], lang_get_font_16(), 0);
+            lv_obj_set_style_text_font(g_record_labels[base + 1], lang_get_font_16(), 0);
+            lv_obj_set_style_text_font(g_record_labels[base + 2], lang_get_font_16(), 0);
+            lv_obj_set_style_text_font(g_record_labels[base + 3], lang_get_font_16(), 0);
+            lv_obj_set_style_text_color(g_record_labels[base], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+            lv_obj_set_style_text_color(g_record_labels[base + 1], lv_color_hex(COLOR_TEXT_NORMAL), 0);
+            lv_obj_set_style_text_color(g_record_labels[base + 2], lv_color_hex(0x8A9499), 0);
+            lv_obj_set_style_text_color(g_record_labels[base + 3], lv_color_hex(0x8A9499), 0);
             lv_obj_set_style_bg_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
             lv_obj_set_style_border_side(g_record_conts[i], LV_BORDER_SIDE_NONE, 0);
             lv_obj_set_style_border_opa(g_record_conts[i], LV_OPA_TRANSP, 0);
@@ -861,11 +898,11 @@ static void update_browser_display(void)
         if (g_no_data_label == NULL) {
             g_no_data_label = lv_label_create(g_hist_screen ? g_hist_screen : lv_screen_active());
             lv_label_set_recolor(g_no_data_label, true);
-            lv_obj_set_style_text_font(g_no_data_label, lang_get_font_24(), 0);
+            lv_obj_set_style_text_font(g_no_data_label, &lv_font_montserrat_24, 0);
             lv_obj_set_style_text_color(g_no_data_label, lv_color_hex(COLOR_TEXT_NORMAL), 0);
             lv_obj_align(g_no_data_label, LV_ALIGN_CENTER, 0, 0);
         }
-        lv_label_set_text(g_no_data_label, lang_get(LANG_HIST_NO_DATA));
+        lv_label_set_text(g_no_data_label, "No Data");
     } else {
         if (g_no_data_label) {
             lv_obj_del(g_no_data_label);

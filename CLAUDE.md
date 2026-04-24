@@ -39,7 +39,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 | 任务 | 栈(字节) | 周期 | 功能 |
 |------|----------|------|------|
 | main_task | 8192 | 事件驱动 | LVGL刷新 + 启动时初始化所有模块 |
-| log_task | 4096 | 500ms | 日志输出、config_process、flow_process、RTC更新 |
+| log_task | 8192 | 500ms | 日志输出、config_process、flow_process、历史查询、RTC更新 |
 | button_scan_tas | 2048 | 10ms | 按键扫描 |
 | modbus_master_t | 1024 | 10ms | 传感器轮询 |
 | modbus_slave_ta | 1024 | 10ms | 从机通信 (每1秒同步数据到寄存器) |
@@ -59,7 +59,8 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 
 ## 代码规范
 
-- 缩进: 4个空格 | 大括号: Linux风格 | 命名: snake_case函数 / CamelCase类型 / UPPER_SNAKE_CASE宏常量
+- 格式化配置: `.clang-format` (基于 Microsoft 风格, 4空格缩进, Linux大括号, 无行长度限制, 允许单行if/for)
+- 命名: snake_case函数 / CamelCase类型 / UPPER_SNAKE_CASE宏常量
 - 注释: Doxygen风格 (`@brief`, `@param`, `@retval`, `@note`)
 
 ## LVGL 9.5.0 注意事项
@@ -79,7 +80,7 @@ LVGL 9.x API 与 8.x 差异较大，本项目的关键API：
 3. 修正生成文件的 `fallback` 指向 `my_font_montserrat_16/24`
 4. 修正 `noto_sans_sc_16.c` 的 `line_height=20`, `base_line=4`
 
-少量新增字符时，可使用 `merge_glyphs.py` 脚本直接将字形数据合并到现有字体文件，避免重新生成整个字体。需修改脚本中的 `new_glyphs` 数组和 `list_length` 计数。
+少量新增字符时，可使用 `merge_glyphs.py` 脚本直接将字形数据合并到 `noto_sans_sc_16.c`（不支持24pt版本），避免重新生成整个字体。需修改脚本中的 `new_glyphs` 数组和 `list_length` 计数。
 
 ### 异步UI操作
 **从按键回调等非LVGL上下文修改UI时，必须使用 `lv_async_call()`**，否则触发 rendering_in_progress 断言。
@@ -175,3 +176,9 @@ TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。线性插值：`ratio = (flow - 
 **设置页面** — 三级菜单：分类列表 → 参数列表 → 数值编辑（SHIFT键切换步进 1/10/100/1000/10000）。15秒无操作自动返回主屏幕。进入设置前可选密码验证（固定密码1234）。
 
 **屏幕切换：** `ui_switch_screen(new_screen, anim_type, time)`，通过 `ui_manager->active_screen` 跟踪当前屏幕。
+
+**历史数据查询页** (`App/ui/ui_history.c`) — 主屏幕长按SHIFT进入，包含两个子页面：
+- **日期选择器**：UP/DOWN调整数值，SHIFT切换年/月/日/时字段
+- **数据浏览**：显示3条可见记录（上一条/当前/下一条），滑动窗口缓存21条，边缘预加载
+- **跨任务查询**：按键回调仅修改状态标记，UI操作通过 `lv_async_call()` 执行，文件I/O由 `history_query_process()` 在 log_task 中完成（使用序号同步 query/commit/cancel）
+- 15秒无操作自动返回主屏幕
