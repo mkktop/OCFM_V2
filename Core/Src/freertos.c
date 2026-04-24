@@ -59,6 +59,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+static volatile uint8_t s_system_ready = 0U;
 
 /* USER CODE END Variables */
 /* Definitions for main_task */
@@ -104,6 +105,9 @@ const osTimerAttr_t flow_refresh_timer_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+static uint8_t app_system_is_ready(void);
+static void app_system_set_ready(void);
+static void app_system_wait_ready(void);
 
 /* USER CODE END FunctionPrototypes */
 
@@ -140,7 +144,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-  osTimerStart(flow_refresh_timerHandle, 1000);  // 1秒周期
+  /* flow_refresh_timer is started after application modules are ready. */
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -194,6 +198,10 @@ void main_task_func(void *argument)
   lv_port_disp_init();  // 初始化显示端口
   // lv_demo_benchmark();  // 初始化演示基准测试
   ui_create();
+  app_system_set_ready();
+  if (flow_refresh_timerHandle != NULL) {
+      (void)osTimerStart(flow_refresh_timerHandle, 1000U);
+  }
   /* 背光关闭状态下运行几个渲染周期，让LVGL自然完成首帧渲染 */
   for (int i = 0; i < 10; i++) {
       lv_timer_handler();
@@ -222,6 +230,8 @@ void main_task_func(void *argument)
 void log_task_func(void *argument)
 {
   /* USER CODE BEGIN log_task_func */
+  app_system_wait_ready();
+
   app_log_data_init();
 
   /* 等待首次数据就绪 (flow_refresh_timer 1秒后才首次运行) */
@@ -292,6 +302,7 @@ void log_task_func(void *argument)
 void button_scan_fun(void *argument)
 {
   /* USER CODE BEGIN button_scan_fun */
+  app_system_wait_ready();
 
   /* 初始化应用层按键 */
   app_button_init();
@@ -315,6 +326,8 @@ void button_scan_fun(void *argument)
 void modbus_master_task_func(void *argument)
 {
   /* USER CODE BEGIN modbus_master_task_func */
+  app_system_wait_ready();
+
   /* Infinite loop */
   for(;;)
   {
@@ -334,6 +347,8 @@ void modbus_master_task_func(void *argument)
 void modbus_slave_task_func(void *argument)
 {
   /* USER CODE BEGIN modbus_slave_task_func */
+  app_system_wait_ready();
+
   /* 初始化应用层：将配置参数预填到寄存器（内部会调用modbus_slave_init） */
   app_modbus_slave_init();
 
@@ -366,6 +381,10 @@ void modbus_slave_task_func(void *argument)
 void flow_refresh_fun(void *argument)
 {
   /* USER CODE BEGIN flow_refresh_fun */
+  if (!app_system_is_ready()) {
+      return;
+  }
+
   SensorData_t *sensor = app_sensor_get_data();
   float water_level = 0.0f;
   if (sensor && sensor->is_online)
@@ -384,6 +403,22 @@ void flow_refresh_fun(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+static uint8_t app_system_is_ready(void)
+{
+    return s_system_ready != 0U;
+}
+
+static void app_system_set_ready(void)
+{
+    s_system_ready = 1U;
+}
+
+static void app_system_wait_ready(void)
+{
+    while (!app_system_is_ready()) {
+        osDelay(10U);
+    }
+}
 
 /* USER CODE END Application */
 
