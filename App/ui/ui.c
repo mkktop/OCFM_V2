@@ -16,6 +16,33 @@
 
 ui_manager_t *ui_manager;
 
+#define UI_FLOW_VALUE_LABEL_WIDTH       288
+#define UI_ALARM_BITMAP_FORCE_REFRESH   0xFFU
+
+typedef struct {
+    int32_t max_width;
+    const lv_font_t *font_large;
+    const lv_font_t *font_medium;
+    const lv_font_t *font_small;
+    const lv_font_t *font_tiny;
+} ui_value_label_fit_t;
+
+static ui_value_label_fit_t s_instant_flow_fit = {
+    UI_FLOW_VALUE_LABEL_WIDTH,
+    &lv_font_montserrat_48,
+    &lv_font_montserrat_26,
+    &lv_font_montserrat_24,
+    &lv_font_montserrat_20,
+};
+
+static ui_value_label_fit_t s_total_flow_fit = {
+    UI_FLOW_VALUE_LABEL_WIDTH,
+    &lv_font_montserrat_26,
+    &lv_font_montserrat_24,
+    &lv_font_montserrat_20,
+    &lv_font_montserrat_18,
+};
+
 /*============================================================================*/
 /*                           私有函数                                           */
 /*============================================================================*/
@@ -95,6 +122,43 @@ static void total_flow_with_unit_observer_cb(lv_observer_t *observer, lv_subject
     lv_label_set_text_fmt(label, "%s m\xC2\xB3", text);
 }
 
+static uint8_t value_text_fits_width(const char *text, const lv_font_t *font, int32_t max_width)
+{
+    lv_point_t size;
+
+    lv_text_get_size(&size, text, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    return size.x <= max_width;
+}
+
+static const lv_font_t *select_value_font(const char *text, const ui_value_label_fit_t *fit)
+{
+    if (value_text_fits_width(text, fit->font_large, fit->max_width)) {
+        return fit->font_large;
+    }
+    if (value_text_fits_width(text, fit->font_medium, fit->max_width)) {
+        return fit->font_medium;
+    }
+    if (value_text_fits_width(text, fit->font_small, fit->max_width)) {
+        return fit->font_small;
+    }
+    return fit->font_tiny;
+}
+
+static void fitted_value_label_observer_cb(lv_observer_t *observer, lv_subject_t *subject)
+{
+    lv_obj_t *label = lv_observer_get_target_obj(observer);
+    const ui_value_label_fit_t *fit =
+        (const ui_value_label_fit_t *)lv_observer_get_user_data(observer);
+    const char *text = lv_subject_get_string(subject);
+
+    if (label == NULL || text == NULL || fit == NULL) {
+        return;
+    }
+
+    lv_obj_set_style_text_font(label, select_value_font(text, fit), 0);
+    lv_label_set_text(label, text);
+}
+
 /**
  * @brief  UI更新定时器回调函数
  * @details 每秒被LVGL定时器调用一次，负责更新界面显示的所有动态数据
@@ -171,6 +235,7 @@ static void ui_update_timer_cb(lv_timer_t *timer)
 
         if (!show_alarm) {
             lv_obj_add_flag(ui_manager->bottom_alarm_cont, LV_OBJ_FLAG_HIDDEN);
+            ui_manager->prev_alarm_bitmap = UI_ALARM_BITMAP_FORCE_REFRESH;
         } else if (bitmap != ui_manager->prev_alarm_bitmap) {
             ui_manager->prev_alarm_bitmap = bitmap;
 
@@ -557,6 +622,8 @@ static void create_details_tile(lv_obj_t *tile)
 
     /* 创建瞬时流量数值标签（核心数据显示） */
     lv_obj_t *inst_flaw_data_label = lv_label_create(inst_flaw_obj);
+    lv_obj_set_width(inst_flaw_data_label, UI_FLOW_VALUE_LABEL_WIDTH);
+    lv_label_set_long_mode(inst_flaw_data_label, LV_LABEL_LONG_MODE_CLIP);
     lv_label_set_text(inst_flaw_data_label, "0.00");
 
     /* 设置数值字体为48px最大字号，白色，突出显示 */
@@ -568,9 +635,9 @@ static void create_details_tile(lv_obj_t *tile)
     
     /* 绑定瞬时流量Subject，实现每秒自动更新 */
     lv_subject_add_observer_obj(&ui_manager->subjects.instant_flow_str, 
-                                string_label_observer_cb, 
+                                fitted_value_label_observer_cb,
                                 inst_flaw_data_label, 
-                                NULL);
+                                &s_instant_flow_fit);
 
     /*--------------------------------------------------------------------*/
     /* 第四部分：累计流量显示区 - 中等字号显示累计值                        */
@@ -609,6 +676,8 @@ static void create_details_tile(lv_obj_t *tile)
 
     /* 创建累计流量数值标签 */
     lv_obj_t *total_flaw_data_label = lv_label_create(total_flaw_obj);
+    lv_obj_set_width(total_flaw_data_label, UI_FLOW_VALUE_LABEL_WIDTH);
+    lv_label_set_long_mode(total_flaw_data_label, LV_LABEL_LONG_MODE_CLIP);
     lv_label_set_text(total_flaw_data_label, "0.00");
 
     /* 设置数值字体为26px，白色 */
@@ -620,9 +689,9 @@ static void create_details_tile(lv_obj_t *tile)
     
     /* 绑定累计流量Subject，实现每秒自动更新 */
     lv_subject_add_observer_obj(&ui_manager->subjects.total_flow_str, 
-                                string_label_observer_cb, 
+                                fitted_value_label_observer_cb,
                                 total_flaw_data_label, 
-                                NULL);
+                                &s_total_flow_fit);
 
     /*--------------------------------------------------------------------*/
     /* 第五部分：底部栏 - 三栏布局：电流 | 报警 | 温度                      */
