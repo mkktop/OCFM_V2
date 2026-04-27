@@ -144,21 +144,11 @@ void button_driver_scan(uint32_t interval_ms)
 
             case BUTTON_STATE_LONG_PRESSED:
                 if (!is_pressed) {
-                    /* 松手，判断长按 */
-                    if (g_buttons[i].long_triggered) {
-                        /* 长按触发 */
-                        event = BUTTON_EVENT_LONG;
-                    }
-                    /* 重置按键状态 */
+                    /* 松手，长按事件已在阈值时触发，此处仅重置状态 */
                     g_buttons[i].state = BUTTON_STATE_IDLE;
                     g_buttons[i].press_time = 0;
                     g_buttons[i].debounce_time = 0;
                     g_buttons[i].long_triggered = false;
-
-                    /* 触发回调 */
-                    if (g_button_callback != NULL) {
-                        g_button_callback(i, event);
-                    }
                 }
                 break;
 

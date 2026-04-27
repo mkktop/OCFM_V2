@@ -210,7 +210,7 @@ static float flow_convert_instant(float flow_l_s, flow_unit_t unit)
         case FLOW_UNIT_T_H:
             return flow_l_s * 3.6f;
         case FLOW_UNIT_G_H:
-            return flow_l_s * 3.785411784f * 3600.0f;
+            return flow_l_s * 3600.0f / 3.785411784f;
         default:
             return flow_l_s;
     }
