@@ -40,6 +40,7 @@
 #include "../App/app_modbus_slave.h"
 #include "data_recorder.h"
 #include "../App/ui/ui_history.h"
+#include "iwdg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +61,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 static volatile uint8_t s_system_ready = 0U;
+extern IWDG_HandleTypeDef hiwdg;
 
 /* USER CODE END Variables */
 /* Definitions for main_task */
@@ -202,6 +204,7 @@ void main_task_func(void *argument)
   if (flow_refresh_timerHandle != NULL) {
       (void)osTimerStart(flow_refresh_timerHandle, 1000U);
   }
+  HAL_IWDG_Refresh(&hiwdg);
   /* 背光关闭状态下运行几个渲染周期，让LVGL自然完成首帧渲染 */
   for (int i = 0; i < 10; i++) {
       lv_timer_handler();
@@ -287,6 +290,7 @@ void log_task_func(void *argument)
       );
     }
 
+    HAL_IWDG_Refresh(&hiwdg);
     osDelay(500);
   }
   /* USER CODE END log_task_func */
