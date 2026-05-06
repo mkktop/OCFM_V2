@@ -25,6 +25,7 @@
  * @details 基于ISO 4359标准
  *          计算公式: Q = K * H^n
  *          其中: Q-流量(L/s), H-水位(m), K-流量系数, n-指数
+ * @note   巴歇尔槽不使用Kh水头修正
  */
 typedef struct {
     uint32_t number_ID;        /**< 水槽规格编号 (1-8) */
@@ -39,16 +40,17 @@ typedef struct {
 
 /**
  * @brief 三角堰参数结构体
- * @details 基于ISO 1438标准
- *          计算公式: Q = K * H^n
- *          其中: Q-流量(L/s), H-水位(m), K-流量系数, n=2.5
- *          常用角度: 90°, 60°, 45°, 30°
+ * @details 基于ISO 1438标准 (Kindsvater-Shen方法)
+ *          计算公式: Q = K * (H + Kh)^n
+ *          其中: Q-流量(L/s), H-水位(m), K-流量系数, n=2.5, Kh-水头修正
+ *          常用角度: 90°, 60°, 45°, 30°, 22.5°
  */
 typedef struct {
-    uint32_t number_ID;        /**< 堰型编号 (1-4) */
+    uint32_t number_ID;        /**< 堰型编号 (1-5) */
     float angle_deg;           /**< 堰口角度 (度) */
-    float factor;              /**< 流量系数 K */
+    float factor;              /**< 流量系数 K (含Ce) */
     float n;                   /**< 指数 n (固定2.5) */
+    float kh;                  /**< 水头修正 Kh (m) */
     float water_level_down;    /**< 最小水位限制 (m) */
     float water_level_up;      /**< 最大水位限制 (m) */
     float flow_range_down;     /**< 最小流量限制 (L/s) */
@@ -57,16 +59,17 @@ typedef struct {
 
 /**
  * @brief 矩形堰参数结构体
- * @details 基于ISO 1438标准
- *          计算公式: Q = K * b * H^1.5
- *          其中: Q-流量(L/s), H-水位(m), K-流量系数, b-堰宽(m)
+ * @details 基于ISO 1438标准 (Francis公式 + Kh修正)
+ *          计算公式: Q = K * b * (H + Kh)^1.5
+ *          其中: Q-流量(L/s), H-水位(m), K-流量系数, b-堰宽(m), Kh-水头修正
  *          常用堰宽: 0.5m, 1.0m, 1.5m, 2.0m
  */
 typedef struct {
     uint32_t number_ID;        /**< 堰型编号 (1-4) */
     float width;               /**< 堰宽 (m) */
-    float factor;              /**< 流量系数 K (约1.84) */
+    float factor;              /**< 流量系数 K (约1.838) */
     float n;                   /**< 指数 n (固定1.5) */
+    float kh;                  /**< 水头修正 Kh (m) */
     float water_level_down;    /**< 最小水位限制 (m) */
     float water_level_up;      /**< 最大水位限制 (m) */
     float flow_range_down;     /**< 最小流量限制 (L/s) */
@@ -124,32 +127,36 @@ static const Water_Channel s_channel_tbl[16] = {
 };
 
 /**
- * @brief 三角堰参数表 (ISO 1438)
+ * @brief 三角堰参数表 (ISO 1438, Kindsvater-Shen方法)
  * @note  索引0-4对应规格1-5
  *        规格: 90°三角堰, 60°三角堰, 45°三角堰, 30°三角堰, 22.5°三角堰
- *        公式: Q = K * H^2.5 (L/s, m)
- *        K系数已转换为L/s单位 (原m³/s系数 × 1000)
+ *        公式: Q = K * (H + Kh)^2.5 (L/s, m)
+ *        K = Ce × (8/15) × √(2g) × tan(θ/2) × 1000
+ *        Ce, Kh 由 Kindsvater-Shen 曲线拟合得到
+ *        Ce = 0.607165052 - 0.000874467θ + 6.103933e-6 θ²
+ *        Kh(ft) = 0.01449 - 0.0003396θ + 3.298e-6 θ² - 1.062e-8 θ³
  */
 static const TriangularWeir_t s_triangular_weir_tbl[5] = {
-    { 1,  90.0f, 1340.0f, 2.50f, 0.05f, 0.40f,  0.75f,  136.0f },  /* 90°三角堰 */
-    { 2,  60.0f,  770.0f, 2.50f, 0.05f, 0.35f,  0.43f,  55.8f },   /* 60°三角堰 */
-    { 3,  45.0f,  560.0f, 2.50f, 0.05f, 0.30f,  0.31f,  27.6f },   /* 45°三角堰 */
-    { 4,  30.0f,  370.0f, 2.50f, 0.05f, 0.25f,  0.21f,  11.6f },   /* 30°三角堰 */
-    { 5,  22.5f,  300.0f, 2.50f, 0.05f, 0.25f,  0.17f,   9.4f },   /* 22.5°三角堰 */
+    { 1,  90.0f, 1365.0f, 2.50f, 0.00301f, 0.05f, 0.40f,  0.88f,  140.7f },  /* 90° Ce=0.5779 Kh=0.00301m */
+    { 2,  60.0f,  786.4f, 2.50f, 0.00176f, 0.05f, 0.35f,  0.48f,   57.7f },  /* 60° Ce=0.5767 Kh=0.00176m */
+    { 3,  45.0f,  567.8f, 2.50f, 0.00177f, 0.05f, 0.30f,  0.35f,   28.4f },  /* 45° Ce=0.5802 Kh=0.00177m */
+    { 4,  30.0f,  371.1f, 2.50f, 0.00221f, 0.05f, 0.25f,  0.23f,   11.9f },  /* 30° Ce=0.5864 Kh=0.00221m */
+    { 5,  22.5f,  277.5f, 2.50f, 0.00259f, 0.05f, 0.25f,  0.18f,    8.90f }, /* 22.5° Ce=0.5906 Kh=0.00259m */
 };
 
 /**
- * @brief 矩形堰参数表 (ISO 1438)
+ * @brief 矩形堰参数表 (ISO 1438, Francis公式)
  * @note  索引0-3对应规格1-4
  *        规格: 0.5m堰宽, 1.0m堰宽, 1.5m堰宽, 2.0m堰宽
- *        公式: Q = K * b * H^1.5 (L/s, m) - 无侧收缩（全宽堰）
- *        K系数已转换为L/s单位 (原m³/s系数 × 1000)
+ *        公式: Q = K * b * (H + Kh)^1.5 (L/s, m) - 无侧收缩（全宽堰）
+ *        K = Cd × (2/3) × √(2g) × 1000, Cd=0.622 (Francis)
+ *        Kh ≈ 0.001m (Kindsvater-Carter 水头修正)
  */
 static const RectangularWeir_t s_rectangular_weir_tbl[4] = {
-    { 1, 0.50f, 1840.0f, 1.50f, 0.05f, 0.50f,   10.0f,  330.0f },   /* 0.5m堰宽 */
-    { 2, 1.00f, 1840.0f, 1.50f, 0.05f, 0.60f,   20.0f,  860.0f },   /* 1.0m堰宽 */
-    { 3, 1.50f, 1840.0f, 1.50f, 0.05f, 0.70f,   30.0f, 1530.0f },   /* 1.5m堰宽 */
-    { 4, 2.00f, 1840.0f, 1.50f, 0.05f, 0.80f,   40.0f, 2640.0f },   /* 2.0m堰宽 */
+    { 1, 0.50f, 1838.0f, 1.50f, 0.001f, 0.05f, 0.50f,  10.6f,  326.0f },   /* 0.5m堰宽 */
+    { 2, 1.00f, 1838.0f, 1.50f, 0.001f, 0.05f, 0.60f,  21.2f,  856.0f },   /* 1.0m堰宽 */
+    { 3, 1.50f, 1838.0f, 1.50f, 0.001f, 0.05f, 0.70f,  31.8f, 1618.0f },   /* 1.5m堰宽 */
+    { 4, 2.00f, 1838.0f, 1.50f, 0.001f, 0.05f, 0.80f,  42.3f, 2635.0f },   /* 2.0m堰宽 */
 };
 
 /**
@@ -217,69 +224,63 @@ static float flow_convert_instant(float flow_l_s, flow_unit_t unit)
 }
 
 /**
- * @brief  计算三角堰瞬时流量
+ * @brief  计算三角堰瞬时流量 (Kindsvater-Shen方法)
  * @param  water_level_m: 水位 (米)
  * @param  weir: 三角堰参数指针
  * @retval 瞬时流量 (L/s)，水位无效时返回0
- * @note   公式: Q = K * H^n，超量程时限制在最大值
+ * @note   公式: Q = K * (H + Kh)^n，超量程时限制在最大值
  */
 static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t *weir)
 {
     float Q = 0.0f;
+    float he;
 
-    /* 检查空指针 */
     if (weir == NULL) {
         return 0.0f;
     }
 
-    /* 水位在有效范围内 */
     if (water_level_m >= weir->water_level_down && water_level_m <= weir->water_level_up) {
-        Q = weir->factor * powf(water_level_m, weir->n);
+        he = water_level_m + weir->kh;
+        Q = weir->factor * powf(he, weir->n);
     }
-    /* 水位低于下限 */
     else if (water_level_m < weir->water_level_down) {
         Q = 0.0f;
     }
-    /* 水位高于上限 */
     else if (water_level_m > weir->water_level_up) {
-        /* 限制水位在最大值 */
-        water_level_m = weir->water_level_up;
-        Q = weir->factor * powf(water_level_m, weir->n);
+        he = weir->water_level_up + weir->kh;
+        Q = weir->factor * powf(he, weir->n);
     }
 
     return Q;
 }
 
 /**
- * @brief  计算矩形堰瞬时流量
+ * @brief  计算矩形堰瞬时流量 (Francis公式 + Kh修正)
  * @param  water_level_m: 水位 (米)
  * @param  weir: 矩形堰参数指针
  * @retval 瞬时流量 (L/s)，水位无效时返回0
- * @note   公式: Q = K * b * H^n (无侧收缩/全宽堰)
+ * @note   公式: Q = K * b * (H + Kh)^n (无侧收缩/全宽堰)
  *         超量程时限制在最大值
  */
 static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir_t *weir)
 {
     float Q = 0.0f;
+    float he;
 
-    /* 检查空指针 */
     if (weir == NULL) {
         return 0.0f;
     }
 
-    /* 水位在有效范围内 */
     if (water_level_m >= weir->water_level_down && water_level_m <= weir->water_level_up) {
-        Q = weir->factor * weir->width * powf(water_level_m, weir->n);
+        he = water_level_m + weir->kh;
+        Q = weir->factor * weir->width * powf(he, weir->n);
     }
-    /* 水位低于下限 */
     else if (water_level_m < weir->water_level_down) {
         Q = 0.0f;
     }
-    /* 水位高于上限 */
     else if (water_level_m > weir->water_level_up) {
-        /* 限制水位在最大值 */
-        water_level_m = weir->water_level_up;
-        Q = weir->factor * weir->width * powf(water_level_m, weir->n);
+        he = weir->water_level_up + weir->kh;
+        Q = weir->factor * weir->width * powf(he, weir->n);
     }
 
     return Q;
