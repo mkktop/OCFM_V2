@@ -48,6 +48,8 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 |--------|------|------|
 | flow_refresh_timer | 1000ms | 读取水位 → flow_calc_update() → app_alarm_update() → app_current_update() |
 
+**独立看门狗 (IWDG):** 预分频64，重载值4095，超时≈8.2秒。在 main_task 初始化完成后和 log_task 每500ms循环中刷新。其他任务（button_scan、modbus_master、modbus_slave）通过 `app_system_wait_ready()` 等待 main_task 初始化完成后才启动。
+
 **系统启动顺序** (main_task_func, `Core/Src/freertos.c`)：
 1. `app_config_init()` — 从EEPROM加载配置
 2. `app_alarm_init()` — 继电器默认关闭
