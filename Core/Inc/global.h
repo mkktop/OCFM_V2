@@ -192,10 +192,12 @@
 #define CONFIG_EEPROM_ADDR     0
 
 /**
- * @brief 累计流量在EEPROM中的存储地址 (最后一页)
- * @note 与配置区分开，避免频繁写入影响配置区寿命
+ * @brief 累计流量在EEPROM中的存储地址
+ * @note 与配置区(0~131)分开，避免频繁写入影响配置区寿命
+ *       TotalFlowStorage_t 含 double 字段，ARM 对齐后约 24 字节，
+ *       需满足 addr + sizeof(TotalFlowStorage_t) <= AT24C02_SIZE(256)
  */
-#define TOTAL_FLOW_EEPROM_ADDR     240
+#define TOTAL_FLOW_EEPROM_ADDR     232
 
 /**
  * @brief 累计流量存储校验标志
