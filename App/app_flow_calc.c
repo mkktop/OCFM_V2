@@ -592,3 +592,36 @@ uint32_t flow_calc_get_total_time(void)
 {
     return s_total_time_sec;
 }
+
+/**
+ * @brief  获取当前槽型的最大流量上限 (m³/h)
+ * @note   从参数表的 flow_range_up (L/s) 转换为 m³/h，用于限制4-20mA量程
+ */
+float flow_calc_get_max_flow_m3h(void)
+{
+    uint32_t cid = app_config_get_channel_id();
+    uint32_t canals_type = app_config_get_canals_type();
+    float max_lps = 0.0f;
+
+    if (cid < 1) return 0.0f;
+
+    switch (canals_type) {
+        case PARSHALL_FLUME:
+            if (cid > 16) return 0.0f;
+            max_lps = s_channel_tbl[cid - 1].flow_range_up;
+            break;
+        case TRIANGULAR_WEIR:
+            if (cid > 5) return 0.0f;
+            max_lps = s_triangular_weir_tbl[cid - 1].flow_range_up;
+            break;
+        case RECTANGULAR_WEIR:
+            if (cid > 4) return 0.0f;
+            max_lps = s_rectangular_weir_tbl[cid - 1].flow_range_up;
+            break;
+        default:
+            return 0.0f;
+    }
+
+    /* L/s → m³/h × 110% 裕量 */
+    return max_lps * 3.6f * 1.1f;
+}

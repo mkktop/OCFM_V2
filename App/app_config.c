@@ -278,7 +278,7 @@ static const config_range_t config_range_table[CONFIG_ID_COUNT] = {
     /* [24] CONFIG_ID_CANALS_TYPE     */ {0, 1, 1, 3,     0, 0},
     /* [25] CONFIG_ID_CHANNEL_ID      */ {0, 1, 1, 16,    0, 0},
     /* [26] CONFIG_ID_INSTANT_UNIT    */ {0, 1, 1, 8,     0, 0},
-    /* [27] CONFIG_ID_SUM_POINT       */ {0, 1, 1, 3,     0, 0},
+    /* [27] CONFIG_ID_SUM_POINT       */ {0, 1, 0, 3,     0, 0},
     /* [28] CONFIG_ID_LANGUAGE        */ {0, 1, 0, 1,     0, 0},
     /* [29] CONFIG_ID_SHOW_ALARM      */ {0, 1, 0, 1,     0, 0},
     /* [30] CONFIG_ID_PASSWORD_ENABLE */ {0, 1, 0, 1,     0, 0},
@@ -332,8 +332,14 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
     switch (id)
     {
         /* 基本参数 */
-        case CONFIG_ID_RANGE_MAX:       g_config.range_max = value;       break;
-        case CONFIG_ID_HEIGHT:          g_config.height = value;          break;
+        case CONFIG_ID_RANGE_MAX:
+            if (value < g_config.height) return CONFIG_ERR_RANGE;
+            g_config.range_max = value;
+            break;
+        case CONFIG_ID_HEIGHT:
+            if (value > g_config.range_max) return CONFIG_ERR_RANGE;
+            g_config.height = value;
+            break;
         case CONFIG_ID_CALIBRATION_4MA: g_config.calibration_4ma = value; break;
         case CONFIG_ID_CALIBRATION_20MA:g_config.calibration_20ma = value;break;
         case CONFIG_ID_POINT_NUM:       g_config.point_num = value;       break;
@@ -412,6 +418,16 @@ uint8_t app_config_setf(config_id_t id, float value)
     if (id == CONFIG_ID_ALARM_AL && value < g_config.alarm_aal)
     {
         return CONFIG_ERR_RANGE;
+    }
+
+    /* 4-20mA量程上限: 不超过当前槽型最大流量 + 10% 裕量 */
+    if (id == CONFIG_ID_RANGE_20MA)
+    {
+        float max_flow = flow_calc_get_max_flow_m3h();
+        if (max_flow > 0.0f && value > max_flow)
+        {
+            return CONFIG_ERR_RANGE;
+        }
     }
 
     switch (id)
