@@ -367,9 +367,12 @@ static uint8_t flow_calc_load_from_backup(void)
     buf[1] = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR2);
     memcpy(&total_flow, buf, sizeof(double));
 
-    /* 检查是否为有效数据 (NaN检查) */
-    if (total_flow < 0.0 || total_flow >= 1e12) {
+    /* 检查是否为有效数据 */
+    if (total_flow < 0.0) {
         return 0;
+    }
+    if (total_flow >= 1e12) {
+        total_flow = 999999999999.0;
     }
 
     /* 读取累计时长 */
@@ -415,9 +418,12 @@ static uint8_t flow_calc_load_from_eeprom(void)
         return 0;
     }
 
-    /* 检查是否为有效数据 (NaN检查) */
-    if (storage.total_flow < 0.0 || storage.total_flow >= 1e12) {
+    /* 检查是否为有效数据 */
+    if (storage.total_flow < 0.0) {
         return 0;
+    }
+    if (storage.total_flow >= 1e12) {
+        storage.total_flow = 999999999999.0;
     }
 
     /* 检查累计时长是否有效 */
@@ -488,8 +494,8 @@ void flow_calc_update(float water_level_m)
         s_instant_flow = flow_convert_instant(s_instant_flow, app_config_get_instant_unit());
     }
 
-    /* 每10秒保存累计流量到备份寄存器 */
-    if (++s_bkp_save_counter >= 10) {
+    /* 每2秒保存累计流量到备份寄存器 */
+    if (++s_bkp_save_counter >= 2) {
         s_bkp_save_counter = 0;
         flow_calc_save_total();
     }

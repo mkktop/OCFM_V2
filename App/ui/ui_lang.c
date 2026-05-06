@@ -56,12 +56,12 @@ static const char * const g_strings[LANG_COUNT][2] = {
     [LANG_P_20MA_RANGE]     = { "20mA Range",   "20mA\xe9\x87\x8f\xe7\xa8\x8b" },         /* 20mA量程 */
 
     /* 参数名称 - 测量参数 */
-    [LANG_P_WINDOW_WIDTH]   = { "Window Width", "\xe7\xaa\x97\xe5\x8f\xa3\xe5\xae\xbd\xe5\xba\xa6" }, /* 窗口宽度 */
+    [LANG_P_WINDOW_WIDTH]   = { "Filter Width", "\xe6\xbb\xa4\xe6\xb3\xa2\xe5\xae\xbd\xe5\xba\xa6" }, /* 滤波宽度 */
     [LANG_P_FILTER_COUNT]   = { "Filter Count", "\xe6\xbb\xa4\xe6\xb3\xa2\xe6\xac\xa1\xe6\x95\xb0" }, /* 滤波次数 */
-    [LANG_P_SAMPLE_DELAY]   = { "Sample Delay", "\xe9\x87\x87\xe6\xa0\xb7\xe5\xbb\xb6\xe8\xbf\x9f" }, /* 采样延迟 */
+    [LANG_P_SAMPLE_DELAY]   = { "Sample Rate",  "\xe9\x87\x87\xe6\xa0\xb7\xe9\xa2\x91\xe7\x8e\x87" }, /* 采样频率 */
     [LANG_P_BLIND_AREA]     = { "Blind Area",   "\xe7\x9b\xb2\xe5\x8c\xba" },              /* 盲区 */
-    [LANG_P_WINDOW_COEFF]   = { "Window Coeff", "\xe7\xaa\x97\xe4\xbd\x93\xe7\xb3\xbb\xe6\x95\xb0" }, /* 窗体系数 */
-    [LANG_P_MEASURE_COEFF]  = { "Measure Coeff","\xe6\xb5\x8b\xe9\x87\x8f\xe7\xb3\xbb\xe6\x95\xb0" }, /* 测量系数 */
+    [LANG_P_WINDOW_COEFF]   = { "Wgt Average",  "\xe5\x8a\xa0\xe6\x9d\x83\xe5\xb9\xb3\xe5\x9d\x87" }, /* 加权平均 */
+    [LANG_P_MEASURE_COEFF]  = { "Damping",      "\xe9\x98\xbb\xe5\xb0\xbc" },              /* 阻尼 */
 
     /* 参数名称 - Modbus参数 */
     [LANG_P_SLAVE_ADDR]     = { "Slave Addr",   "\xe4\xbb\x8e\xe6\x9c\xba\xe5\x9c\xb0\xe5\x9d\x80" }, /* 从机地址 */
