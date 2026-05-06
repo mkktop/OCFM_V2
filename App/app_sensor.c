@@ -396,6 +396,9 @@ static void on_config_change_to_sensor(config_id_t id)
             value = (uint16_t)app_config_get_dis_offset();
             app_sensor_set_register(SENSOR_COM_DIS_OFFSET, value, NULL);
             break;
+        case CONFIG_ID_FACTORY_RESET:
+            sync_all_params_to_sensor();
+            break;
         default:
             break;
     }
