@@ -30,6 +30,12 @@ float flow_calc_get_instant(void);
 float flow_calc_get_instant_lps(void);
 
 /**
+ * @brief  获取上次流量计算使用的水位
+ * @retval 水位 (米)，用于寄存器同步更新
+ */
+float flow_calc_get_last_water_level(void);
+
+/**
  * @brief  获取累计流量
  * @retval 累计流量 (m³)
  */

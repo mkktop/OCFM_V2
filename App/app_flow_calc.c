@@ -92,6 +92,7 @@ typedef struct {
 
 static float s_instant_flow = 0.0f;     /**< 当前瞬时流量 (根据配置的单位) */
 static float s_instant_flow_lps = 0.0f;  /**< 当前瞬时流量 (原始L/s，未经单位转换) */
+static volatile float s_last_water_level_m = 0.0f; /**< 上次流量计算使用的水位 (米) */
 static double s_total_flow_m3 = 0.0;    /**< 累计流量 (m³) */
 static uint32_t s_total_time_sec = 0;   /**< 累计时长 (秒) */
 static uint8_t s_bkp_save_counter = 0;  /**< 备份寄存器保存计数器 (10秒周期) */
@@ -472,6 +473,9 @@ void flow_calc_load_total(void)
  */
 void flow_calc_update(float water_level_m)
 {
+    /* 保存计算用的水位快照 */
+    s_last_water_level_m = water_level_m;
+
     /* 传感器离线时累计时长不递增 */
     if (water_level_m <= 0.0f) {
         s_instant_flow_lps = 0.0f;
@@ -541,6 +545,15 @@ float flow_calc_get_instant(void)
 float flow_calc_get_instant_lps(void)
 {
     return s_instant_flow_lps;
+}
+
+/**
+ * @brief  获取上次流量计算使用的水位
+ * @retval 水位 (米)
+ */
+float flow_calc_get_last_water_level(void)
+{
+    return s_last_water_level_m;
 }
 
 /**

@@ -247,11 +247,19 @@ void app_modbus_slave_update(void)
     /* 校准模式超时检测 */
     app_current_calibration_tick();
 
-    /* 物位 (水位) - 0x0001 */
-    if (sensor != NULL && sensor->is_online)
+    /* 物位 (水位) - 0x0001
+     * 使用与流量计算相同的水位快照，确保水位和流量寄存器一致 */
     {
-        uint16_t water_level_mm = (uint16_t)(sensor->water_level_m * 1000);
-        modbus_slave_set_holding_register(REG_WUWEI, water_level_mm);
+        float water_level = flow_calc_get_last_water_level();
+        if (water_level > 0.0f)
+        {
+            uint16_t water_level_mm = (uint16_t)(water_level * 1000);
+            modbus_slave_set_holding_register(REG_WUWEI, water_level_mm);
+        }
+        else
+        {
+            modbus_slave_set_holding_register(REG_WUWEI, 0);
+        }
     }
 
     /* 距离 - 0x0002 */
