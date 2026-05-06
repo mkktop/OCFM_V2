@@ -87,7 +87,7 @@ static config_id_t reg_to_config_id(uint16_t reg_addr)
         case REG_SUM_POINT:       return CONFIG_ID_SUM_POINT;
         case REG_RANGE_4MA:       return CONFIG_ID_RANGE_4MA;
         case REG_RANGE_20MA:      return CONFIG_ID_RANGE_20MA;
-        case REG_DEAD_ZONE:       return CONFIG_ID_ANTENNA_TYPE;
+        case REG_ANTENNA_TYPE:    return CONFIG_ID_ANTENNA_TYPE;
         case REG_DIS_OFFSET:      return CONFIG_ID_DIS_OFFSET;
         case REG_CALIBRATION_4MA: return CONFIG_ID_CALIBRATION_4MA;
         case REG_CALIBRATION_20MA:return CONFIG_ID_CALIBRATION_20MA;
@@ -329,7 +329,7 @@ void app_modbus_slave_update(void)
     /* 出厂校准寄存器 - 0x1001-0x1005 */
     {
         uint32_t val;
-        app_config_get_val(CONFIG_ID_ANTENNA_TYPE, &val);     modbus_slave_set_holding_register(REG_DEAD_ZONE, (uint16_t)val);
+        app_config_get_val(CONFIG_ID_ANTENNA_TYPE, &val);     modbus_slave_set_holding_register(REG_ANTENNA_TYPE, (uint16_t)val);
         app_config_get_val(CONFIG_ID_DIS_OFFSET, &val);      modbus_slave_set_holding_register(REG_DIS_OFFSET, (uint16_t)val);
         app_config_get_val(CONFIG_ID_CALIBRATION_4MA, &val); modbus_slave_set_holding_register(REG_CALIBRATION_4MA, (uint16_t)val);
         app_config_get_val(CONFIG_ID_CALIBRATION_20MA, &val);modbus_slave_set_holding_register(REG_CALIBRATION_20MA, (uint16_t)val);

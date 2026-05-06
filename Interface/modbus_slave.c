@@ -85,7 +85,7 @@ static const reg_map_t reg_map[] = {
     {REG_RTC_SECOND,       55},
     {REG_RTC_WEEKDAY,      56},
     /* 出厂校准区 (0x1001-0x1006) */
-    {REG_DEAD_ZONE,        44},
+    {REG_ANTENNA_TYPE,     44},
     {REG_DIS_OFFSET,       45},
     {REG_CALIBRATION_4MA,  46},
     {REG_CALIBRATION_20MA, 47},

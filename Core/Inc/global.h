@@ -104,7 +104,7 @@
 #define REG_RANGE_20MA          0x0107       /* 20mA量程寄存器 占2个寄存器 */
 
 //出厂校准寄存器
-#define REG_DEAD_ZONE           0x1001       /* 天线类型寄存器 占1个寄存器 */
+#define REG_ANTENNA_TYPE        0x1001       /* 天线类型寄存器 占1个寄存器 */
 #define REG_DIS_OFFSET          0x1002       /* 距离偏移寄存器 占1个寄存器 */
 #define REG_CALIBRATION_4MA     0x1003       /* 4mA校准值寄存器 占1个寄存器 */
 #define REG_CALIBRATION_20MA    0x1004       /* 20mA校准值寄存器 占1个寄存器 */
