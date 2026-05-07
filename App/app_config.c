@@ -358,7 +358,11 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         /* 其他参数 */
         case CONFIG_ID_DIS_OFFSET:      g_config.dis_offset = value;      break;
         case CONFIG_ID_CANALS_TYPE:     g_config.canals_type = value;
-                                        g_config.channel_id = 1;          break;
+                                        g_config.channel_id = 1;
+                                        g_config.range_20ma = flow_calc_get_max_flow_m3h();
+                                        if (g_config.range_4ma >= g_config.range_20ma)
+                                            g_config.range_4ma = 0.0f;
+                                        break;
         case CONFIG_ID_CHANNEL_ID:  {
                 /* 通道编号上限取决于当前水渠类型 */
                 uint32_t ch_max = 16;
@@ -366,6 +370,9 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
                 else if (g_config.canals_type == 3) ch_max = 4;   /* 矩形堰 */
                 if (value > ch_max) return CONFIG_ERR_RANGE;
                 g_config.channel_id = value;
+                g_config.range_20ma = flow_calc_get_max_flow_m3h();
+                if (g_config.range_4ma >= g_config.range_20ma)
+                    g_config.range_4ma = 0.0f;
             }
             break;
         case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break;
