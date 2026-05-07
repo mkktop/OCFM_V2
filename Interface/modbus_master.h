@@ -23,7 +23,7 @@ extern "C" {
 /**
  * @brief 命令队列大小
  */
-#define MODBUS_CMD_QUEUE_SIZE       8
+#define MODBUS_CMD_QUEUE_SIZE       16
 
 /**
  * @brief 命令最大重试次数
