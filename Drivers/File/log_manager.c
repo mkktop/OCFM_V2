@@ -57,6 +57,50 @@ static const char* get_log_path(LogType type)
     }
 }
 
+static uint8_t log_is_leap_year(uint16_t year)
+{
+    return (uint8_t)(((year % 4U) == 0U && (year % 100U) != 0U) ||
+                     ((year % 400U) == 0U));
+}
+
+static uint8_t log_days_in_month(uint16_t year, uint8_t month)
+{
+    static const uint8_t days[] = {
+        0U, 31U, 28U, 31U, 30U, 31U, 30U,
+        31U, 31U, 30U, 31U, 30U, 31U
+    };
+
+    if (month == 2U) {
+        return log_is_leap_year(year) ? 29U : 28U;
+    }
+
+    if (month >= 1U && month <= 12U) {
+        return days[month];
+    }
+
+    return 31U;
+}
+
+static void log_subtract_days(uint16_t* year, uint8_t* month, uint8_t* day,
+                              uint16_t days)
+{
+    while (days > 0U) {
+        if (*day > 1U) {
+            (*day)--;
+        } else {
+            if (*month > 1U) {
+                (*month)--;
+            } else {
+                (*year)--;
+                *month = 12U;
+            }
+            *day = log_days_in_month(*year, *month);
+        }
+
+        days--;
+    }
+}
+
 /**
  * @brief 生成日志日文件路径
  * @param type 日志类型
@@ -689,21 +733,7 @@ static uint32_t cleanup_type(LogType type, uint16_t keep_days)
     }
 
     /* 计算截止日期（从当前日期往前推keep_days天） */
-    if (cutoff_day > keep_days) {
-        cutoff_day = cutoff_day - (uint8_t)keep_days;
-    } else {
-        /* 需要往前推一个月 */
-        if (cutoff_month > 1) {
-            cutoff_month--;
-            /* 简单处理：统一设为28日 */
-            cutoff_day = 28;
-        } else {
-            /* 跨年 */
-            cutoff_year--;
-            cutoff_month = 12;
-            cutoff_day = 28;
-        }
-    }
+    log_subtract_days(&cutoff_year, &cutoff_month, &cutoff_day, keep_days);
 
     /* 遍历所有年份 */
     for (y = 2024; y <= cutoff_year; y++) {

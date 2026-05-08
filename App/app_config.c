@@ -62,21 +62,39 @@ void app_config_process(void)
 /*                           EEPROM互锁 (多模块共用)                            */
 /*============================================================================*/
 
+static uint32_t eeprom_lock_irq_save(void)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    return primask;
+}
+
+static void eeprom_lock_irq_restore(uint32_t primask)
+{
+    if ((primask & 0x1U) == 0U) {
+        __enable_irq();
+    }
+}
+
 uint8_t app_config_eeprom_lock(void)
 {
-    __disable_irq();
+    uint32_t primask = eeprom_lock_irq_save();
+
     if (s_eeprom_busy) {
-        __enable_irq();
+        eeprom_lock_irq_restore(primask);
         return 0;
     }
+
     s_eeprom_busy = 1;
-    __enable_irq();
+    eeprom_lock_irq_restore(primask);
     return 1;
 }
 
 void app_config_eeprom_unlock(void)
 {
+    uint32_t primask = eeprom_lock_irq_save();
     s_eeprom_busy = 0;
+    eeprom_lock_irq_restore(primask);
 }
 
 /*============================================================================*/
@@ -143,11 +161,9 @@ void app_config_set_default(void)
 uint8_t app_config_save(void)
 {
     /* 防止并发EEPROM写入 */
-    if (s_eeprom_busy)
-    {
+    if (!app_config_eeprom_lock()) {
         return 0;
     }
-    s_eeprom_busy = 1;
 
     /* 确保magic_number已设置 */
     g_config.magic_number = CONFIG_MAGIC_NUMBER;
@@ -157,7 +173,7 @@ uint8_t app_config_save(void)
     memcpy(buf, &g_config, sizeof(SystemConfig_t));
     uint8_t ret = at24c02_write_buffer(CONFIG_EEPROM_ADDR, sizeof(SystemConfig_t), buf);
 
-    s_eeprom_busy = 0;
+    app_config_eeprom_unlock();
     return ret;
 }
 
