@@ -346,10 +346,10 @@ static const char *format_channel_id(uint32_t val)
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {LANG_P_CANAL_TYPE,      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
-    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,   1,  0,  format_channel_id},
+    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,   1},
     {LANG_P_TOTAL_FLOW,      "m\xC2\xB3", total_flow_get_dummy, NULL, 0, 0, 0, 0, format_total_flow,
                                        total_flow_getf, total_flow_setf, 0.0f, 999999999999.0f, 0.001f, 3},
-    {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          0, 3,     1,  0,  format_decimal},
+    {LANG_P_SUM_DECIMAL,     "",     app_config_get_sum_point,           app_config_set_sum_point,          0, 3,     1},
     {LANG_P_CLEAR_TOTAL,     "",     clear_total_flow_get,               clear_total_flow_set,              0, 1,     1,  0,  format_yes_no},
 };
 static const set_item_t time_items[] = {

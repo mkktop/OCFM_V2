@@ -84,7 +84,8 @@
       "Bash(awk '{print $5,$6,$7,$8}')",
       "Bash(python3 -c ' *)",
       "Bash(python -c \"chars = open\\('App/ui/font/chars.txt', 'r', encoding='utf-8'\\).read\\(\\).strip\\(\\); missing = []; [missing.append\\(c\\) if c not in chars else print\\(f'{c} - FOUND'\\) for c in '设置英天厂']; print\\(f'Missing: {missing}'\\) if missing else print\\('All found!'\\)\")",
-      "Bash(python -X utf8 -c ' *)"
+      "Bash(python -X utf8 -c ' *)",
+      "Bash(python check_chars.py)"
     ],
     "additionalDirectories": [
       "C:\\Program Files\\明渠流量计上位机"
