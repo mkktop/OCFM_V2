@@ -75,9 +75,15 @@ void flow_calc_save_total(void);
 void flow_calc_process(void);
 
 /**
- * @brief  获取当前槽型的最大流量上限
+ * @brief  获取当前槽型的最大流量上限 (含10%余量)
  * @retval 最大流量 (m³/h)，用于限制4-20mA量程设定
  */
 float flow_calc_get_max_flow_m3h(void);
+
+/**
+ * @brief  获取当前槽型的理论最大流量 (不含余量)
+ * @retval 最大流量 (m³/h)，用于自动设置量程
+ */
+float flow_calc_get_channel_max_m3h(void);
 
 #endif /* __APP_FLOW_CALC_H__ */

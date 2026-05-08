@@ -594,10 +594,9 @@ uint32_t flow_calc_get_total_time(void)
 }
 
 /**
- * @brief  获取当前槽型的最大流量上限 (m³/h)
- * @note   从参数表的 flow_range_up (L/s) 转换为 m³/h，用于限制4-20mA量程
+ * @brief  获取当前槽型的理论最大流量 (m³/h)
  */
-float flow_calc_get_max_flow_m3h(void)
+static float get_channel_max_m3h(void)
 {
     uint32_t cid = app_config_get_channel_id();
     uint32_t canals_type = app_config_get_canals_type();
@@ -622,6 +621,23 @@ float flow_calc_get_max_flow_m3h(void)
             return 0.0f;
     }
 
-    /* L/s → m³/h × 110% 裕量 */
-    return max_lps * 3.6f * 1.1f;
+    return max_lps * 3.6f;
+}
+
+/**
+ * @brief  获取当前槽型的最大流量上限 (m³/h)
+ * @note   理论最大值 × 110% 裕量，用于限制4-20mA量程设定
+ */
+float flow_calc_get_max_flow_m3h(void)
+{
+    return get_channel_max_m3h() * 1.1f;
+}
+
+/**
+ * @brief  获取当前槽型的理论最大流量 (m³/h)
+ * @note   不含余量，用于自动设置量程
+ */
+float flow_calc_get_channel_max_m3h(void)
+{
+    return get_channel_max_m3h();
 }

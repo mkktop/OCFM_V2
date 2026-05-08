@@ -58,7 +58,36 @@
       "Bash(python -c \"import struct; h=int\\('40C81C6B8BD4A587',16\\); val=struct.unpack\\('>d',struct.pack\\('>Q',h\\)\\)[0]; print\\('Your command value:', val\\)\")",
       "Bash(python -c \"import struct; b=struct.pack\\('>d',12345.678\\); print\\('Correct hex:', ' '.join\\('%02X'%c for c in b\\)\\)\")",
       "Bash(python -c ' *)",
-      "Bash(dir /b)"
+      "Bash(dir /b)",
+      "Bash(\"C:/Program Files \\(x86\\)/Inno Setup 6/ISCC.exe\" \"D:/UGit/OCFM_Host/installer.iss\")",
+      "Bash(cd \"D:\\\\UGit\\\\OCFM_Host\" && dotnet publish OCFM_Host/OCFM_Host.csproj -c Release -o publish --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false 2>&1 | tail -3)",
+      "Read(//d/UGit/OCFM_Host/**)",
+      "Bash(\"D:/UGit/OCFM_Host/publish/OCFM_Host.exe\")",
+      "Bash(./OCFM_Host.exe)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(ls \"C:/Program Files \\(x86\\)/明渠流量计上位机/OCFM_Host.exe\" 2>/dev/null || ls \"C:/Program Files/明渠流量计上位机/OCFM_Host.exe\" 2>/dev/null || echo \"Not found in default paths\")",
+      "Read(//c/Program Files \\(x86\\)/明渠流量计上位机/**)",
+      "Bash(\"C:/Program Files/明渠流量计上位机/OCFM_Host.exe\")",
+      "Bash(tasklist)",
+      "Bash(\"C:/Program Files/明渠流量计上位机/unins000.exe\" /VERYSILENT)",
+      "Bash(awk '{print $6,$7,$8,$9}')",
+      "Read(//d/UGit/OCFM_V2/**)",
+      "Bash(rm -f \"C:/Program Files/明渠流量计上位机/crash.log\" && echo \"deleted crash.log\")",
+      "Bash(powershell -Command \"Remove-Item 'C:\\\\Program Files\\\\明渠流量计上位机' -Recurse -Force\")",
+      "Bash(taskkill /F /IM OCFM_Host.exe)",
+      "Bash(powershell -Command \"cmd /c 'rmdir /S /Q \\\\\"C:\\\\Program Files\\\\明渠流量计上位机\\\\\"'\")",
+      "Bash(powershell -Command \"Start-Process cmd -ArgumentList '/c','rmdir /S /Q \\\\\"C:\\\\Program Files\\\\明渠流量计上位机\\\\\"' -Verb RunAs -Wait\")",
+      "Bash(powershell -Command \"Start-Process powershell -ArgumentList '-Command','Remove-Item -Path ''C:\\\\Program Files\\\\明渠流量计上位机'' -Recurse -Force' -Verb RunAs -Wait\")",
+      "Bash(powershell -Command \"Start-Process 'D:\\\\UGit\\\\OCFM_Host\\\\installer_output\\\\OCFM_Host_Setup_V2.0.exe' -ArgumentList '/VERYSILENT' -Verb RunAs -Wait\")",
+      "Bash(stat -c '%y' \"C:/Program Files/明渠流量计上位机/crash.log\" 2>/dev/null; cat \"C:/Program Files/明渠流量计上位机/crash.log\" 2>/dev/null | head -3)",
+      "Bash(powershell -Command \"[System.Reflection.AssemblyName]::GetAssemblyName\\('C:\\\\Program Files\\\\明渠流量计上位机\\\\System.IO.Ports.dll'\\).Version\")",
+      "Bash(awk '{print $5,$6,$7,$8}')",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c \"chars = open\\('App/ui/font/chars.txt', 'r', encoding='utf-8'\\).read\\(\\).strip\\(\\); missing = []; [missing.append\\(c\\) if c not in chars else print\\(f'{c} - FOUND'\\) for c in '设置英天厂']; print\\(f'Missing: {missing}'\\) if missing else print\\('All found!'\\)\")",
+      "Bash(python -X utf8 -c ' *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Program Files\\明渠流量计上位机"
     ]
   }
 }
