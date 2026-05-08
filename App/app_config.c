@@ -6,6 +6,8 @@
 #include "app_config.h"
 #include "app_flow_calc.h"
 #include "at24c02.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
 
 /* 全局配置实例 */
@@ -357,11 +359,16 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         case CONFIG_ID_MODBUS_STOPBITS: g_config.modbusStopBits = value; break;
         /* 其他参数 */
         case CONFIG_ID_DIS_OFFSET:      g_config.dis_offset = value;      break;
-        case CONFIG_ID_CANALS_TYPE:     g_config.canals_type = value;
-                                        g_config.channel_id = 1;
-                                        g_config.range_20ma = flow_calc_get_channel_max_m3h();
-                                        if (g_config.range_4ma >= g_config.range_20ma)
-                                            g_config.range_4ma = 0.0f;
+        case CONFIG_ID_CANALS_TYPE:     {
+                                            /* 多字段原子更新，避免读到新槽型+旧量程 */
+                                            taskENTER_CRITICAL();
+                                            g_config.canals_type = value;
+                                            g_config.channel_id = 1;
+                                            g_config.range_20ma = flow_calc_get_channel_max_m3h();
+                                            if (g_config.range_4ma >= g_config.range_20ma)
+                                                g_config.range_4ma = 0.0f;
+                                            taskEXIT_CRITICAL();
+                                        }
                                         break;
         case CONFIG_ID_CHANNEL_ID:  {
                 /* 通道编号上限取决于当前水渠类型 */
@@ -369,10 +376,14 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
                 if (g_config.canals_type == 2) ch_max = 5;       /* 三角堰 */
                 else if (g_config.canals_type == 3) ch_max = 4;   /* 矩形堰 */
                 if (value > ch_max) return CONFIG_ERR_RANGE;
+
+                /* 多字段原子更新，避免读到新通道+旧量程 */
+                taskENTER_CRITICAL();
                 g_config.channel_id = value;
                 g_config.range_20ma = flow_calc_get_channel_max_m3h();
                 if (g_config.range_4ma >= g_config.range_20ma)
                     g_config.range_4ma = 0.0f;
+                taskEXIT_CRITICAL();
             }
             break;
         case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break;

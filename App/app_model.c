@@ -110,8 +110,6 @@ static void format_instant_flow(float value, uint32_t point_num, char *buf, size
  */
 void app_model_update(void)
 {
-    SensorData_t *sensor;
-
     /* 从 RTC 获取当前时间 */
     RTC_TimeData time_data;
     RTC_Time_Get(&time_data);
@@ -157,12 +155,14 @@ void app_model_update(void)
                           g_app_model.current_ma_str,
                           sizeof(g_app_model.current_ma_str));
 
-    /* 同步传感器状态 */
-    sensor = app_sensor_get_data();
-    if (sensor != NULL) {
-        g_app_model.water_level_m = sensor->water_level_m;
-        g_app_model.temperature_x10 = sensor->temperature_x10;
-        g_app_model.sensor_online = sensor->is_online;
+    /* 同步传感器状态 (使用快照保证多字段一致性) */
+    {
+        SensorData_t sensor_snap;
+        app_sensor_get_snapshot(&sensor_snap);
+
+        g_app_model.water_level_m = sensor_snap.water_level_m;
+        g_app_model.temperature_x10 = sensor_snap.temperature_x10;
+        g_app_model.sensor_online = sensor_snap.is_online;
 
         /* 格式化水位字符串 */
         if (g_app_model.sensor_online) {
@@ -174,7 +174,7 @@ void app_model_update(void)
         }
 
         /* 格式化温度字符串 */
-        if (sensor->temp_valid)
+        if (sensor_snap.temp_valid)
         {
             snprintf(g_app_model.temperature_str, sizeof(g_app_model.temperature_str),
                      "%.1f\xC2\xB0""C", g_app_model.temperature_x10 / 10.0f);
@@ -184,11 +184,5 @@ void app_model_update(void)
             snprintf(g_app_model.temperature_str, sizeof(g_app_model.temperature_str),
                      "--\xC2\xB0""C");
         }
-    } else {
-        g_app_model.sensor_online = 0;
-        snprintf(g_app_model.water_level_str, sizeof(g_app_model.water_level_str),
-                 "L:error");
-        snprintf(g_app_model.temperature_str, sizeof(g_app_model.temperature_str),
-                 "--\xC2\xB0""C");
     }
 }

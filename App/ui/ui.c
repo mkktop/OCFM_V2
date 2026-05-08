@@ -43,6 +43,9 @@ static ui_value_label_fit_t s_total_flow_fit = {
     &lv_font_montserrat_18,
 };
 
+/* 趋势图量程更新标志 (由配置变更回调设置，在LVGL定时器中处理) */
+static volatile uint8_t s_trend_range_dirty = 0;
+
 /*============================================================================*/
 /*                           私有函数                                           */
 /*============================================================================*/
@@ -68,7 +71,8 @@ static const char *get_flow_unit_str(void)
 
 /**
  * @brief  配置变更回调函数
- * @details 当量程配置变更时，立即刷新趋势图Y轴范围
+ * @details 当量程配置变更时，设置延迟更新标志
+ *          实际LVGL操作在ui_update_timer_cb中执行，避免从非LVGL线程调用LVGL API
  * @param id  变更的配置项ID
  */
 static void ui_config_change_cb(config_id_t id)
@@ -77,7 +81,7 @@ static void ui_config_change_cb(config_id_t id)
         id == CONFIG_ID_CANALS_TYPE || id == CONFIG_ID_CHANNEL_ID ||
         id == CONFIG_ID_FACTORY_RESET)
     {
-        ui_trend_update_range();
+        s_trend_range_dirty = 1;
     }
 }
 
@@ -261,6 +265,12 @@ static void ui_update_timer_cb(lv_timer_t *timer)
             if (bitmap) lv_obj_clear_flag(ui_manager->bottom_alarm_cont, LV_OBJ_FLAG_HIDDEN);
             else        lv_obj_add_flag(ui_manager->bottom_alarm_cont, LV_OBJ_FLAG_HIDDEN);
         }
+    }
+
+    /* 处理延迟的趋势图量程更新 (来自配置变更回调，可能来自非LVGL线程) */
+    if (s_trend_range_dirty) {
+        s_trend_range_dirty = 0;
+        ui_trend_update_range();
     }
 
     /* 第五步：更新趋势图数据 */

@@ -120,45 +120,51 @@ void app_sensor_poll(void)
     {
         last_update_time = HAL_GetTick();
 
-        /* 更新传感器在线状态 */
-        g_sensor_data.is_online = modbus_master_is_sensor_online(0);
+        uint8_t online = modbus_master_is_sensor_online(0);
 
         /* 检测在线状态变化，记录系统日志 */
-        if (g_sensor_data.is_online != sensor_prev_online)
+        if (online != sensor_prev_online)
         {
             app_log_send(LOG_TYPE_SYSTEM,
-                         g_sensor_data.is_online ? "SENSOR ONLINE" : "SENSOR OFFLINE");
-            sensor_prev_online = g_sensor_data.is_online;
+                         online ? "SENSOR ONLINE" : "SENSOR OFFLINE");
+            sensor_prev_online = online;
 
             /* 传感器首次上线时，同步所有配置参数 */
-            if (g_sensor_data.is_online && !sensor_first_sync_done)
+            if (online && !sensor_first_sync_done)
             {
                 sensor_first_sync_done = 1;
                 sync_all_params_to_sensor();
             }
         }
 
-        if (g_sensor_data.is_online)
+        if (online)
         {
-            /* 读取距离值（第一个寄存器），直接转换为米 */
+            /* 先在局部变量准备数据 */
             uint16_t distance_mm = modbus_master_get_register_value(0, 0);
-            g_sensor_data.distance_m = distance_mm / 1000.0f;
+            float dist = distance_mm / 1000.0f;
+            float level = 0.0f;
+            uint32_t now = HAL_GetTick();
 
-            /* 计算水位 = 安装高度 - 距离（只有距离>0时才计算）
-             * 距离 > 安装高度时水位钳位为0，避免负值传入流量计算 */
             if (distance_mm > 0)
             {
                 float install_height_m = app_config_get_height() / 1000.0f;
-                float level = install_height_m - g_sensor_data.distance_m;
-                g_sensor_data.water_level_m = (level > 0.0f) ? level : 0.0f;
-            }
-            else
-            {
-                /* 距离为0时，水位也为0（传感器未就绪） */
-                g_sensor_data.water_level_m = 0.0f;
+                level = install_height_m - dist;
+                if (level < 0.0f) level = 0.0f;
             }
 
-            g_sensor_data.last_update_time = HAL_GetTick();
+            /* 临界区内一次性写入所有字段 */
+            taskENTER_CRITICAL();
+            g_sensor_data.distance_m = dist;
+            g_sensor_data.water_level_m = level;
+            g_sensor_data.last_update_time = now;
+            g_sensor_data.is_online = 1;
+            taskEXIT_CRITICAL();
+        }
+        else
+        {
+            taskENTER_CRITICAL();
+            g_sensor_data.is_online = 0;
+            taskEXIT_CRITICAL();
         }
     }
 
@@ -173,12 +179,16 @@ void app_sensor_poll(void)
             taskEXIT_CRITICAL();
             if (temp != INT16_MIN)
             {
+                taskENTER_CRITICAL();
                 g_sensor_data.temperature_x10 = temp;
                 g_sensor_data.temp_valid = 1;
+                taskEXIT_CRITICAL();
             }
             else
             {
+                taskENTER_CRITICAL();
                 g_sensor_data.temp_valid = 0;
+                taskEXIT_CRITICAL();
             }
             g_temp_state.converting = 0;
             g_temp_state.last_update = HAL_GetTick();
@@ -237,6 +247,19 @@ uint8_t app_sensor_is_online(void)
 SensorData_t* app_sensor_get_data(void)
 {
     return &g_sensor_data;
+}
+
+/**
+ * @brief  获取传感器数据快照
+ * @param  out: 输出缓冲区指针
+ * @note   在临界区中拷贝完整数据，保证多字段一致性
+ */
+void app_sensor_get_snapshot(SensorData_t *out)
+{
+    if (out == NULL) return;
+    taskENTER_CRITICAL();
+    *out = g_sensor_data;
+    taskEXIT_CRITICAL();
 }
 
 /*============================================================================*/

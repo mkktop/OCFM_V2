@@ -242,7 +242,8 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
  */
 void app_modbus_slave_update(void)
 {
-    SensorData_t *sensor = app_sensor_get_data();
+    SensorData_t sensor_snap;
+    app_sensor_get_snapshot(&sensor_snap);
 
     /* 校准模式超时检测 */
     app_current_calibration_tick();
@@ -263,16 +264,15 @@ void app_modbus_slave_update(void)
     }
 
     /* 距离 - 0x0002 */
-    if (sensor != NULL && sensor->is_online)
+    if (sensor_snap.is_online)
     {
-        uint16_t distance_mm = (uint16_t)(sensor->distance_m * 1000);
+        uint16_t distance_mm = (uint16_t)(sensor_snap.distance_m * 1000);
         modbus_slave_set_holding_register(REG_DISTANCE, distance_mm);
     }
 
     /* 温度 - 0x0003 */
-    if (sensor != NULL)
     {
-        modbus_slave_set_holding_register(REG_TEMPERATURE, (uint16_t)sensor->temperature_x10);
+        modbus_slave_set_holding_register(REG_TEMPERATURE, (uint16_t)sensor_snap.temperature_x10);
     }
 
     /* 瞬时流量 (float) - 0x0004 占2个寄存器 */

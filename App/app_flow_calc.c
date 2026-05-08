@@ -14,6 +14,8 @@
 #include "app_config.h"
 #include "rtc.h"
 #include "at24c02.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
 
 /*============================================================================*/
@@ -335,16 +337,24 @@ static float flow_calc_instant(float water_level_m)
 void flow_calc_save_total(void)
 {
     uint32_t buf[2];
+    double snapshot;
+    uint32_t time_snapshot;
     extern RTC_HandleTypeDef hrtc;
 
+    /* 原子快照：double在Cortex-M4上不是原子读写 */
+    taskENTER_CRITICAL();
+    snapshot = s_total_flow_m3;
+    time_snapshot = s_total_time_sec;
+    taskEXIT_CRITICAL();
+
     /* 保存累计流量 */
-    memcpy(buf, &s_total_flow_m3, sizeof(double));
+    memcpy(buf, &snapshot, sizeof(double));
     HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, buf[0]);
     HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR2, buf[1]);
     HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR3, TOTAL_FLOW_MAGIC_NUMBER);
 
     /* 保存累计时长 */
-    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR4, s_total_time_sec);
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR4, time_snapshot);
 }
 
 /**
@@ -394,8 +404,10 @@ static uint8_t flow_calc_save_to_eeprom(void)
     TotalFlowStorage_t storage;
 
     storage.magic = TOTAL_FLOW_MAGIC_NUMBER;
+    taskENTER_CRITICAL();
     storage.total_flow = s_total_flow_m3;
     storage.total_time = s_total_time_sec;
+    taskEXIT_CRITICAL();
     storage.reserved = 0;
 
     return at24c02_write_buffer(TOTAL_FLOW_EEPROM_ADDR, sizeof(TotalFlowStorage_t),
@@ -483,16 +495,17 @@ void flow_calc_update(float water_level_m)
         return;
     }
 
-    /* 传感器在线时，累计时长加1秒 */
-    s_total_time_sec++;
-
     /* 计算瞬时流量 (L/s) */
     s_instant_flow_lps = flow_calc_instant(water_level_m);
     s_instant_flow = s_instant_flow_lps;
 
     /* 累加累计流量: L/s * 1s = L, 除以1000转m³
-     * 注意：使用double精度计算，避免float除法丢失精度 */
+     * 注意：使用double精度计算，避免float除法丢失精度
+     * 累计时长与累计流量作为一组保护，防止与reset_total/set_total竞态 */
+    taskENTER_CRITICAL();
+    s_total_time_sec++;
     s_total_flow_m3 += (double)s_instant_flow_lps / 1000.0;
+    taskEXIT_CRITICAL();
 
     /* 单位转换 */
     if (app_config_get_instant_unit() != FLOW_UNIT_L_S) {
@@ -562,7 +575,11 @@ float flow_calc_get_last_water_level(void)
  */
 double flow_calc_get_total(void)
 {
-    return s_total_flow_m3;
+    double val;
+    taskENTER_CRITICAL();
+    val = s_total_flow_m3;
+    taskEXIT_CRITICAL();
+    return val;
 }
 
 /**
@@ -570,8 +587,10 @@ double flow_calc_get_total(void)
  */
 void flow_calc_reset_total(void)
 {
+    taskENTER_CRITICAL();
     s_total_flow_m3 = 0.0;
     s_total_time_sec = 0;
+    taskEXIT_CRITICAL();
     flow_calc_save_total();         /* 同步清除备份寄存器 (快速, 无阻塞) */
     s_eeprom_save_pending = 1;      /* 延迟写入EEPROM (由flow_calc_process在主循环执行) */
 }
@@ -579,7 +598,9 @@ void flow_calc_reset_total(void)
 void flow_calc_set_total(double value)
 {
     if (value < 0.0 || value >= 1e12) return;
+    taskENTER_CRITICAL();
     s_total_flow_m3 = value;
+    taskEXIT_CRITICAL();
     flow_calc_save_total();
     s_eeprom_save_pending = 1;
 }

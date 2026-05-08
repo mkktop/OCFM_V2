@@ -260,16 +260,17 @@ void log_task_func(void *argument)
     {
       last_record_tick = HAL_GetTick();
 
-      /* 获取传感器数据 */
-      SensorData_t *sensor = app_sensor_get_data();
+      /* 获取传感器数据快照 */
+      SensorData_t sensor_snap;
+      app_sensor_get_snapshot(&sensor_snap);
 
       float water_level = 0.0f;
       float temperature = 0.0f;
-      if (sensor && sensor->is_online) {
-          water_level = sensor->water_level_m;
+      if (sensor_snap.is_online) {
+          water_level = sensor_snap.water_level_m;
       }
-      if (sensor && sensor->temp_valid) {
-          temperature = sensor->temperature_x10 / 10.0f;
+      if (sensor_snap.temp_valid) {
+          temperature = sensor_snap.temperature_x10 / 10.0f;
       }
 
       /* 组装报警标志位 */
@@ -389,16 +390,17 @@ void flow_refresh_fun(void *argument)
       return;
   }
 
-  SensorData_t *sensor = app_sensor_get_data();
+  SensorData_t sensor_snap;
+  app_sensor_get_snapshot(&sensor_snap);
   float water_level = 0.0f;
-  if (sensor && sensor->is_online)
-      water_level = sensor->water_level_m;
+  if (sensor_snap.is_online)
+      water_level = sensor_snap.water_level_m;
 
   flow_calc_update(water_level);
 
   /* 报警判断: 传感器离线时不触发报警 */
   float flow_m3h = flow_calc_get_instant_lps() * 3.6f;
-  app_alarm_update(flow_m3h, sensor && sensor->is_online);
+  app_alarm_update(flow_m3h, sensor_snap.is_online);
 
   /* 4-20mA输出: 使用原始L/s转m³/h（确保单位一致） */
   app_current_update(flow_m3h);
