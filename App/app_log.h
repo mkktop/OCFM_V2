@@ -16,4 +16,15 @@ void app_log_send(uint8_t type, const char *content);
  */
 void app_log_process(void);
 
+/**
+ * @brief 请求清除SD卡所有数据 (线程安全, 异步执行)
+ */
+void app_log_request_clear_sd(void);
+
+/**
+ * @brief 获取SD卡清除进度 (供LVGL定时器轮询)
+ * @retval -1 空闲  0~99 进行中  100 完成
+ */
+int8_t app_log_get_clear_sd_progress(void);
+
 #endif /* __APP_LOG_H__ */

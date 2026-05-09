@@ -21,7 +21,8 @@
    as FreeRTOS is enabled. */
 
 /* USER CODE BEGIN firstSection */
-/* can be used to modify / undefine following code or add new definitions */
+#include "main.h"
+extern IWDG_HandleTypeDef hiwdg;
 /* USER CODE END firstSection*/
 
 /* Includes ------------------------------------------------------------------*/
@@ -151,6 +152,7 @@ static int SD_CheckStatusWithTimeout(uint32_t timeout)
     {
       return 0;
     }
+    HAL_IWDG_Refresh(&hiwdg);
   }
 
   return -1;
@@ -311,6 +313,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
 #endif
                 break;
               }
+              HAL_IWDG_Refresh(&hiwdg);
             }
 #if (osCMSIS < 0x20000U)
           }
@@ -360,6 +363,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
                   {
                     break;
                   }
+                  HAL_IWDG_Refresh(&hiwdg);
                 }
 
                 if (ret != MSD_OK)
@@ -479,6 +483,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
             res = RES_OK;
             break;
           }
+          HAL_IWDG_Refresh(&hiwdg);
         }
 #if (osCMSIS < 0x20000U)
       }
@@ -535,6 +540,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
                   {
                     break;
                   }
+                  HAL_IWDG_Refresh(&hiwdg);
                 }
 
                 if (ret != MSD_OK)

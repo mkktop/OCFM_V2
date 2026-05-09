@@ -146,6 +146,7 @@ static void history_cancel_query(void);
 static uint8_t history_take_query(uint32_t *query_seq);
 static uint8_t history_query_is_current(uint32_t query_seq);
 static uint8_t history_commit_query_result(uint32_t query_seq, const hist_cache_t *cache);
+static uint32_t history_next_query_seq(void);
 static int16_t history_calc_collect_start(int16_t current_absolute,
                                           int16_t previous_collect_start,
                                           uint16_t previous_total_count);
@@ -194,6 +195,16 @@ void history_screen_exit(void)
     history_clear_widget_refs();
 
     lv_async_call(async_exit_to_main_cb, NULL);
+}
+
+void history_invalidate_cache(void)
+{
+    vTaskSuspendAll();
+    (void)history_next_query_seq();
+    g_hist_query_pending = 0;
+    g_hist_data_ready = (g_hist_state == HIST_STATE_BROWSER) ? 1 : 0;
+    memset(&g_hist_cache, 0, sizeof(g_hist_cache));
+    (void)xTaskResumeAll();
 }
 
 void history_button_handler(uint8_t button_id, uint8_t event)

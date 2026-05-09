@@ -44,6 +44,7 @@
 #include "lvgl.h"
 #include "app_config.h"
 #include "app_flow_calc.h"
+#include "app_log.h"
 #include "app_current.h"
 #include "rtc_time.h"
 #include "../../Drivers/Button/button_driver.h"
@@ -287,6 +288,17 @@ static uint32_t clear_total_flow_get(void) { return 0; }
 static void clear_total_flow_set(uint32_t v) { if (v == 1) flow_calc_reset_total(); }
 static const char *format_yes_no(uint32_t val) { return val == 1 ? lang_get(LANG_F_YES) : lang_get(LANG_F_NO); }
 
+/* ---------- 清除SD卡数据 ---------- */
+
+static uint32_t clear_sd_data_get(void) { return 0; }
+
+static void clear_sd_data_set(uint32_t v)
+{
+    if (v == 1) {
+        app_log_request_clear_sd();
+    }
+}
+
 /* ---------- 累计流量设置 (double 路径) ---------- */
 static char total_flow_fmt_buf[24];
 static float total_flow_getf(void) { return (float)flow_calc_get_total(); }
@@ -379,6 +391,7 @@ static const set_item_t advanced_items[] = {
     {LANG_P_DIST_OFFSET,     "mm",   app_config_get_dis_offset,          app_config_set_dis_offset,       0, 99999, 10},
     {LANG_P_PASSWORD,        "",     app_config_get_password_enable,      app_config_set_password_enable,   0, 1,     1,  0,  format_yes_no},
     {LANG_P_FACTORY_RESET,   "",     app_config_get_factory_settings,    app_config_set_factory_settings,  0, 1,     1,  0,  format_yes_no},
+    {LANG_P_CLEAR_SD_DATA,   "",     clear_sd_data_get,                  clear_sd_data_set,                0, 1,     1,  0,  format_yes_no},
 };
 
 /* ---------- 一级菜单分类表 ---------- */
@@ -422,6 +435,7 @@ static uint8_t g_step_index;                  /* 当前选中的步进索引 */
 static uint32_t g_last_key_tick;              /* 最后一次按键操作的 tick */
 static lv_timer_t *g_idle_timer = NULL;       /* 空闲超时检测定时器 */
 static uint8_t g_is_cal_edit = 0;             /* 当前编辑的是校准参数 */
+static lv_timer_t *g_clear_sd_timer = NULL;   /* SD clear progress timer */
 
 #define IDLE_TIMEOUT_MS       15000            /* 15秒无操作自动返回主页 */
 #define IDLE_CHECK_PERIOD_MS  1000             /* 每秒检查一次 */
@@ -473,6 +487,7 @@ static void update_edit_value_display(void);
 static uint8_t generate_step_list(uint32_t max_val);
 static void update_category_row(lv_obj_t *list, int8_t row_idx, uint8_t selected);
 static void update_parameter_row(lv_obj_t *list, int8_t row_idx, uint8_t selected);
+static void update_clear_sd_progress_display(int8_t progress);
 
 /* --- 按键处理函数 (仅限按键任务上下文调用，不含LVGL操作) --- */
 static void handle_category_key(uint8_t button_id);
@@ -488,10 +503,12 @@ static void async_select_category_cb(void *context);
 static void async_select_parameter_cb(void *context);
 static void async_update_edit_val_cb(void *context);
 static void async_update_step_cb(void *context);
+static void async_start_clear_sd_cb(void *context);
 
 /* --- 屏幕切换辅助函数 --- */
 static void set_screen_load(lv_obj_t *new_screen, lv_screen_load_anim_t anim, uint32_t time);
 static void idle_timeout_cb(lv_timer_t *timer);
+static void clear_sd_progress_timer_cb(lv_timer_t *timer);
 
 /**
  * @brief  判断当前编辑项是否为校准参数
@@ -500,6 +517,14 @@ static uint8_t is_calibration_item(const set_item_t *item)
 {
     return (item->set == app_config_set_calibration_4ma ||
             item->set == app_config_set_calibration_20ma);
+}
+
+/**
+ * @brief  判断当前编辑项是否为清除SD卡数据
+ */
+static uint8_t is_clear_sd_item(const set_item_t *item)
+{
+    return (item != NULL && item->set == clear_sd_data_set);
 }
 
 /*============================================================================*/
@@ -1667,6 +1692,13 @@ static void handle_edit_key(uint8_t button_id, uint8_t event)
         }
         break;
     case BUTTON_ID_OK:
+        if (is_clear_sd_item(item) && g_set_nav.edit_value == 1) {
+            item->set(g_set_nav.edit_value);
+            g_set_busy = 1;
+            lv_async_call(async_start_clear_sd_cb, NULL);
+            break;
+        }
+
         /* 保存: 写入配置结构体 + 持久化到 EEPROM */
         if (is_total_flow_item(item)) {
             flow_calc_set_total(g_set_nav.edit_valued);
@@ -1748,12 +1780,79 @@ static void idle_timeout_cb(lv_timer_t *timer)
             lv_timer_del(g_idle_timer);
             g_idle_timer = NULL;
         }
+        if (g_clear_sd_timer) {
+            lv_timer_del(g_clear_sd_timer);
+            g_clear_sd_timer = NULL;
+        }
         g_edit_value_label = NULL;
         g_edit_item = NULL;
         if (g_is_cal_edit) { g_is_cal_edit = 0; app_current_exit_calibration(); }
         ui_manager->settings_screen = NULL;
         g_set_nav.level = SET_LEVEL_CATEGORY;
         set_screen_load(ui_manager->main_screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
+        g_set_busy = 0;
+    }
+}
+
+static void update_clear_sd_progress_display(int8_t progress)
+{
+    if (g_edit_value_label == NULL) return;
+
+    if (progress < 0) progress = 0;
+    if (progress > 100) progress = 100;
+
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d%%", (int)progress);
+    lv_label_set_recolor(g_edit_value_label, false);
+    lv_obj_set_style_text_color(g_edit_value_label, lv_color_hex(COLOR_TEXT_SEL), 0);
+    lv_obj_set_style_text_font(g_edit_value_label, &lv_font_montserrat_48, 0);
+    lv_label_set_text(g_edit_value_label, buf);
+}
+
+static void clear_sd_progress_timer_cb(lv_timer_t *timer)
+{
+    int8_t progress = app_log_get_clear_sd_progress();
+
+    (void)timer;
+    g_last_key_tick = lv_tick_get();
+    update_clear_sd_progress_display(progress);
+
+    if (progress >= 100) {
+        if (g_clear_sd_timer) {
+            lv_timer_del(g_clear_sd_timer);
+            g_clear_sd_timer = NULL;
+        }
+
+        g_edit_value_label = NULL;
+        g_edit_item = NULL;
+
+        set_nav_context_t *ctx = lv_malloc(sizeof(set_nav_context_t));
+        if (ctx) {
+            ctx->target_level = 0;
+            ctx->category_idx = g_category_index;
+            ctx->item_idx = g_set_nav.selected_index;
+            g_set_busy = 1;
+            lv_async_call(async_enter_parameter_cb, ctx);
+        } else {
+            g_set_busy = 0;
+        }
+    }
+}
+
+static void async_start_clear_sd_cb(void *context)
+{
+    (void)context;
+
+    g_last_key_tick = lv_tick_get();
+    update_clear_sd_progress_display(0);
+
+    if (g_clear_sd_timer) {
+        lv_timer_del(g_clear_sd_timer);
+        g_clear_sd_timer = NULL;
+    }
+
+    g_clear_sd_timer = lv_timer_create(clear_sd_progress_timer_cb, 200, NULL);
+    if (g_clear_sd_timer == NULL) {
         g_set_busy = 0;
     }
 }
@@ -1861,6 +1960,10 @@ static void async_enter_edit_cb(void *context)
 static void async_exit_to_main_cb(void *context)
 {
     (void)context;
+    if (g_clear_sd_timer) {
+        lv_timer_del(g_clear_sd_timer);
+        g_clear_sd_timer = NULL;
+    }
     g_edit_value_label = NULL;
     g_edit_item = NULL;
     ui_manager->settings_screen = NULL;

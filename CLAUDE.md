@@ -10,6 +10,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 
 **关键约束：**
 - EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 约 160 字节（定义在 `Core/Inc/global.h`）。添加新配置字段前务必确认剩余空间。
+- `Core/Inc/global.h` 是项目的**总头文件**——include 了几乎所有模块头文件（at24c02、fatfs、file_driver、data_recorder、log_manager、rtc_time、ui 等），并集中定义 Modbus 寄存器地址、系统常量、`SystemConfig_t` 结构体。绝大多数 `.c` 文件只需 `#include "global.h"` 即可获得所有依赖。
 - 无自动化测试和lint工具，验证依赖实机调试和串口日志输出。
 
 ### 构建
@@ -18,6 +19,8 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 编译: Project -> Build Target (F7)
 下载: Flash -> Download (F8)
 ```
+
+**硬件配置修改：** 外设引脚、时钟树等硬件配置通过 CubeMX 打开 `OCFM_V2.ioc` 修改，然后重新生成代码。不要手动修改 HAL 初始化代码（`Core/Src/main.c`、`stm32f4xx_hal_msp.c` 等）中的外设配置。
 
 ## 硬件资源分配
 
@@ -121,6 +124,24 @@ button_scan_tas (10ms) → button_driver_scan() (消抖/长按状态机)
 
 **添加新页面按键处理：** 在 `App/app_button.c` 添加handler → 在 `app_button_event_handler()` 添加分支 → 在 `ui_conf.h` 的 `ui_manager_t` 添加屏幕指针
 
+## Modbus 协议栈 (`Interface/`)
+
+独立于应用层的通用 Modbus 协议实现，不依赖 FreeRTOS 或 HAL：
+
+| 文件 | 功能 |
+|------|------|
+| `modbus.c/h` | Modbus RTU 协议栈核心 (帧解析、CRC校验、异常响应) |
+| `modbus_master.c/h` | Modbus 主机 (传感器轮询，异步非阻塞，回调驱动) |
+| `modbus_slave.c/h` | Modbus 从机 (保持寄存器读写，写回调 `modbus_slave_on_write()`) |
+
+**数据流：** `modbus_master_t` 任务 (10ms) → `modbus_master_poll()` → 传感器回调 → `app_sensor` 更新水位 → `modbus_slave_ta` 任务 (10ms) 每1秒将数据同步到保持寄存器 → 上位机通过 UART2 读取。
+
+**添加新寄存器：**
+1. 在 `Core/Inc/global.h` 添加地址宏和默认值
+2. 在 `App/app_modbus_slave.c` 的 `app_modbus_slave_init_registers()` 初始化初值
+3. 如需可写，在 `app_modbus_slave_on_write()` 添加写处理
+4. 在 `modbus_slave_ta` 的1秒同步逻辑中更新寄存器值
+
 ## 关键设计决策
 
 ### 系统配置持久化 (`App/app_config`)
@@ -128,7 +149,7 @@ EEPROM (AT24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改�
 
 ### 累计流量双层持久化 (`App/app_flow_calc`)
 - **RTC备份寄存器**：每10秒保存（快速、非阻塞）— DR1/DR2 存 total_flow(double), DR3 存 magic, DR4 存 total_time
-- **EEPROM**：每5分钟保存（地址240，20字节结构体）— 实际写入延迟到 `flow_calc_process()` 在 log_task 中执行
+- **EEPROM**：每5分钟保存（地址232，20字节结构体）— 实际写入延迟到 `flow_calc_process()` 在 log_task 中执行
 - **加载优先级**：备份寄存器 → EEPROM → 默认0
 - **校验**：magic = `0x5A5A5A5A`，total_flow 范围 [0, 1e12)
 
@@ -168,6 +189,13 @@ TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。线性插值：`ratio = (flow - 
 以下外设已在硬件表和CubeMX中配置，但应用层代码尚未实现：
 - **UART4 / 4G模块 (ML307)** — 无应用层驱动代码
 - **SPI2 / LoRa模块 (SX1278)** — 无应用层驱动代码
+
+### 硬件参考文档 (`Doc/`)
+`Doc/` 目录包含硬件设计文件，调试硬件相关问题时的重要参考：
+- **原理图** (`.SchDoc`)：MCU、电源、传感器接口、继电器、4-20mA、RS485 等各模块电路
+- **PCB 文件** (`.PcbDoc`, `.PrjPcb`)：PCB 布局和项目文件
+- **技术规范**：`超声波明渠污水流量计技术要求.pdf` 等行业标准文档
+- **结构图纸**：LCD 铁框尺寸图纸 (`.dwg`)
 
 ## UI页面结构
 

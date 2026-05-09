@@ -30,4 +30,9 @@ void history_button_handler(uint8_t button_id, uint8_t event);
  */
 void history_query_process(void);
 
+/**
+ * @brief 使历史查询缓存失效 (例如清空SD卡数据后调用)
+ */
+void history_invalidate_cache(void);
+
 #endif /* __UI_HISTORY_H__ */

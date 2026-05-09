@@ -115,6 +115,9 @@ typedef enum {
     LANG_HIST_RECORD,          /* 记录 */
     LANG_HIST_HOUR,            /* 时 */
 
+    /* 参数名称 - 存储管理 */
+    LANG_P_CLEAR_SD_DATA,      /* 清除存储数据 */
+
     LANG_COUNT
 } lang_id_t;
 

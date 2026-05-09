@@ -105,6 +105,7 @@ static const char * const g_strings[LANG_COUNT][2] = {
     [LANG_P_20MA_CAL]       = { "20mA Cal",     "20mA\xe6\xa0\xa1\xe5\x87\x86" },         /* 20mA校准 */
     [LANG_P_DIST_OFFSET]    = { "Dist Offset",  "\xe8\xb7\x9d\xe7\xa6\xbb\xe5\x81\x8f\xe7\xa7\xbb" }, /* 距离偏移 */
     [LANG_P_FACTORY_RESET]  = { "Factory Reset","\xe6\x81\xa2\xe5\xa4\x8d\xe5\x87\xba\xe5\x8e\x82" }, /* 恢复出厂 */
+    [LANG_P_CLEAR_SD_DATA]  = { "Clear SD Data","\xe6\xb8\x85\xe9\x99\xa4\xe5\xad\x98\xe5\x82\xa8\xe6\x95\xb0\xe6\x8d\xae" }, /* 清除存储数据 */
     [LANG_P_PASSWORD]       = { "Password Lock","\xe5\xaf\x86\xe7\xa0\x81\xe9\x94\x81" },            /* 密码锁 */
 
     /* 格式回调字符串 */
