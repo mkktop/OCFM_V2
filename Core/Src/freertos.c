@@ -360,7 +360,7 @@ void modbus_slave_task_func(void *argument)
   /* 注册写入回调 */
   modbus_slave_set_write_callback(app_modbus_slave_on_write);
 
-  /* 寄存器更新计数器 (每100次=1秒) */
+  /* 寄存器更新计数器 (每20次=200ms) */
   uint16_t update_counter = 0;
 
   /* 无限循环 */
@@ -370,8 +370,8 @@ void modbus_slave_task_func(void *argument)
     modbus_slave_task(&sensor_slave);
     app_modbus_slave_process_pending();
 
-    /* 每1秒更新一次寄存器数据 */
-    if (++update_counter >= 100)
+    /* 每200ms更新一次寄存器数据，避免与flow_calc_update(1s)同频导致读重复值 */
+    if (++update_counter >= 20)
     {
       update_counter = 0;
       app_modbus_slave_update();
