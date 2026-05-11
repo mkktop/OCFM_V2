@@ -107,6 +107,10 @@ void app_config_eeprom_unlock(void)
  */
 void app_config_set_default(void)
 {
+    /* 保留工厂校准值 */
+    uint32_t saved_cal_4ma  = g_config.calibration_4ma;
+    uint32_t saved_cal_20ma = g_config.calibration_20ma;
+
     memset(&g_config, 0, sizeof(SystemConfig_t));
 
     g_config.magic_number = CONFIG_MAGIC_NUMBER;
@@ -114,8 +118,8 @@ void app_config_set_default(void)
     // 基本参数
     g_config.range_max         = DEFAULT_RANGE_MAX;
     g_config.height            = DEFAULT_HEIGHT;
-    g_config.calibration_4ma   = DEFAULT_CALIBRATION_4MA;
-    g_config.calibration_20ma  = DEFAULT_CALIBRATION_20MA;
+    g_config.calibration_4ma   = saved_cal_4ma;
+    g_config.calibration_20ma  = saved_cal_20ma;
     g_config.range_4ma         = DEFAULT_RANGE_4MA;
     g_config.range_20ma        = DEFAULT_RANGE_20MA;
     g_config.point_num         = DEFAULT_POINT_NUM;
@@ -351,11 +355,9 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
     {
         /* 基本参数 */
         case CONFIG_ID_RANGE_MAX:
-            if (value < g_config.height) return CONFIG_ERR_RANGE;
             g_config.range_max = value;
             break;
         case CONFIG_ID_HEIGHT:
-            if (value > g_config.range_max) return CONFIG_ERR_RANGE;
             g_config.height = value;
             break;
         case CONFIG_ID_CALIBRATION_4MA: g_config.calibration_4ma = value; break;

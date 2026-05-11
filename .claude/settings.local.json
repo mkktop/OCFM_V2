@@ -86,7 +86,9 @@
       "Bash(python -c \"chars = open\\('App/ui/font/chars.txt', 'r', encoding='utf-8'\\).read\\(\\).strip\\(\\); missing = []; [missing.append\\(c\\) if c not in chars else print\\(f'{c} - FOUND'\\) for c in '设置英天厂']; print\\(f'Missing: {missing}'\\) if missing else print\\('All found!'\\)\")",
       "Bash(python -X utf8 -c ' *)",
       "Bash(python check_chars.py)",
-      "Bash(pip install *)"
+      "Bash(pip install *)",
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Inno Setup 6\\\\ISCC.exe\" \"D:\\\\UGit\\\\OCFM_Host\\\\OCFM_Host\\\\installer.iss\")",
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Inno Setup 6\\\\ISCC.exe\" \"D:\\\\UGit\\\\OCFM_Host\\\\installer.iss\")"
     ],
     "additionalDirectories": [
       "C:\\Program Files\\明渠流量计上位机"

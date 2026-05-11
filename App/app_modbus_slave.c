@@ -118,21 +118,18 @@ static void apply_uint16_config_register(uint16_t reg_addr)
 
     val16 = modbus_slave_get_holding_register(reg_addr);
 
-    if (cid == CONFIG_ID_CALIBRATION_4MA) {
-        if (val16 < 805 || val16 > 1495) return;
-        app_config_set(cid, (uint32_t)val16);
-        app_current_set_calibration_modbus(val16);
-        return;
-    }
-
-    if (cid == CONFIG_ID_CALIBRATION_20MA) {
-        if (val16 < 3049 || val16 > 5662) return;
+    if (cid == CONFIG_ID_CALIBRATION_4MA || cid == CONFIG_ID_CALIBRATION_20MA) {
         app_config_set(cid, (uint32_t)val16);
         app_current_set_calibration_modbus(val16);
         return;
     }
 
     app_config_set(cid, (uint32_t)val16);
+
+    /* 一次性动作寄存器，执行后立即清零 */
+    if (cid == CONFIG_ID_FACTORY_RESET || cid == CONFIG_ID_CLEAR_TOTAL) {
+        modbus_slave_set_holding_register(reg_addr, 0);
+    }
 }
 
 /**
