@@ -346,6 +346,10 @@ static uint32_t get_effective_max(const set_item_t *item)
     if (item->set == app_config_set_channel_id) {
         return get_channel_id_max();
     }
+    if (item->set == app_config_set_height) {
+        uint32_t range_max = app_config_get_range_max();
+        return (range_max < item->max_val) ? range_max : item->max_val;
+    }
     return item->max_val;
 }
 

@@ -616,6 +616,7 @@ uint32_t flow_calc_get_total_time(void)
 
 /**
  * @brief  获取当前槽型的理论最大流量 (m³/h)
+ * @note   用 water_level_up 代入流量公式计算，单一数据源
  */
 static float get_channel_max_m3h(void)
 {
@@ -628,15 +629,18 @@ static float get_channel_max_m3h(void)
     switch (canals_type) {
         case PARSHALL_FLUME:
             if (cid > 16) return 0.0f;
-            max_lps = s_channel_tbl[cid - 1].flow_range_up;
+            max_lps = parshall_flow_Ls(s_channel_tbl[cid - 1].water_level_up,
+                                       &s_channel_tbl[cid - 1]);
             break;
         case TRIANGULAR_WEIR:
             if (cid > 5) return 0.0f;
-            max_lps = s_triangular_weir_tbl[cid - 1].flow_range_up;
+            max_lps = triangular_weir_flow_Ls(s_triangular_weir_tbl[cid - 1].water_level_up,
+                                              &s_triangular_weir_tbl[cid - 1]);
             break;
         case RECTANGULAR_WEIR:
             if (cid > 4) return 0.0f;
-            max_lps = s_rectangular_weir_tbl[cid - 1].flow_range_up;
+            max_lps = rectangular_weir_flow_Ls(s_rectangular_weir_tbl[cid - 1].water_level_up,
+                                               &s_rectangular_weir_tbl[cid - 1]);
             break;
         default:
             return 0.0f;

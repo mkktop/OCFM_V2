@@ -356,8 +356,10 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         /* 基本参数 */
         case CONFIG_ID_RANGE_MAX:
             g_config.range_max = value;
+            g_config.height = value;  /* 量程变更时同步高度 */
             break;
         case CONFIG_ID_HEIGHT:
+            if (value > g_config.range_max) value = g_config.range_max;
             g_config.height = value;
             break;
         case CONFIG_ID_CALIBRATION_4MA: g_config.calibration_4ma = value; break;
@@ -617,6 +619,8 @@ uint32_t app_config_get_range_max(void)
 void app_config_set_range_max(uint32_t value)
 {
     app_config_set(CONFIG_ID_RANGE_MAX, value);
+    /* 量程变更时同步高度 */
+    app_config_set(CONFIG_ID_HEIGHT, value);
 }
 
 uint32_t app_config_get_height(void)
