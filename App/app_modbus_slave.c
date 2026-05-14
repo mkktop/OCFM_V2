@@ -251,7 +251,7 @@ void app_modbus_slave_update(void)
         float water_level = flow_calc_get_last_water_level();
         if (water_level > 0.0f)
         {
-            uint16_t water_level_mm = (uint16_t)(water_level * 1000);
+            uint16_t water_level_mm = (uint16_t)(water_level * 1000.0f + 0.5f);
             modbus_slave_set_holding_register(REG_WUWEI, water_level_mm);
         }
         else
