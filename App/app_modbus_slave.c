@@ -176,7 +176,7 @@ void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
         {
             RTC_Time_SetValues(year, (uint8_t)month, (uint8_t)day,
                                (uint8_t)hour, (uint8_t)minute, (uint8_t)second,
-                               (uint8_t)weekday);
+                               (uint8_t)(weekday % 7 + 1));
             char rtc_buf[48];
             snprintf(rtc_buf, sizeof(rtc_buf), "SET RTC %04u-%02u-%02u %02u:%02u:%02u",
                      year, month, day, hour, minute, second);
@@ -350,7 +350,7 @@ void app_modbus_slave_update(void)
         modbus_slave_set_holding_register(REG_RTC_HOUR,   time.hour);
         modbus_slave_set_holding_register(REG_RTC_MINUTE, time.minute);
         modbus_slave_set_holding_register(REG_RTC_SECOND, time.second);
-        modbus_slave_set_holding_register(REG_RTC_WEEKDAY,time.weekDay);
+        modbus_slave_set_holding_register(REG_RTC_WEEKDAY, (time.weekDay + 5) % 7 + 1);
     }
 }
 
