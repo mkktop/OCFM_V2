@@ -423,6 +423,7 @@ static void reconfigure_uart2(void)
     huart2.Init.BaudRate = baudrate;
     huart2.Init.StopBits = stopbits;
     huart2.Init.Parity = parity;
+    huart2.Init.WordLength = (parity == UART_PARITY_NONE) ? UART_WORDLENGTH_8B : UART_WORDLENGTH_9B;
 
     /* 重新初始化UART */
     HAL_UART_Init(&huart2);
