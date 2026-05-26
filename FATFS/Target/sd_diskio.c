@@ -686,4 +686,11 @@ void BSP_SD_AbortCallback(void)
 
 /* USER CODE BEGIN lastSection */
 /* can be used to modify / undefine previous code or add new code */
+void SD_FlushQueue(void)
+{
+    if (SDQueueID) {
+        uint16_t msg;
+        while (osMessageQueueGet(SDQueueID, &msg, NULL, 0) == osOK);
+    }
+}
 /* USER CODE END lastSection */

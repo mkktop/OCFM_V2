@@ -36,6 +36,7 @@ extern const Diskio_drvTypeDef  SD_Driver;
 
 /* USER CODE BEGIN lastSection */
 /* can be used to modify / undefine previous code or add new definitions */
+void SD_FlushQueue(void);
 /* USER CODE END lastSection */
 
 #endif /* __SD_DISKIO_H */

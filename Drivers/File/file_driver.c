@@ -6,6 +6,7 @@
 
 #include "file_driver.h"
 #include "fatfs_platform.h"
+#include "sdio.h"
 
 /**
  * @brief �ļ�����
@@ -22,6 +23,23 @@ static uint8_t g_mounted = 0;
  */
 static uint8_t g_opened = 0;
 
+static void file_unmount(void)
+{
+    if (g_opened) {
+        f_close(&g_fil);
+        g_opened = 0;
+    }
+    if (g_mounted) {
+        f_mount(NULL, SDPath, 0);
+        g_mounted = 0;
+    }
+    SD_FlushQueue();
+    if (hsd.State != HAL_SD_STATE_RESET) {
+        HAL_SD_Abort(&hsd);
+        HAL_SD_DeInit(&hsd);
+    }
+}
+
 /**
  * @brief 检测SD卡是否在位，不在位时清除挂载和打开标志
  * @return 1:在位 0:不在位
@@ -29,8 +47,7 @@ static uint8_t g_opened = 0;
 static uint8_t file_check_card(void)
 {
     if (BSP_PlatformIsDetected() != SD_PRESENT) {
-        g_mounted = 0;
-        g_opened = 0;
+        file_unmount();
         return 0;
     }
     return 1;
