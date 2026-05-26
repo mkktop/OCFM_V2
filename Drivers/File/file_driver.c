@@ -5,6 +5,7 @@
  */
 
 #include "file_driver.h"
+#include "fatfs_platform.h"
 
 /**
  * @brief �ļ�����
@@ -22,12 +23,30 @@ static uint8_t g_mounted = 0;
 static uint8_t g_opened = 0;
 
 /**
+ * @brief 检测SD卡是否在位，不在位时清除挂载和打开标志
+ * @return 1:在位 0:不在位
+ */
+static uint8_t file_check_card(void)
+{
+    if (BSP_PlatformIsDetected() != SD_PRESENT) {
+        g_mounted = 0;
+        g_opened = 0;
+        return 0;
+    }
+    return 1;
+}
+
+/**
  * @brief ��ʼ���ļ�ϵͳ
  * @return FILE_OK:�ɹ� FILE_ERROR:ʧ��
  * @note ����SD����FATFS�ļ�ϵͳ��ֻ�����һ��
  */
 uint8_t file_init(void)
 {
+    if (!file_check_card()) {
+        printf("file_init: SD card not present\r\n");
+        return FILE_ERROR;
+    }
     // ����Ƿ��ѹ��أ����ѹ���������
     if (g_mounted) {
         printf("file_init: already mounted, skip\r\n");
@@ -70,6 +89,10 @@ uint8_t file_init(void)
  */
 uint8_t file_open(const char *filename, uint8_t mode)
 {
+    if (!file_check_card()) {
+        return FILE_NOT_MOUNTED;
+    }
+
     if (!g_mounted) {
         if (file_init() != FILE_OK) {
             return FILE_NOT_MOUNTED;
@@ -126,6 +149,10 @@ uint8_t file_close(void)
  */
 uint8_t file_write(const void *data, uint32_t len, uint32_t *written)
 {
+    if (!file_check_card()) {
+        return FILE_NOT_OPENED;
+    }
+
     if (!g_opened) {
         return FILE_NOT_OPENED;
     }
@@ -155,6 +182,10 @@ uint8_t file_write(const void *data, uint32_t len, uint32_t *written)
  */
 uint8_t file_read(void *buf, uint32_t len, uint32_t *read)
 {
+    if (!file_check_card()) {
+        return FILE_NOT_OPENED;
+    }
+
     if (!g_opened) {
         return FILE_NOT_OPENED;
     }
@@ -175,6 +206,10 @@ uint8_t file_read(void *buf, uint32_t len, uint32_t *read)
  */
 uint8_t file_delete(const char *filename)
 {
+    if (!file_check_card()) {
+        return FILE_NOT_MOUNTED;
+    }
+
     if (!g_mounted) {
         if (file_init() != FILE_OK) {
             return FILE_NOT_MOUNTED;
@@ -192,6 +227,10 @@ uint8_t file_delete(const char *filename)
  */
 uint8_t file_exists(const char *filename)
 {
+    if (!file_check_card()) {
+        return 0;
+    }
+
     if (!g_mounted) {
         printf("file_exists: not mounted, calling init...\r\n");
         if (file_init() != FILE_OK) {
@@ -213,6 +252,10 @@ uint8_t file_exists(const char *filename)
  */
 uint8_t file_create_dir(const char *path)
 {
+    if (!file_check_card()) {
+        return FILE_NOT_MOUNTED;
+    }
+
     if (!g_mounted) {
         printf("file_create_dir: not mounted, calling init...\r\n");
         if (file_init() != FILE_OK) {
@@ -240,6 +283,10 @@ uint8_t file_create_dir(const char *path)
  */
 uint8_t file_list_dir(const char *path)
 {
+    if (!file_check_card()) {
+        return FILE_NOT_MOUNTED;
+    }
+
     if (!g_mounted) {
         if (file_init() != FILE_OK) {
             return FILE_NOT_MOUNTED;
