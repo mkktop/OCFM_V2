@@ -83,6 +83,8 @@ static config_id_t reg_to_config_id(uint16_t reg_addr)
         case REG_STOP_BITS:       return CONFIG_ID_MODBUS_STOPBITS;
         case REG_CANALS__TYPE:    return CONFIG_ID_CANALS_TYPE;
         case REG_CHANNEL_ID:      return CONFIG_ID_CHANNEL_ID;
+        case REG_CHANNEL_WIDTH:   return CONFIG_ID_CHANNEL_WIDTH;
+        case REG_WEIR_HEIGHT:     return CONFIG_ID_WEIR_HEIGHT;
         case REG_INSTANT_UNIT:    return CONFIG_ID_INSTANT_UNIT;
         case REG_SUM_POINT:       return CONFIG_ID_SUM_POINT;
         case REG_RANGE_4MA:       return CONFIG_ID_RANGE_4MA;
@@ -329,6 +331,8 @@ void app_modbus_slave_update(void)
         app_config_get_val(CONFIG_ID_SUM_POINT, &val);    modbus_slave_set_holding_register(REG_SUM_POINT, (uint16_t)val);
         app_config_getf(CONFIG_ID_RANGE_4MA, &fval);  modbus_slave_set_float(REG_RANGE_4MA, fval);
         app_config_getf(CONFIG_ID_RANGE_20MA, &fval); modbus_slave_set_float(REG_RANGE_20MA, fval);
+        app_config_get_val(CONFIG_ID_CHANNEL_WIDTH, &val); modbus_slave_set_holding_register(REG_CHANNEL_WIDTH, (uint16_t)val);
+        app_config_get_val(CONFIG_ID_WEIR_HEIGHT, &val);   modbus_slave_set_holding_register(REG_WEIR_HEIGHT, (uint16_t)val);
     }
 
     /* 出厂校准寄存器 - 0x1001-0x1005 */

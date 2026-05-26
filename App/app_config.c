@@ -151,6 +151,8 @@ void app_config_set_default(void)
     g_config.dis_offset        = DEFAULT_DIS_OFFSET;
     g_config.canals_type       = DEFAULT_CANALS_TYPE;
     g_config.channel_id        = DEFAULT_CHANNEL_ID;
+    g_config.channel_width     = DEFAULT_CHANNEL_WIDTH;
+    g_config.weir_height       = DEFAULT_WEIR_HEIGHT;
     g_config.instant_unit      = DEFAULT_INSTANT_UNIT;
     g_config.sum_point         = DEFAULT_SUM_POINT;
     g_config.language          = DEFAULT_LANGUAGE;
@@ -299,13 +301,15 @@ static const config_range_t config_range_table[CONFIG_ID_COUNT] = {
     /* [23] CONFIG_ID_DIS_OFFSET      */ {0, 1, 0, 99999, 0, 0},
     /* [24] CONFIG_ID_CANALS_TYPE     */ {0, 1, 1, 3,     0, 0},
     /* [25] CONFIG_ID_CHANNEL_ID      */ {0, 1, 1, 16,    0, 0},
-    /* [26] CONFIG_ID_INSTANT_UNIT    */ {0, 1, 1, 8,     0, 0},
-    /* [27] CONFIG_ID_SUM_POINT       */ {0, 1, 0, 3,     0, 0},
-    /* [28] CONFIG_ID_LANGUAGE        */ {0, 1, 0, 1,     0, 0},
-    /* [29] CONFIG_ID_SHOW_ALARM      */ {0, 1, 0, 1,     0, 0},
-    /* [30] CONFIG_ID_PASSWORD_ENABLE */ {0, 1, 0, 1,     0, 0},
-    /* [31] CONFIG_ID_FACTORY_RESET   */ {0, 0, 0, 0,     0, 0},
-    /* [31] CONFIG_ID_CLEAR_TOTAL     */ {0, 0, 0, 0,     0, 0},
+    /* [26] CONFIG_ID_CHANNEL_WIDTH   */ {0, 1, 0, 10000, 0, 0},
+    /* [27] CONFIG_ID_WEIR_HEIGHT     */ {0, 1, 0, 10000, 0, 0},
+    /* [28] CONFIG_ID_INSTANT_UNIT    */ {0, 1, 1, 8,     0, 0},
+    /* [29] CONFIG_ID_SUM_POINT       */ {0, 1, 0, 3,     0, 0},
+    /* [30] CONFIG_ID_LANGUAGE        */ {0, 1, 0, 1,     0, 0},
+    /* [31] CONFIG_ID_SHOW_ALARM      */ {0, 1, 0, 1,     0, 0},
+    /* [32] CONFIG_ID_PASSWORD_ENABLE */ {0, 1, 0, 1,     0, 0},
+    /* [33] CONFIG_ID_FACTORY_RESET   */ {0, 0, 0, 0,     0, 0},
+    /* [34] CONFIG_ID_CLEAR_TOTAL     */ {0, 0, 0, 0,     0, 0},
 };
 
 uint8_t app_config_set(config_id_t id, uint32_t value)
@@ -406,6 +410,8 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
                 taskEXIT_CRITICAL();
             }
             break;
+        case CONFIG_ID_CHANNEL_WIDTH:   g_config.channel_width = value;   break;
+        case CONFIG_ID_WEIR_HEIGHT:     g_config.weir_height = value;     break;
         case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break;
         case CONFIG_ID_SUM_POINT:       g_config.sum_point = value;       break;
         case CONFIG_ID_LANGUAGE:        g_config.language = value;        break;
@@ -526,6 +532,8 @@ uint8_t app_config_get_val(config_id_t id, uint32_t *value)
         case CONFIG_ID_DIS_OFFSET:      *value = g_config.dis_offset;      break;
         case CONFIG_ID_CANALS_TYPE:     *value = g_config.canals_type;     break;
         case CONFIG_ID_CHANNEL_ID:      *value = g_config.channel_id;      break;
+        case CONFIG_ID_CHANNEL_WIDTH:   *value = g_config.channel_width;   break;
+        case CONFIG_ID_WEIR_HEIGHT:     *value = g_config.weir_height;     break;
         case CONFIG_ID_INSTANT_UNIT:    *value = g_config.instant_unit;    break;
         case CONFIG_ID_SUM_POINT:       *value = g_config.sum_point;       break;
         case CONFIG_ID_LANGUAGE:        *value = g_config.language;        break;
@@ -867,6 +875,24 @@ uint32_t app_config_get_channel_id(void)
 void app_config_set_channel_id(uint32_t value)
 {
     app_config_set(CONFIG_ID_CHANNEL_ID, value);
+}
+
+uint32_t app_config_get_channel_width(void)
+{
+    uint32_t v = 0; app_config_get_val(CONFIG_ID_CHANNEL_WIDTH, &v); return v;
+}
+void app_config_set_channel_width(uint32_t value)
+{
+    app_config_set(CONFIG_ID_CHANNEL_WIDTH, value);
+}
+
+uint32_t app_config_get_weir_height(void)
+{
+    uint32_t v = 0; app_config_get_val(CONFIG_ID_WEIR_HEIGHT, &v); return v;
+}
+void app_config_set_weir_height(uint32_t value)
+{
+    app_config_set(CONFIG_ID_WEIR_HEIGHT, value);
 }
 
 uint32_t app_config_get_instant_unit(void)

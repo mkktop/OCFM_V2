@@ -268,22 +268,37 @@ static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t
 static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir_t *weir)
 {
     float Q = 0.0f;
-    float he;
+    float he, effective_width;
 
     if (weir == NULL) {
         return 0.0f;
     }
 
+    float B = app_config_get_channel_width() / 1000.0f;
+    float b = weir->width;
+
     if (water_level_m >= weir->water_level_down && water_level_m <= weir->water_level_up) {
         he = water_level_m + weir->kh;
-        Q = weir->factor * weir->width * powf(he, weir->n);
+        if (B > 0.0f && b < B) {
+            effective_width = b - 0.2f * water_level_m;
+            if (effective_width < 0.0f) effective_width = 0.0f;
+        } else {
+            effective_width = b;
+        }
+        Q = weir->factor * effective_width * powf(he, weir->n);
     }
     else if (water_level_m < weir->water_level_down) {
         Q = 0.0f;
     }
-    else if (water_level_m > weir->water_level_up) {
+    else {
         he = weir->water_level_up + weir->kh;
-        Q = weir->factor * weir->width * powf(he, weir->n);
+        if (B > 0.0f && b < B) {
+            effective_width = b - 0.2f * weir->water_level_up;
+            if (effective_width < 0.0f) effective_width = 0.0f;
+        } else {
+            effective_width = b;
+        }
+        Q = weir->factor * effective_width * powf(he, weir->n);
     }
 
     return Q;

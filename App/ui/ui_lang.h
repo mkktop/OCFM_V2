@@ -117,6 +117,8 @@ typedef enum {
 
     /* 参数名称 - 存储管理 */
     LANG_P_CLEAR_SD_DATA,      /* 清除存储数据 */
+    LANG_P_CHANNEL_WIDTH,      /* 渠宽 */
+    LANG_P_WEIR_HEIGHT,        /* 堰高 */
 
     LANG_COUNT
 } lang_id_t;
