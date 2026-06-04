@@ -9,7 +9,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 **核心技术栈：** STM32F407VGTx (Cortex-M4, 168MHz) | FreeRTOS V10.3.1 | LVGL 9.5.0 | FatFs | Keil MDK-ARM (AC5)
 
 **关键约束：**
-- EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 约 120 字节（22×uint32 + 8×float，定义在 `Core/Inc/global.h`）。累计流量存储在地址 232（24字节）。添加新配置字段前务必确认剩余空间（配置区 0~119，累计流量区 232~255）。
+- EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 约 148 字节（27×uint32 + 10×float，定义在 `Core/Inc/global.h`）。累计流量存储在地址 232（24字节）。添加新配置字段前务必确认剩余空间（配置区 0~147，累计流量区 232~255，中间 148~231 字节空闲）。
 - `Core/Inc/global.h` 是项目的**总头文件**——include 了几乎所有模块头文件（at24c02、fatfs、file_driver、data_recorder、log_manager、rtc_time、ui 等），并集中定义 Modbus 寄存器地址、系统常量、`SystemConfig_t` 结构体。绝大多数 `.c` 文件只需 `#include "global.h"` 即可获得所有依赖。
 - 无自动化测试和lint工具，验证依赖实机调试和串口日志输出。
 
@@ -60,7 +60,9 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 4. `app_sensor_init()` — 初始化传感器（参数在传感器首次上线时同步，非启动时）
 5. `app_current_init()` — 启动TIM3 CH4 PWM，初始输出4mA
 6. `lv_init()` + `lv_tick_set_cb()` + `lv_delay_set_cb()` + `lv_port_disp_init()` + `ui_create()` — 初始化LVGL和UI
-7. 预渲染10帧后开背光，进入 `lv_timer_handler()` 主循环
+7. `app_system_set_ready()` — 通知其他任务可以启动
+8. 启动 `flow_refresh_timer` (1秒周期) + 刷新IWDG
+9. 预渲染10帧后开背光，进入 `lv_timer_handler()` 主循环
 
 ## 代码规范
 
@@ -168,7 +170,11 @@ EEPROM (AT24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改�
 **关键：** AAH/AAL 没有独立的回差值，恢复条件分别参考 AH/AL 阈值。
 
 ### 4-20mA电流输出 (`App/app_current`)
-TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。线性插值：`ratio = (flow - range_4ma) / (range_20ma - range_4ma)`，映射到 `ccr_4ma ~ ccr_20ma`。`calibration_4ma/20ma` 是工厂校准的CCR值，`range_4ma/20ma` 是用户可调的流量量程端点(m³/h)。校准模式有两种路径：UI路径和Modbus路径（10秒超时）。
+TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。TIM3配置：PSC=29, ARR=6999 → 84MHz/30/7000 = 400Hz PWM，~7000级分辨率（约12.8 bit）。默认4mA CCR=1006，20mA CCR=3811，有效步数2805级。
+
+线性插值：`ratio = (flow - range_4ma) / (range_20ma - range_4ma)`，映射到 `ccr_4ma ~ ccr_20ma`。`calibration_4ma/20ma` 是工厂校准的CCR值，`range_4ma/20ma` 是用户可调的流量量程端点(m³/h)。20mA量程上限 = `flow_calc_get_max_flow_m3h()`（理论最大流量 × 1.2 裕量）。校准模式有两种路径：UI路径和Modbus路径（10秒超时）。
+
+**已知问题：** `app_current.c` 中 `#define TIM_ARR 7999` 和文件头注释 `ARR=1999` 均与 CubeMX 实际值 6999 不一致，属于历史遗留死代码，不影响功能。
 
 ### 水位计算 (`App/app_sensor`)
 `水位(mm) = 安装高度 - 距离`。传感器参数（高度、量程等）不在启动时推送，而是在传感器**首次上线**时自动同步。传感器设置均为异步非阻塞，结果通过回调获取。
@@ -210,7 +216,15 @@ TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。线性插值：`ratio = (flow - 
 
 **趋势图细节：** 10秒采样序列30点（5分钟历史）+ 5分钟采样序列30点（150分钟历史）。Y轴按历史最大流量自动缩放。数据在 `ui_update_timer_cb()` 中每秒递增计数器，每10秒/300秒分别推入对应序列。
 
-**设置页面** — 三级菜单：分类列表 → 参数列表 → 数值编辑（SHIFT键切换步进 1/10/100/1000/10000）。15秒无操作自动返回主屏幕。进入设置前可选密码验证（固定密码1234）。
+**设置页面** — 三级菜单：分类列表 → 参数列表 → 数值编辑（SHIFT键切换步进量级）。15秒无操作自动返回主屏幕。进入设置前可选密码验证（固定密码1234）。
+
+**设置项双路径编辑** (`set_item_t` in `ui_set_page.c`)：参数项支持四种数据路径：
+- **uint32路径**：`get/set` 回调 + `step/min_val/max_val` — 整数参数（高度、地址等）
+- **float路径**：`getf/setf` 回调 + `stepf/min_valf/max_valf/f_decimals` — 浮点参数（量程、报警值等）
+- **double路径**：仅累计流量使用，独立步进列表
+- **format路径**：`format()` 回调自定义显示（波特率、停止位等），值在 min~max 间循环
+
+添加新设置项时，在对应分类的 `xxx_items[]` 数组中追加 `set_item_t`，选择合适的数据路径即可。
 
 **屏幕切换：** `ui_switch_screen(new_screen, anim_type, time)`，通过 `ui_manager->active_screen` 跟踪当前屏幕。
 

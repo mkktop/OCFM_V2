@@ -680,11 +680,11 @@ static float get_channel_max_m3h(void)
 
 /**
  * @brief  获取当前槽型的最大流量上限 (m³/h)
- * @note   理论最大值 × 110% 裕量，用于限制4-20mA量程设定
+ * @note   理论最大值 × 120% 裕量，用于限制4-20mA量程设定
  */
 float flow_calc_get_max_flow_m3h(void)
 {
-    return get_channel_max_m3h() * 1.1f;
+    return get_channel_max_m3h() * 1.2f;
 }
 
 /**
