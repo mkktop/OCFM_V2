@@ -76,6 +76,12 @@ static const reg_map_t reg_map[] = {
     {0x0106,               41},  /* 4mA量程低字 */
     {REG_RANGE_20MA,       42},  /* float 占2个: 42,43 */
     {0x0108,               43},  /* 20mA量程低字 */
+    {REG_CHANNEL_WIDTH,    57},
+    {REG_WEIR_HEIGHT,      58},
+    {REG_WATER_LEVEL_UP,   59},  /* float 占2个: 59,60 */
+    {0x010C,               60},  /* 水位上限低字 */
+    {REG_WATER_LEVEL_DOWN, 61},  /* float 占2个: 61,62 */
+    {0x010E,               62},  /* 水位下限低字 */
     /* RTC时间设置区 (0x0200-0x0206) */
     {REG_RTC_YEAR,         50},
     {REG_RTC_MONTH,        51},
@@ -94,7 +100,7 @@ static const reg_map_t reg_map[] = {
 };
 
 #define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))
-#define REG_ARRAY_SIZE  58  /* 映射后的紧凑数组大小 */
+#define REG_ARRAY_SIZE  64  /* 映射后的紧凑数组大小 */
 
 /**
  * @brief 保持寄存器紧凑数组

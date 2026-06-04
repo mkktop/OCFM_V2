@@ -108,6 +108,8 @@ static const char * const g_strings[LANG_COUNT][2] = {
     [LANG_P_CLEAR_SD_DATA]  = { "Clear SD Data","\xe6\xb8\x85\xe9\x99\xa4\xe5\xad\x98\xe5\x82\xa8\xe6\x95\xb0\xe6\x8d\xae" }, /* 清除存储数据 */
     [LANG_P_CHANNEL_WIDTH]  = { "Ch Width",     "\xe6\xb8\xa0\xe5\xae\xbd\x28\xe6\x94\xb6\xe7\xbc\xa9\xe5\xa0\xb0\x29" },     /* 渠宽(收缩堰) */
     [LANG_P_WEIR_HEIGHT]    = { "Weir Ht",      "\xe5\xa0\xb0\xe9\xab\x98\x28\xe6\x94\xb6\xe7\xbc\xa9\xe5\xa0\xb0\x29" },     /* 堰高(收缩堰) */
+    [LANG_P_WATER_LEVEL_UP] = { "WL Upper",     "\xe6\xb0\xb4\xe4\xbd\x8d\xe4\xb8\x8a\xe9\x99\x90" },   /* 水位上限 */
+    [LANG_P_WATER_LEVEL_DOWN]= { "WL Lower",    "\xe6\xb0\xb4\xe4\xbd\x8d\xe4\xb8\x8b\xe9\x99\x90" },   /* 水位下限 */
     [LANG_P_PASSWORD]       = { "Password Lock","\xe5\xaf\x86\xe7\xa0\x81\xe9\x94\x81" },            /* 密码锁 */
 
     /* 格式回调字符串 */

@@ -119,6 +119,8 @@ typedef enum {
     LANG_P_CLEAR_SD_DATA,      /* 清除存储数据 */
     LANG_P_CHANNEL_WIDTH,      /* 渠宽 */
     LANG_P_WEIR_HEIGHT,        /* 堰高 */
+    LANG_P_WATER_LEVEL_UP,     /* 水位上限 */
+    LANG_P_WATER_LEVEL_DOWN,   /* 水位下限 */
 
     LANG_COUNT
 } lang_id_t;

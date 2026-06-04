@@ -153,6 +153,8 @@ void app_config_set_default(void)
     g_config.channel_id        = DEFAULT_CHANNEL_ID;
     g_config.channel_width     = DEFAULT_CHANNEL_WIDTH;
     g_config.weir_height       = DEFAULT_WEIR_HEIGHT;
+    g_config.water_level_up    = DEFAULT_WATER_LEVEL_UP;
+    g_config.water_level_down  = DEFAULT_WATER_LEVEL_DOWN;
     g_config.instant_unit      = DEFAULT_INSTANT_UNIT;
     g_config.sum_point         = DEFAULT_SUM_POINT;
     g_config.language          = DEFAULT_LANGUAGE;
@@ -303,13 +305,15 @@ static const config_range_t config_range_table[CONFIG_ID_COUNT] = {
     /* [25] CONFIG_ID_CHANNEL_ID      */ {0, 1, 1, 16,    0, 0},
     /* [26] CONFIG_ID_CHANNEL_WIDTH   */ {0, 1, 0, 10000, 0, 0},
     /* [27] CONFIG_ID_WEIR_HEIGHT     */ {0, 1, 0, 10000, 0, 0},
-    /* [28] CONFIG_ID_INSTANT_UNIT    */ {0, 1, 1, 8,     0, 0},
-    /* [29] CONFIG_ID_SUM_POINT       */ {0, 1, 0, 3,     0, 0},
-    /* [30] CONFIG_ID_LANGUAGE        */ {0, 1, 0, 1,     0, 0},
-    /* [31] CONFIG_ID_SHOW_ALARM      */ {0, 1, 0, 1,     0, 0},
-    /* [32] CONFIG_ID_PASSWORD_ENABLE */ {0, 1, 0, 1,     0, 0},
-    /* [33] CONFIG_ID_FACTORY_RESET   */ {0, 0, 0, 0,     0, 0},
-    /* [34] CONFIG_ID_CLEAR_TOTAL     */ {0, 0, 0, 0,     0, 0},
+    /* [28] CONFIG_ID_WATER_LEVEL_UP  */ {1, 1, 0, 0, 0.0f, 10.0f},
+    /* [29] CONFIG_ID_WATER_LEVEL_DOWN*/ {1, 1, 0, 0, 0.0f, 10.0f},
+    /* [30] CONFIG_ID_INSTANT_UNIT    */ {0, 1, 1, 8,     0, 0},
+    /* [31] CONFIG_ID_SUM_POINT       */ {0, 1, 0, 3,     0, 0},
+    /* [32] CONFIG_ID_LANGUAGE        */ {0, 1, 0, 1,     0, 0},
+    /* [33] CONFIG_ID_SHOW_ALARM      */ {0, 1, 0, 1,     0, 0},
+    /* [34] CONFIG_ID_PASSWORD_ENABLE */ {0, 1, 0, 1,     0, 0},
+    /* [35] CONFIG_ID_FACTORY_RESET   */ {0, 0, 0, 0,     0, 0},
+    /* [36] CONFIG_ID_CLEAR_TOTAL     */ {0, 0, 0, 0,     0, 0},
 };
 
 uint8_t app_config_set(config_id_t id, uint32_t value)
@@ -384,10 +388,16 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         /* 其他参数 */
         case CONFIG_ID_DIS_OFFSET:      g_config.dis_offset = value;      break;
         case CONFIG_ID_CANALS_TYPE:     {
+                                            float def_up, def_down;
                                             /* 多字段原子更新，避免读到新槽型+旧量程 */
                                             taskENTER_CRITICAL();
                                             g_config.canals_type = value;
                                             g_config.channel_id = 1;
+                                            /* 自动填入默认水位上下限 */
+                                            if (flow_calc_get_default_water_level(&def_up, &def_down)) {
+                                                g_config.water_level_up = def_up;
+                                                g_config.water_level_down = def_down;
+                                            }
                                             g_config.range_20ma = flow_calc_get_channel_max_m3h();
                                             if (g_config.range_4ma >= g_config.range_20ma)
                                                 g_config.range_4ma = 0.0f;
@@ -395,6 +405,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
                                         }
                                         break;
         case CONFIG_ID_CHANNEL_ID:  {
+                float def_up, def_down;
                 /* 通道编号上限取决于当前水渠类型 */
                 uint32_t ch_max = 16;
                 if (g_config.canals_type == 2) ch_max = 5;       /* 三角堰 */
@@ -404,6 +415,11 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
                 /* 多字段原子更新，避免读到新通道+旧量程 */
                 taskENTER_CRITICAL();
                 g_config.channel_id = value;
+                /* 自动填入默认水位上下限 */
+                if (flow_calc_get_default_water_level(&def_up, &def_down)) {
+                    g_config.water_level_up = def_up;
+                    g_config.water_level_down = def_down;
+                }
                 g_config.range_20ma = flow_calc_get_channel_max_m3h();
                 if (g_config.range_4ma >= g_config.range_20ma)
                     g_config.range_4ma = 0.0f;
@@ -412,7 +428,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
             break;
         case CONFIG_ID_CHANNEL_WIDTH:   g_config.channel_width = value;   break;
         case CONFIG_ID_WEIR_HEIGHT:     g_config.weir_height = value;     break;
-        case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break;
+        case CONFIG_ID_INSTANT_UNIT:    g_config.instant_unit = value;    break; /* water_level_up/down 在 setf 中处理 */
         case CONFIG_ID_SUM_POINT:       g_config.sum_point = value;       break;
         case CONFIG_ID_LANGUAGE:        g_config.language = value;        break;
         case CONFIG_ID_SHOW_ALARM:      g_config.show_alarm = value;      break;
@@ -484,6 +500,8 @@ uint8_t app_config_setf(config_id_t id, float value)
         case CONFIG_ID_ALARM_DL:   g_config.alarm_dl   = value; break;
         case CONFIG_ID_ALARM_AAH:  g_config.alarm_aah  = value; break;
         case CONFIG_ID_ALARM_AAL:  g_config.alarm_aal  = value; break;
+        case CONFIG_ID_WATER_LEVEL_UP:   g_config.water_level_up   = value; break;
+        case CONFIG_ID_WATER_LEVEL_DOWN: g_config.water_level_down = value; break;
         default: return CONFIG_ERR_ID;
     }
 
@@ -567,7 +585,8 @@ uint8_t app_config_getf(config_id_t id, float *value)
         case CONFIG_ID_ALARM_DL:   *value = g_config.alarm_dl;   break;
         case CONFIG_ID_ALARM_AAH:  *value = g_config.alarm_aah;  break;
         case CONFIG_ID_ALARM_AAL:  *value = g_config.alarm_aal;  break;
-        default: return CONFIG_ERR_ID;
+        case CONFIG_ID_WATER_LEVEL_UP:   *value = g_config.water_level_up;   break;
+        case CONFIG_ID_WATER_LEVEL_DOWN: *value = g_config.water_level_down; break;
     }
 
     return CONFIG_OK;
@@ -585,6 +604,8 @@ uint8_t app_config_is_float(config_id_t id)
         case CONFIG_ID_ALARM_DL:
         case CONFIG_ID_ALARM_AAH:
         case CONFIG_ID_ALARM_AAL:
+        case CONFIG_ID_WATER_LEVEL_UP:
+        case CONFIG_ID_WATER_LEVEL_DOWN:
             return 1;
         default:
             return 0;
@@ -893,6 +914,23 @@ uint32_t app_config_get_weir_height(void)
 void app_config_set_weir_height(uint32_t value)
 {
     app_config_set(CONFIG_ID_WEIR_HEIGHT, value);
+}
+
+float app_config_get_water_level_up(void)
+{
+    float v = 0.0f; app_config_getf(CONFIG_ID_WATER_LEVEL_UP, &v); return v;
+}
+void app_config_set_water_level_up(float value)
+{
+    app_config_setf(CONFIG_ID_WATER_LEVEL_UP, value);
+}
+float app_config_get_water_level_down(void)
+{
+    float v = 0.0f; app_config_getf(CONFIG_ID_WATER_LEVEL_DOWN, &v); return v;
+}
+void app_config_set_water_level_down(float value)
+{
+    app_config_setf(CONFIG_ID_WATER_LEVEL_DOWN, value);
 }
 
 uint32_t app_config_get_instant_unit(void)

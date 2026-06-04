@@ -56,6 +56,8 @@ static uint8_t is_float_register(uint16_t addr)
         case REG_AAL:
         case REG_RANGE_4MA:
         case REG_RANGE_20MA:
+        case REG_WATER_LEVEL_UP:
+        case REG_WATER_LEVEL_DOWN:
             return 1;
         default:
             return 0;
@@ -85,6 +87,8 @@ static config_id_t reg_to_config_id(uint16_t reg_addr)
         case REG_CHANNEL_ID:      return CONFIG_ID_CHANNEL_ID;
         case REG_CHANNEL_WIDTH:   return CONFIG_ID_CHANNEL_WIDTH;
         case REG_WEIR_HEIGHT:     return CONFIG_ID_WEIR_HEIGHT;
+        case REG_WATER_LEVEL_UP:  return CONFIG_ID_WATER_LEVEL_UP;
+        case REG_WATER_LEVEL_DOWN: return CONFIG_ID_WATER_LEVEL_DOWN;
         case REG_INSTANT_UNIT:    return CONFIG_ID_INSTANT_UNIT;
         case REG_SUM_POINT:       return CONFIG_ID_SUM_POINT;
         case REG_RANGE_4MA:       return CONFIG_ID_RANGE_4MA;
@@ -333,6 +337,8 @@ void app_modbus_slave_update(void)
         app_config_getf(CONFIG_ID_RANGE_20MA, &fval); modbus_slave_set_float(REG_RANGE_20MA, fval);
         app_config_get_val(CONFIG_ID_CHANNEL_WIDTH, &val); modbus_slave_set_holding_register(REG_CHANNEL_WIDTH, (uint16_t)val);
         app_config_get_val(CONFIG_ID_WEIR_HEIGHT, &val);   modbus_slave_set_holding_register(REG_WEIR_HEIGHT, (uint16_t)val);
+        app_config_getf(CONFIG_ID_WATER_LEVEL_UP, &fval);   modbus_slave_set_float(REG_WATER_LEVEL_UP, fval);
+        app_config_getf(CONFIG_ID_WATER_LEVEL_DOWN, &fval); modbus_slave_set_float(REG_WATER_LEVEL_DOWN, fval);
     }
 
     /* 出厂校准寄存器 - 0x1001-0x1005 */

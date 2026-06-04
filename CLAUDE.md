@@ -9,7 +9,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 **核心技术栈：** STM32F407VGTx (Cortex-M4, 168MHz) | FreeRTOS V10.3.1 | LVGL 9.5.0 | FatFs | Keil MDK-ARM (AC5)
 
 **关键约束：**
-- EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 约 160 字节（定义在 `Core/Inc/global.h`）。添加新配置字段前务必确认剩余空间。
+- EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 约 120 字节（22×uint32 + 8×float，定义在 `Core/Inc/global.h`）。累计流量存储在地址 232（24字节）。添加新配置字段前务必确认剩余空间（配置区 0~119，累计流量区 232~255）。
 - `Core/Inc/global.h` 是项目的**总头文件**——include 了几乎所有模块头文件（at24c02、fatfs、file_driver、data_recorder、log_manager、rtc_time、ui 等），并集中定义 Modbus 寄存器地址、系统常量、`SystemConfig_t` 结构体。绝大多数 `.c` 文件只需 `#include "global.h"` 即可获得所有依赖。
 - 无自动化测试和lint工具，验证依赖实机调试和串口日志输出。
 
@@ -45,7 +45,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 | log_task | 8192 | 500ms | 日志输出、config_process、flow_process、历史查询、RTC更新 |
 | button_scan_tas | 2048 | 10ms | 按键扫描 |
 | modbus_master_t | 1024 | 10ms | 传感器轮询 |
-| modbus_slave_ta | 1024 | 10ms | 从机通信 (每1秒同步数据到寄存器) |
+| modbus_slave_ta | 1024 | 10ms | 从机通信 (每200ms同步数据到寄存器) |
 
 | 定时器 | 周期 | 回调 |
 |--------|------|------|
@@ -59,7 +59,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 3. `flow_calc_load_total()` — 从备份寄存器/EEPROM加载累计流量
 4. `app_sensor_init()` — 初始化传感器（参数在传感器首次上线时同步，非启动时）
 5. `app_current_init()` — 启动TIM3 CH4 PWM，初始输出4mA
-6. `lv_init()` + `lv_port_disp_init()` + `ui_create()` — 初始化LVGL和UI
+6. `lv_init()` + `lv_tick_set_cb()` + `lv_delay_set_cb()` + `lv_port_disp_init()` + `ui_create()` — 初始化LVGL和UI
 7. 预渲染10帧后开背光，进入 `lv_timer_handler()` 主循环
 
 ## 代码规范
@@ -106,7 +106,7 @@ app_model_update() (1秒定时器) → lv_subject_set_*() → Observer 自动刷
 
 ## 多语言系统 (`App/ui/ui_lang.c/h`)
 
-设置菜单支持中英文切换，通过 `lang_id_t` 枚举（~55项）索引双语字符串查找表。`SystemConfig_t.language` 字段控制当前语言（0=英文, 1=中文，默认中文）。
+设置菜单支持中英文切换，通过 `lang_id_t` 枚举（~63项）索引双语字符串查找表。`SystemConfig_t.language` 字段控制当前语言（0=英文, 1=中文，默认中文）。
 
 **语言相关的字体切换：** `lang_get_font_14/16/18/20/24()` 根据当前语言自动返回对应字体——中文模式返回 CJK 字体（`noto_sans_sc_*`），英文模式返回 Montserrat 字体。新增翻译项时在 `lang_id_t` 枚举追加ID，在 `ui_lang.c` 的查找表对应位置添加中英文字符串。
 
@@ -147,9 +147,11 @@ button_scan_tas (10ms) → button_driver_scan() (消抖/长按状态机)
 ### 系统配置持久化 (`App/app_config`)
 EEPROM (AT24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改后需 `app_config_save()` 持久化。Modbus从机写回参数使用脏标记 + **3秒延迟保存**（`CONFIG_SAVE_DELAY_MS`），由 `app_config_process()` 在 log_task 中执行。EEPROM 使用互斥锁，config 和 flow_calc 共享。
 
+**配置变更回调：** `app_config_set_change_callback()` 注册 `config_change_callback_t`（最多4个监听者），UI通过此机制响应配置变更（如清除历史缓存）。
+
 ### 累计流量双层持久化 (`App/app_flow_calc`)
-- **RTC备份寄存器**：每10秒保存（快速、非阻塞）— DR1/DR2 存 total_flow(double), DR3 存 magic, DR4 存 total_time
-- **EEPROM**：每5分钟保存（地址232，20字节结构体）— 实际写入延迟到 `flow_calc_process()` 在 log_task 中执行
+- **RTC备份寄存器**：每2秒保存（快速、非阻塞）— DR1/DR2 存 total_flow(double), DR3 存 magic, DR4 存 total_time
+- **EEPROM**：每5分钟保存（地址232，24字节结构体 `TotalFlowStorage_t`）— 实际写入延迟到 `flow_calc_process()` 在 log_task 中执行
 - **加载优先级**：备份寄存器 → EEPROM → 默认0
 - **校验**：magic = `0x5A5A5A5A`，total_flow 范围 [0, 1e12)
 
@@ -176,14 +178,19 @@ TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。线性插值：`ratio = (flow - 
 - 三角堰: Q = K × H^2.5（90/60/45/30/22.5度）
 - 矩形堰: Q = K × b × H^1.5（0.5/1.0/1.5/2.0m）
 
+**收缩堰修正：** 矩形堰计算内置侧收缩修正——当 `channel_width > 0` 且 `channel_width < weir_width` 时，有效宽度 `b_eff = b - 0.2 × H`。`channel_width` 和 `weir_height` 通过 Modbus 寄存器 0x0109/0x010A 配置。
+
 流量单位由 `instant_unit` 配置决定：L/s, L/min, L/h, m³/h, m³/s, m³/min, T/h, G/h
 
 ### Modbus寄存器映射 (`Core/Inc/global.h`)
-寄存器地址和类型全部定义在 global.h 中。主要分组：实时数据(0x0001-0x000D)、报警值(0x000E-0x0018)、传感器参数(0x0065-0x006F)、从机参数(0x0101-0x0107)、工厂校准(0x1001-0x1006)、RTC时间(0x0200-0x0206)。写回调在 `App/app_modbus_slave.c` 的 `app_modbus_slave_on_write()` 中处理。
+寄存器地址和类型全部定义在 global.h 中。主要分组：实时数据(0x0001-0x000D)、报警值(0x000E-0x0018)、传感器参数(0x0065-0x006F)、从机参数(0x0101-0x010A)、工厂校准(0x1001-0x1006)、RTC时间(0x0200-0x0206)。写回调在 `App/app_modbus_slave.c` 的 `app_modbus_slave_on_write()` 中处理。
 
 ### 异步日志与数据记录
 - **日志系统** (`App/app_log.c/h` + `Drivers/File/log_manager.c/h`)：`app_log_send()` 线程安全，可从任意上下文调用。日志按类型分三类（System/User/Alarm），存储路径 `/LOGS/{SYS|USER|ALARM}/YYYY/MM/DD.log`，默认90天保留。所有文件I/O在 `log_task` 中统一执行。
 - **数据记录** (`Drivers/File/data_recorder.c/h`)：按 `DATA_RECORD_INTERVAL_MS`（60秒）间隔记录CSV数据。支持时间范围查询、聚合统计（均值/最大/最小/流量增量/报警计数）、CSV/JSON导出，默认365天保留。
+
+### SD卡数据清除 (`App/app_log`)
+`app_log_request_clear_sd()` 线程安全地请求清除SD卡所有数据（日志+数据记录），实际删除在 `log_task` 中异步执行。进度通过 `app_log_get_clear_sd_progress()` 查询（-1=空闲, 0~99=进行中, 100=完成）。清除完成后自动调用 `history_invalidate_cache()` 刷新历史查询缓存。UI中通过设置菜单触发。
 
 ### 未实现的硬件功能
 以下外设已在硬件表和CubeMX中配置，但应用层代码尚未实现：

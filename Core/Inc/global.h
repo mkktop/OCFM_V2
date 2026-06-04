@@ -104,6 +104,8 @@
 #define REG_RANGE_20MA          0x0107       /* 20mA量程寄存器 占2个寄存器 */
 #define REG_CHANNEL_WIDTH       0x0109       /* 渠宽寄存器 占1个寄存器 */
 #define REG_WEIR_HEIGHT         0x010A       /* 堰高寄存器 占1个寄存器 */
+#define REG_WATER_LEVEL_UP      0x010B       /* 水位上限寄存器 占2个寄存器 */
+#define REG_WATER_LEVEL_DOWN    0x010C       /* 水位下限寄存器 占2个寄存器 */
 
 //出厂校准寄存器
 #define REG_ANTENNA_TYPE        0x1001       /* 天线类型寄存器 占1个寄存器 */
@@ -244,6 +246,8 @@ typedef struct
     uint32_t channel_id;        /* 通道编号 */
     uint32_t channel_width;     /* 渠宽 B (mm), 0=全宽堰/未配置 */
     uint32_t weir_height;       /* 堰高 p (mm), 0=未配置 */
+    float water_level_up;       /* 水位上限 (m), 用户可调 */
+    float water_level_down;     /* 水位下限 (m), 用户可调 */
     uint32_t instant_unit;      /* 瞬时流量单位 */
     uint32_t sum_point;         /* 累计流量小数点数 */
     uint32_t language;          /* 语言 */
@@ -335,6 +339,8 @@ typedef enum
 #define DEFAULT_CHANNEL_ID       1           /* 通道编号 */
 #define DEFAULT_CHANNEL_WIDTH    0           /* 渠宽 (0=全宽堰/未配置) */
 #define DEFAULT_WEIR_HEIGHT      0           /* 堰高 (0=未配置) */
+#define DEFAULT_WATER_LEVEL_UP   0.21f       /* 水位上限 (m), 初始化时被覆盖 */
+#define DEFAULT_WATER_LEVEL_DOWN 0.015f      /* 水位下限 (m), 初始化时被覆盖 */
 #define DEFAULT_INSTANT_UNIT     4           /* 瞬时流量单位 (m³/h) */
 #define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         1           /* 语言 (中文) */

@@ -49,6 +49,8 @@ typedef enum {
     CONFIG_ID_CHANNEL_ID,
     CONFIG_ID_CHANNEL_WIDTH,
     CONFIG_ID_WEIR_HEIGHT,
+    CONFIG_ID_WATER_LEVEL_UP,
+    CONFIG_ID_WATER_LEVEL_DOWN,
     CONFIG_ID_INSTANT_UNIT,
     CONFIG_ID_SUM_POINT,
     CONFIG_ID_LANGUAGE,
@@ -293,6 +295,11 @@ void app_config_set_channel_width(uint32_t value);
 
 uint32_t app_config_get_weir_height(void);
 void app_config_set_weir_height(uint32_t value);
+
+float app_config_get_water_level_up(void);
+void app_config_set_water_level_up(float value);
+float app_config_get_water_level_down(void);
+void app_config_set_water_level_down(float value);
 
 uint32_t app_config_get_instant_unit(void);
 void app_config_set_instant_unit(uint32_t value);

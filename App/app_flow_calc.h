@@ -86,4 +86,12 @@ float flow_calc_get_max_flow_m3h(void);
  */
 float flow_calc_get_channel_max_m3h(void);
 
+/**
+ * @brief  根据当前槽型/规格获取参数表的默认水位上下限
+ * @param  up:   输出水位上限 (m)
+ * @param  down: 输出水位下限 (m)
+ * @retval 1: 成功获取, 0: 参数无效
+ */
+uint8_t flow_calc_get_default_water_level(float *up, float *down);
+
 #endif /* __APP_FLOW_CALC_H__ */

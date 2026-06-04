@@ -166,10 +166,13 @@ static const RectangularWeir_t s_rectangular_weir_tbl[4] = {
  * @brief  计算巴歇尔槽瞬时流量
  * @param  water_level_m: 水位 (米)
  * @param  channel: 水槽参数指针
+ * @param  wl_down: 用户配置的水位下限 (m)
+ * @param  wl_up: 用户配置的水位上限 (m)
  * @retval 瞬时流量 (L/s)，水位无效时返回0
  * @note   公式: Q = K * H^n，超量程时限制在最大值
  */
-static float parshall_flow_Ls(float water_level_m, const Water_Channel *channel)
+static float parshall_flow_Ls(float water_level_m, const Water_Channel *channel,
+                              float wl_down, float wl_up)
 {
     float Q = 0.0f;
 
@@ -179,17 +182,16 @@ static float parshall_flow_Ls(float water_level_m, const Water_Channel *channel)
     }
 
     /* 水位在有效范围内 */
-    if (water_level_m >= channel->water_level_down && water_level_m <= channel->water_level_up) {
+    if (water_level_m >= wl_down && water_level_m <= wl_up) {
         Q = channel->factor * powf(water_level_m, channel->n);
     }
     /* 水位低于下限 */
-    else if (water_level_m < channel->water_level_down) {
+    else if (water_level_m < wl_down) {
         Q = 0.0f;
     }
     /* 水位高于上限 */
-    else if (water_level_m > channel->water_level_up) {
-        /* 限制水位在最大值 */
-        water_level_m = channel->water_level_up;
+    else {
+        water_level_m = wl_up;
         Q = channel->factor * powf(water_level_m, channel->n);
     }
 
@@ -230,10 +232,13 @@ static float flow_convert_instant(float flow_l_s, flow_unit_t unit)
  * @brief  计算三角堰瞬时流量 (Kindsvater-Shen方法)
  * @param  water_level_m: 水位 (米)
  * @param  weir: 三角堰参数指针
+ * @param  wl_down: 用户配置的水位下限 (m)
+ * @param  wl_up: 用户配置的水位上限 (m)
  * @retval 瞬时流量 (L/s)，水位无效时返回0
  * @note   公式: Q = K * (H + Kh)^n，超量程时限制在最大值
  */
-static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t *weir)
+static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t *weir,
+                                     float wl_down, float wl_up)
 {
     float Q = 0.0f;
     float he;
@@ -242,15 +247,15 @@ static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t
         return 0.0f;
     }
 
-    if (water_level_m >= weir->water_level_down && water_level_m <= weir->water_level_up) {
+    if (water_level_m >= wl_down && water_level_m <= wl_up) {
         he = water_level_m + weir->kh;
         Q = weir->factor * powf(he, weir->n);
     }
-    else if (water_level_m < weir->water_level_down) {
+    else if (water_level_m < wl_down) {
         Q = 0.0f;
     }
-    else if (water_level_m > weir->water_level_up) {
-        he = weir->water_level_up + weir->kh;
+    else {
+        he = wl_up + weir->kh;
         Q = weir->factor * powf(he, weir->n);
     }
 
@@ -261,11 +266,14 @@ static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t
  * @brief  计算矩形堰瞬时流量 (Francis公式 + Kh修正)
  * @param  water_level_m: 水位 (米)
  * @param  weir: 矩形堰参数指针
+ * @param  wl_down: 用户配置的水位下限 (m)
+ * @param  wl_up: 用户配置的水位上限 (m)
  * @retval 瞬时流量 (L/s)，水位无效时返回0
  * @note   公式: Q = K * b * (H + Kh)^n (无侧收缩/全宽堰)
  *         超量程时限制在最大值
  */
-static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir_t *weir)
+static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir_t *weir,
+                                      float wl_down, float wl_up)
 {
     float Q = 0.0f;
     float he, effective_width;
@@ -277,7 +285,7 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
     float B = app_config_get_channel_width() / 1000.0f;
     float b = weir->width;
 
-    if (water_level_m >= weir->water_level_down && water_level_m <= weir->water_level_up) {
+    if (water_level_m >= wl_down && water_level_m <= wl_up) {
         he = water_level_m + weir->kh;
         if (B > 0.0f && b < B) {
             effective_width = b - 0.2f * water_level_m;
@@ -287,13 +295,13 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
         }
         Q = weir->factor * effective_width * powf(he, weir->n);
     }
-    else if (water_level_m < weir->water_level_down) {
+    else if (water_level_m < wl_down) {
         Q = 0.0f;
     }
     else {
-        he = weir->water_level_up + weir->kh;
+        he = wl_up + weir->kh;
         if (B > 0.0f && b < B) {
-            effective_width = b - 0.2f * weir->water_level_up;
+            effective_width = b - 0.2f * wl_up;
             if (effective_width < 0.0f) effective_width = 0.0f;
         } else {
             effective_width = b;
@@ -314,6 +322,8 @@ static float flow_calc_instant(float water_level_m)
     float Q_l_s = 0.0f;
     uint32_t cid = app_config_get_channel_id();
     uint32_t canals_type = app_config_get_canals_type();
+    float wl_up = app_config_get_water_level_up();
+    float wl_down = app_config_get_water_level_down();
 
     /* 边界保护: channel_id 必须从1开始, 否则返回0 */
     if (cid < 1) return 0.0f;
@@ -325,13 +335,16 @@ static float flow_calc_instant(float water_level_m)
 
     switch (canals_type) {
         case PARSHALL_FLUME:
-            Q_l_s = parshall_flow_Ls(water_level_m, &s_channel_tbl[cid - 1]);
+            Q_l_s = parshall_flow_Ls(water_level_m, &s_channel_tbl[cid - 1],
+                                     wl_down, wl_up);
             break;
         case TRIANGULAR_WEIR:
-            Q_l_s = triangular_weir_flow_Ls(water_level_m, &s_triangular_weir_tbl[cid - 1]);
+            Q_l_s = triangular_weir_flow_Ls(water_level_m, &s_triangular_weir_tbl[cid - 1],
+                                            wl_down, wl_up);
             break;
         case RECTANGULAR_WEIR:
-            Q_l_s = rectangular_weir_flow_Ls(water_level_m, &s_rectangular_weir_tbl[cid - 1]);
+            Q_l_s = rectangular_weir_flow_Ls(water_level_m, &s_rectangular_weir_tbl[cid - 1],
+                                             wl_down, wl_up);
             break;
         default:
             Q_l_s = 0.0f;
@@ -631,31 +644,32 @@ uint32_t flow_calc_get_total_time(void)
 
 /**
  * @brief  获取当前槽型的理论最大流量 (m³/h)
- * @note   用 water_level_up 代入流量公式计算，单一数据源
+ * @note   用配置的 water_level_up 代入流量公式计算
  */
 static float get_channel_max_m3h(void)
 {
     uint32_t cid = app_config_get_channel_id();
     uint32_t canals_type = app_config_get_canals_type();
     float max_lps = 0.0f;
+    float wl_up = app_config_get_water_level_up();
 
     if (cid < 1) return 0.0f;
 
     switch (canals_type) {
         case PARSHALL_FLUME:
             if (cid > 16) return 0.0f;
-            max_lps = parshall_flow_Ls(s_channel_tbl[cid - 1].water_level_up,
-                                       &s_channel_tbl[cid - 1]);
+            max_lps = parshall_flow_Ls(wl_up, &s_channel_tbl[cid - 1],
+                                       0.0f, wl_up);
             break;
         case TRIANGULAR_WEIR:
             if (cid > 5) return 0.0f;
-            max_lps = triangular_weir_flow_Ls(s_triangular_weir_tbl[cid - 1].water_level_up,
-                                              &s_triangular_weir_tbl[cid - 1]);
+            max_lps = triangular_weir_flow_Ls(wl_up, &s_triangular_weir_tbl[cid - 1],
+                                              0.0f, wl_up);
             break;
         case RECTANGULAR_WEIR:
             if (cid > 4) return 0.0f;
-            max_lps = rectangular_weir_flow_Ls(s_rectangular_weir_tbl[cid - 1].water_level_up,
-                                               &s_rectangular_weir_tbl[cid - 1]);
+            max_lps = rectangular_weir_flow_Ls(wl_up, &s_rectangular_weir_tbl[cid - 1],
+                                               0.0f, wl_up);
             break;
         default:
             return 0.0f;
@@ -680,4 +694,40 @@ float flow_calc_get_max_flow_m3h(void)
 float flow_calc_get_channel_max_m3h(void)
 {
     return get_channel_max_m3h();
+}
+
+/**
+ * @brief  根据当前槽型/规格获取参数表的默认水位上下限
+ * @param  up:   输出水位上限 (m)
+ * @param  down: 输出水位下限 (m)
+ * @retval 1: 成功获取, 0: 参数无效
+ * @note   仅从硬编码参数表读取默认值，不读取用户配置
+ */
+uint8_t flow_calc_get_default_water_level(float *up, float *down)
+{
+    uint32_t cid = app_config_get_channel_id();
+    uint32_t canals_type = app_config_get_canals_type();
+
+    if (cid < 1) return 0;
+
+    switch (canals_type) {
+        case PARSHALL_FLUME:
+            if (cid > 16) return 0;
+            *up = s_channel_tbl[cid - 1].water_level_up;
+            *down = s_channel_tbl[cid - 1].water_level_down;
+            break;
+        case TRIANGULAR_WEIR:
+            if (cid > 5) return 0;
+            *up = s_triangular_weir_tbl[cid - 1].water_level_up;
+            *down = s_triangular_weir_tbl[cid - 1].water_level_down;
+            break;
+        case RECTANGULAR_WEIR:
+            if (cid > 4) return 0;
+            *up = s_rectangular_weir_tbl[cid - 1].water_level_up;
+            *down = s_rectangular_weir_tbl[cid - 1].water_level_down;
+            break;
+        default:
+            return 0;
+    }
+    return 1;
 }
