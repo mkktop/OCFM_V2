@@ -68,7 +68,6 @@ typedef enum {
  */
 #define CONFIG_OK           0   /* 成功 */
 #define CONFIG_ERR_ID       1   /* 无效的config_id */
-#define CONFIG_ERR_READONLY 2   /* 只读参数 */
 #define CONFIG_ERR_RANGE    3   /* 值超出范围 */
 
 /*============================================================================*/

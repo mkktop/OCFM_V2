@@ -134,7 +134,6 @@
  * @brief 传感器从机地址定义
  */
 #define SENSOR_ADDR_1           1       /* 传感器1地址 */
-#define SENSOR_ADDR_2           2       /* 传感器2地址 */
 
 /* 传感器寄存器地址 */
 #define SENSOR_REG_DISTANCE     0x0005  /* 距离 */
@@ -151,13 +150,6 @@
 #define SENSOR_COM_FACTORY_LC   0x1000  /* 满量程（出厂量程） */
 #define SENSOR_COM_DEAD_ZONE    0x1001  /* 死区/天线类型 */
 #define SENSOR_COM_DIS_OFFSET  0x1002  /* 距离偏移 */
-#define SENSOR_COM_RESET_FLAG   0x1003  /* 复位标志 */
-
-/**
- * @brief 传感器寄存器地址定义
- * @note 
- */
-#define SENSOR_REG_DATA         0       /* 传感器数据寄存器 */
 
 /*============================================================================*/
 /*                           数据记录配置                                       */
