@@ -480,8 +480,8 @@ uint8_t app_config_setf(config_id_t id, float value)
         return CONFIG_ERR_RANGE;
     }
 
-    /* 4-20mA量程上限: 不超过当前槽型最大流量 + 10% 裕量 */
-    if (id == CONFIG_ID_RANGE_20MA)
+    /* 4mA/20mA量程: 不超过当前槽型最大流量 × 120% 裕量 */
+    if (id == CONFIG_ID_RANGE_4MA || id == CONFIG_ID_RANGE_20MA)
     {
         float max_flow = flow_calc_get_max_flow_m3h();
         if (max_flow > 0.0f && value > max_flow)
