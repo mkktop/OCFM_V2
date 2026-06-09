@@ -85,8 +85,8 @@ void app_alarm_init(void)
  * @note   报警逻辑说明
  *         上限报警(AH)：触发>=AH，恢复<AH-DH (回差)
  *         下限报警(AL)：触发<=AL，恢复>AL+DL (回差)
- *         上上限报警(AAH)：触发>=AAH，恢复<AH (无回差)
- *         下下限报警(AAL)：触发<=AAL，恢复>AL (无回差)
+ *         上上限报警(AAH)：触发>=AAH，恢复<AAH-DH (与AH共用回差)
+ *         下下限报警(AAL)：触发<=AAL，恢复>AAL+DL (与AL共用回差)
  *         传感器离线时解除所有报警
  */
 void app_alarm_update(float instant_flow_m3h, uint8_t sensor_online)

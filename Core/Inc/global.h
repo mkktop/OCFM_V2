@@ -105,7 +105,7 @@
 #define REG_CHANNEL_WIDTH       0x0109       /* 渠宽寄存器 占1个寄存器 */
 #define REG_WEIR_HEIGHT         0x010A       /* 堰高寄存器 占1个寄存器 */
 #define REG_WATER_LEVEL_UP      0x010B       /* 水位上限寄存器 占2个寄存器 */
-#define REG_WATER_LEVEL_DOWN    0x010C       /* 水位下限寄存器 占2个寄存器 */
+#define REG_WATER_LEVEL_DOWN    0x010D       /* 水位下限寄存器 占2个寄存器 */
 
 //出厂校准寄存器
 #define REG_ANTENNA_TYPE        0x1001       /* 天线类型寄存器 占1个寄存器 */

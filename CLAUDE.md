@@ -164,10 +164,10 @@ EEPROM (AT24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改�
 |------|--------|------|------|
 | AH (上限) | relay1/PA4 | flow >= AH | flow < AH - DH |
 | AL (下限) | relay2/PA5 | flow <= AL | flow > AL + DL |
-| AAH (上上限) | relay3/PA6 | flow >= AAH | flow < AH (恢复到AH，非AAH) |
-| AAL (下下限) | relay4/PA7 | flow <= AAL | flow > AL (恢复到AL，非AAL) |
+| AAH (上上限) | relay3/PA6 | flow >= AAH | flow < AAH - DH (与AH共用回差DH) |
+| AAL (下下限) | relay4/PA7 | flow <= AAL | flow > AAL + DL (与AL共用回差DL) |
 
-**关键：** AAH/AAL 没有独立的回差值，恢复条件分别参考 AH/AL 阈值。
+**关键：** AAH/AAL 没有独立的回差值，分别与 AH/AL 共用 DH/DL。
 
 ### 4-20mA电流输出 (`App/app_current`)
 TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。TIM3配置：PSC=29, ARR=6999 → 84MHz/30/7000 = 400Hz PWM，~7000级分辨率（约12.8 bit）。默认4mA CCR=1006，20mA CCR=3811，有效步数2805级。
