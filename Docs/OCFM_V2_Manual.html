@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCFM_V2 明渠流量计 — 用户手册</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-2: #161b22;
+    --bg-3: #1f262e;
+    --border: #2a3138;
+    --text: #e6edf3;
+    --text-dim: #9aa4ad;
+    --accent: #2effde;
+    --accent-2: #58a6ff;
+    --warn: #f0883e;
+    --err: #ff6b6b;
+    --ok: #56d364;
+    --code-bg: #0a0e13;
+    --shadow: 0 4px 20px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ====== 顶部 Hero ====== */
+  header.hero {
+    padding: 60px 40px 40px;
+    background: linear-gradient(135deg, #0a0f1c 0%, #142031 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  header.hero::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(46,255,222,.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header.hero h1 {
+    margin: 0 0 12px;
+    font-size: 36px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #2effde, #58a6ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header.hero .subtitle {
+    color: var(--text-dim);
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+  header.hero .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header.hero .meta span {
+    padding: 4px 12px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-family: "SF Mono", Consolas, monospace;
+  }
+
+  /* ====== 布局 ====== */
+  .container {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  nav.toc {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 32px 20px;
+    background: var(--bg-2);
+    border-right: 1px solid var(--border);
+  }
+  nav.toc h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin: 24px 0 8px;
+    font-weight: 600;
+  }
+  nav.toc h3:first-child { margin-top: 0; }
+  nav.toc a {
+    display: block;
+    padding: 6px 12px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+  }
+  nav.toc a:hover {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(46,255,222,.05);
+  }
+
+  main {
+    padding: 40px 60px;
+    max-width: 1100px;
+  }
+
+  /* ====== 标题 ====== */
+  h2 {
+    font-size: 26px;
+    margin: 56px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  h2:first-of-type { margin-top: 0; }
+  h2 .anchor {
+    color: var(--accent);
+    margin-right: 8px;
+    opacity: .5;
+    font-family: monospace;
+    font-size: 22px;
+  }
+
+  h3 {
+    font-size: 19px;
+    margin: 32px 0 12px;
+    color: var(--accent-2);
+  }
+  h3 .anchor {
+    color: var(--accent);
+    margin-right: 6px;
+    opacity: .5;
+    font-family: monospace;
+  }
+
+  h4 {
+    font-size: 16px;
+    margin: 24px 0 8px;
+    color: var(--text);
+  }
+
+  p { margin: 0 0 14px; }
+
+  /* ====== 卡片 ====== */
+  .card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    box-shadow: var(--shadow);
+  }
+  .card.warn { border-left: 3px solid var(--warn); }
+  .card.tip  { border-left: 3px solid var(--ok); }
+  .card.info { border-left: 3px solid var(--accent-2); }
+
+  .card h4 { margin-top: 0; color: var(--accent); }
+  .card.warn h4 { color: var(--warn); }
+  .card.tip  h4 { color: var(--ok); }
+  .card.info h4 { color: var(--accent-2); }
+
+  /* ====== 表格 ====== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-2);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  tr:hover td { background: rgba(46,255,222,.03); }
+  td code, th code { font-size: 12px; }
+
+  /* ====== 代码 ====== */
+  code {
+    font-family: "SF Mono", Consolas, "Courier New", monospace;
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 13px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; color: var(--text); }
+
+  /* ====== 键名样式 ====== */
+  kbd {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    color: var(--accent);
+    margin: 0 2px;
+  }
+
+  /* ====== 标签徽章 ====== */
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-right: 4px;
+  }
+  .badge.ronly { background: #1a4a5e; color: #58a6ff; }
+  .badge.rw    { background: #4a3e1a; color: #f0c674; }
+  .badge.act   { background: #4a1f1f; color: #ff6b6b; }
+
+  /* ====== 注释块 ====== */
+  blockquote {
+    margin: 12px 0;
+    padding: 10px 16px;
+    background: var(--bg-3);
+    border-left: 3px solid var(--accent);
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  blockquote.warn { border-left-color: var(--warn); }
+  blockquote.note { border-left-color: var(--accent-2); }
+
+  /* ====== 折叠 ====== */
+  details {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 12px 0;
+    padding: 10px 16px;
+  }
+  details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent-2);
+    list-style: none;
+  }
+  details summary::before {
+    content: "▸ ";
+    color: var(--accent);
+    margin-right: 6px;
+  }
+  details[open] summary::before { content: "▾ "; }
+  details > *:not(summary) { margin-top: 12px; }
+
+  /* ====== 底部 ====== */
+  footer {
+    padding: 30px 60px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+    background: var(--bg-2);
+  }
+
+  /* ====== 响应式 ====== */
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    nav.toc { position: relative; height: auto; max-height: 300px; }
+    main { padding: 24px 20px; }
+    header.hero { padding: 40px 20px 30px; }
+    header.hero h1 { font-size: 26px; }
+  }
+
+  /* ====== 滚动条 ====== */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  @media print {
+    nav.toc { display: none; }
+    .container { grid-template-columns: 1fr; }
+    body { background: white; color: black; }
+    .card, details, pre, table th { background: #f5f5f5; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>OCFM_V2 明渠流量计</h1>
+  <div class="subtitle">用户手册 — 设置参数 / 流量参考 / Modbus 通信</details>
+  <div class="meta">
+    <span>固件 v1.00</span>
+    <span>基于 ISO 4359 / ISO 1438</span>
+  </details>
+</header>
+
+<div class="container">
+
+  <nav class="toc">
+    <h3>上手</h3>
+    <a href="#quick">快速开始</a>
+    <a href="#keymap">按键操作</a>
+    <a href="#menu">菜单结构</a>
+
+    <h3>设置参数</h3>
+    <a href="#set-basic">基本参数</a>
+    <a href="#set-modbus">Modbus 设置</a>
+    <a href="#set-alarm">报警参数</a>
+    <a href="#set-canal">水渠/堰槽</a>
+    <a href="#set-measure">测量参数</a>
+    <a href="#set-display">显示设置</a>
+    <a href="#set-advanced">高级设置</a>
+    <a href="#set-time">时间设置</a>
+
+    <h3>流量参考</h3>
+    <a href="#flow-common">计算逻辑</a>
+    <a href="#flow-parshall">巴歇尔槽</a>
+    <a href="#flow-v">三角堰</a>
+    <a href="#flow-rect">矩形堰</a>
+    <a href="#flow-unit">单位换算</a>
+
+    <h3>故障排查</h3>
+    <a href="#trouble">常见问题</a>
+
+    <h3>附录</h3>
+    <a href="#modbus-reg">Modbus 寄存器表</a>
+  </nav>
+
+  <main>
+
+<!-- ======================== 快速开始 ======================== -->
+<h2 id="quick"><span class="anchor">#</span>快速开始</h2>
+
+<details>
+  <h4>开箱流程</h4>
+  <ol>
+    <li>上电，等待 3 秒初始化完成（屏幕显示主界面）</li>
+    <li>长按 <kbd>OK</kbd> 进入设置菜单</li>
+    <li>按 <kbd>UP</kbd>/<kbd>DOWN</kbd> 选 <strong>水渠</strong>，进入后设置 <em>渠道类型</em>、<em>水槽编号</em></li>
+    <li>进入 <strong>测量参数</strong>，根据传感器规格设置 <em>窗口宽度</em>、<em>滤波次数</em> 等</li>
+    <li>长按 <kbd>SHIFT</kbd> 进入 <strong>历史查询</strong>，确认传感器数据</li>
+    <li>主屏 <em>短按</em> <kbd>UP</kbd>/<kbd>DOWN</kbd> 切换瓦片页查看详情 / 趋势 / 累计</li>
+  </ol>
+</details>
+
+<div class="card warn">
+  <h4>首次使用提醒</h4>
+  <ul>
+    <li>渠道类型/水槽编号改变后，<strong>水位上下限会被自动覆盖</strong>为新槽型默认值</li>
+    <li>4-20mA 校准值范围 0~7999，超出有效范围的值可能导致电流输出不准确</li>
+    <li>出厂默认 4mA 校准值 1006，20mA 校准值 3811，一般无需重新校准</li>
+  </ul>
+</details>
+
+<!-- ======================== 按键 ======================== -->
+<h2 id="keymap"><span class="anchor">#</span>按键操作</h2>
+
+<table>
+  <thead>
+    <tr><th>按键</th><th>主屏 (详情/趋势/累计)</th><th>设置菜单 (3 级)</th><th>编辑参数</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><kbd>OK</kbd></td>
+      <td>长按 = 进入设置 (启用密码时先验证)</td>
+      <td>进入下一级 / 保存并返回上级</td>
+      <td>保存当前值</td>
+    </tr>
+    <tr>
+      <td><kbd>UP</kbd></td>
+      <td>短按 = 切换到上一瓦片页</td>
+      <td>选择上一项</td>
+      <td>增加当前值 (按当前步进)</td>
+    </tr>
+    <tr>
+      <td><kbd>DOWN</kbd></td>
+      <td>短按 = 切换到下一瓦片页</td>
+      <td>选择下一项</td>
+      <td>减少当前值 (按当前步进)</td>
+    </tr>
+    <tr>
+      <td><kbd>SHIFT</kbd></td>
+      <td>长按 = 进入历史查询</td>
+      <td>返回上一级</td>
+      <td>短按 = 切换步进 (1/10/100/...)，长按 = 取消编辑</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="card tip">
+  <h4>步进切换 (SHIFT 短按)</h4>
+  进入编辑页后短按 <kbd>SHIFT</kbd>，步进在 1 → 10 → 100 → 1000 → 10000 之间循环。
+  当前步进位会高亮显示，方便快速定位要修改的位数。
+  累计流量编辑器支持更宽的步进范围。
+</details>
+
+<!-- ======================== 菜单结构 ======================== -->
+<h2 id="menu"><span class="anchor">#</span>菜单结构</h2>
+
+<pre>
+主屏
+ ├─ 短按 UP/DOWN        切换 详情 / 趋势 / 累计 (3 个瓦片页循环)
+ ├─ 长按 SHIFT          → 历史查询
+ └─ 长按 OK             → 设置
+                            │
+                            ├─ 基本参数      (3 项)
+                            ├─ Modbus 设置   (3 项)
+                            ├─ 报警参数      (6 项)
+                            ├─ 水渠/堰槽     (9 项)
+                            ├─ 测量参数      (6 项)
+                            ├─ 显示设置      (4 项)
+                            ├─ 高级设置      (8 项)
+                            └─ 时间设置      (7 项)
+
+历史查询
+ ├─ 日期选择 (UP/DOWN 调值，SHIFT 切年/月/日/时)
+ └─ 数据浏览 (左右 21 条缓存)
+</pre>
+
+<blockquote class="note">
+<strong>15 秒无操作自动返回主屏。</strong>在设置菜单任一层级停留超过 15 秒将自动退出，避免意外耗电或挡操作。
+</blockquote>
+
+<!-- ======================== 设置参数 ======================== -->
+<h2 id="set-basic"><span class="anchor">#</span>基本参数</h2>
+
+<p>与传感器直接交互的基础测量参数，以及 4-20mA 输出量程。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围</th><th>步进</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>安装高度 (Height)</td>
+      <td>0 ~ 最大量程</td>
+      <td>0.001 m</td>
+      <td>5000 mm (5.000 m)</td>
+      <td>
+        传感器到渠底的距离 (mm)，水位 = 安装高度 - 测量距离。<br>
+        <strong>限制：不能超过最大量程。</strong>
+      </td>
+    </tr>
+    <tr>
+      <td>4mA 量程</td>
+      <td>0 ~ 99999 m³/h</td>
+      <td>0.001</td>
+      <td>0.0 m³/h</td>
+      <td>对应电流输出 4mA 时的流量值。设为 0 时电流钳位到 4mA。</td>
+    </tr>
+    <tr>
+      <td>20mA 量程</td>
+      <td>0 ~ 槽型上限×1.2</td>
+      <td>0.001</td>
+      <td>19.354 m³/h</td>
+      <td>
+        对应电流输出 20mA 时的流量值。<br>
+        <strong>范围受限于当前槽型理论最大流量 × 1.2 倍裕量。</strong><br>
+        修改渠道类型/水槽编号时会自动填入新槽型的理论最大值。
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ======================== -->
+<h2 id="set-modbus"><span class="anchor">#</span>Modbus 设置</h2>
+
+<p>本机通信口的参数。修改波特率/停止位后会立即生效，影响所有上位机通信。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>从机地址 (Slave Addr)</td>
+      <td>1 ~ 247</td>
+      <td>1</td>
+      <td>Modbus 从机地址 1~247，0 为广播地址 (一般不用)。</td>
+    </tr>
+    <tr>
+      <td>波特率 (Baud Rate)</td>
+      <td>1 ~ 8</td>
+      <td>2 (9600)</td>
+      <td>
+        循环切换：1=4800 / 2=9600 / 3=14400 / 4=19200 / 5=38400 / 6=56000 / 7=57600 / 8=115200。
+      </td>
+    </tr>
+    <tr>
+      <td>停止位 (Stop Bits)</td>
+      <td>1 ~ 4</td>
+      <td>1 (8N1)</td>
+      <td>
+        1=8N1 (None+1Stop) / 2=8O1 (Odd+1Stop) / 3=8N2 (None+2Stop) / 4=8E1 (Even+1Stop)。<br>
+        注意：8O1/8E1 时数据位为 9，校验位会占用第 9 位。
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ======================== -->
+<h2 id="set-alarm"><span class="anchor">#</span>报警参数</h2>
+
+<p>四路继电器对应的报警阈值与回差。瞬时流量与各阈值实时比较，超出触发吸合。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>继电器</th><th>范围</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>上限报警 (Alarm High)</td>
+      <td>继电器 1</td>
+      <td>0 ~ 99999</td>
+      <td>19.44 m³/h</td>
+      <td>流量 <strong>≥ AH</strong> 触发吸合；流量 <strong>&lt; AH - DH</strong> 恢复释放。</td>
+    </tr>
+    <tr>
+      <td>下限报警 (Alarm Low)</td>
+      <td>继电器 2</td>
+      <td>0 ~ 99999</td>
+      <td>0.0 m³/h</td>
+      <td>流量 <strong>≤ AL</strong> 触发吸合；流量 <strong>&gt; AL + DL</strong> 恢复释放。</td>
+    </tr>
+    <tr>
+      <td>上上限报警 (Alarm HH)</td>
+      <td>继电器 3</td>
+      <td>≥ AH</td>
+      <td>100.0 m³/h</td>
+      <td>流量 <strong>≥ AAH</strong> 触发吸合；流量 <strong>&lt; AAH - DH</strong> 恢复释放。回差与 AH 共用 DH。</td>
+    </tr>
+    <tr>
+      <td>下下限报警 (Alarm LL)</td>
+      <td>继电器 4</td>
+      <td>≤ AL</td>
+      <td>0.0 m³/h</td>
+      <td>流量 <strong>≤ AAL</strong> 触发吸合；流量 <strong>&gt; AAL + DL</strong> 恢复释放。回差与 AL 共用 DL。</td>
+    </tr>
+    <tr>
+      <td>上限回差 (Alarm High DB)</td>
+      <td>—</td>
+      <td>0 ~ 99999</td>
+      <td>2.0 m³/h</td>
+      <td>AH 与 AAH 共用的回差。流量必须低于 (阈值 - DH) 才解除。</td>
+    </tr>
+    <tr>
+      <td>下限回差 (Alarm Low DB)</td>
+      <td>—</td>
+      <td>0 ~ 99999</td>
+      <td>2.0 m³/h</td>
+      <td>AL 与 AAL 共用的回差。流量必须高于 (阈值 + DL) 才解除。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="card warn">
+  <h4>关联校验</h4>
+  设置 <code>AAH</code> 时不能小于 <code>AH</code>；设置 <code>AAL</code> 时不能大于 <code>AL</code>。
+  违反时系统会提示参数冲突。
+</details>
+
+<!-- ======================== -->
+<h2 id="set-canal"><span class="anchor">#</span>水渠/堰槽</h2>
+
+<p>渠道类型、水槽规格、累计流量显示和清零操作。修改渠道类型/水槽编号会重新计算并覆盖水位上下限。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>渠道类型 (Canal Type)</td>
+      <td>1 ~ 3</td>
+      <td>1 (巴歇尔槽)</td>
+      <td>1=巴歇尔槽 / 2=三角堰 / 3=矩形堰。</td>
+    </tr>
+    <tr>
+      <td>水槽编号 (Channel ID)</td>
+      <td>1 ~ (依槽型)</td>
+      <td>1</td>
+      <td>
+        巴歇尔槽: 1~16；三角堰: 1~5；矩形堰: 1~4。<br>
+        切换时会按当前类型重新限制最大值。
+      </td>
+    </tr>
+    <tr>
+      <td>渠宽 (Ch Width)</td>
+      <td>0 ~ 10000 mm</td>
+      <td>0</td>
+      <td>矩形堰渠道宽度。<strong>0 = 全宽堰，不做收缩修正</strong>；&gt;0 且 &gt; 堰宽时按收缩堰计算。</td>
+    </tr>
+    <tr>
+      <td>堰高 (Weir Ht)</td>
+      <td>0 ~ 10000 mm</td>
+      <td>0</td>
+      <td>矩形堰堰高 p (预留参数)。</td>
+    </tr>
+    <tr>
+      <td>水位上限 (WL Upper)</td>
+      <td>0 ~ 10 m</td>
+      <td>按槽型自动</td>
+      <td>
+        流量计算的水位上限。<br>
+        切换渠道类型/水槽编号时会<strong>自动填入</strong>新槽型的默认值。
+      </td>
+    </tr>
+    <tr>
+      <td>水位下限 (WL Lower)</td>
+      <td>0 ~ 10 m</td>
+      <td>按槽型自动</td>
+      <td>流量计算的水位下限。低于此值瞬时流量返回 0。同样在切换槽型时被自动覆盖。</td>
+    </tr>
+    <tr>
+      <td>累计流量 (Total Flow)</td>
+      <td>0 ~ 999999999999 m³</td>
+      <td>0.0</td>
+      <td>累计流量。可手动设定初始值。断电后自动恢复。</td>
+    </tr>
+    <tr>
+      <td>累计小数位 (Sum Decimal)</td>
+      <td>0 ~ 3</td>
+      <td>1</td>
+      <td>累计流量显示的小数位数。</td>
+    </tr>
+    <tr>
+      <td>清零累计 (Clear Total)</td>
+      <td>0 / 1</td>
+      <td>0</td>
+      <td>设为 1 并按 OK 清除累计流量和累计时长 (不可撤销)。</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ======================== -->
+<h2 id="set-measure"><span class="anchor">#</span>测量参数</h2>
+
+<p>传感器端的高级参数。一般情况下使用传感器出厂默认即可，仅在信号质量差或特殊工况下调整。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>窗口宽度 (Filter Width)</td>
+      <td>0 ~ 1000</td>
+      <td>100</td>
+      <td>滑动平均窗口的样本数。越大输出越平滑，但响应越慢。</td>
+    </tr>
+    <tr>
+      <td>滤波次数 (Filter Count)</td>
+      <td>0 ~ 50</td>
+      <td>2</td>
+      <td>中值/均值滤波的迭代次数。</td>
+    </tr>
+    <tr>
+      <td>采样延迟 (Sample Rate)</td>
+      <td>0 ~ 1000 ms</td>
+      <td>50 ms</td>
+      <td>传感器两次采样之间的间隔。值越大功耗越低，但响应越慢。</td>
+    </tr>
+    <tr>
+      <td>盲区 (Blind Area)</td>
+      <td>0 ~ 1000 mm</td>
+      <td>50 mm</td>
+      <td>传感器正下方的测量盲区。距离 < 盲区 时数据无效。</td>
+    </tr>
+    <tr>
+      <td>加权平均 (Wgt Average)</td>
+      <td>0 ~ 10</td>
+      <td>8</td>
+      <td>传感器加权平均系数 W。</td>
+    </tr>
+    <tr>
+      <td>阻尼 (Damping)</td>
+      <td>0 ~ 10</td>
+      <td>3</td>
+      <td>传感器测量系数 M，影响阻尼强度。</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ======================== -->
+<h2 id="set-display"><span class="anchor">#</span>显示设置</h2>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围/选项</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>语言 (Language)</td>
+      <td>0=English / 1=中文</td>
+      <td>1 (中文)</td>
+      <td>切换语言会重新加载菜单字串。</td>
+    </tr>
+    <tr>
+      <td>小数位数 (Decimal)</td>
+      <td>0 ~ 3</td>
+      <td>3</td>
+      <td>瞬时流量显示的小数位数。大数值会自动缩减小数位以保持可读性。</td>
+    </tr>
+    <tr>
+      <td>流量单位 (Flow Unit)</td>
+      <td>1 ~ 8</td>
+      <td>4 (m³/h)</td>
+      <td>
+        1=L/s / 2=L/min / 3=L/h / 4=m³/h / 5=m³/s / 6=m³/min / 7=T/h / 8=G/h (美制加仑/小时)。
+      </td>
+    </tr>
+    <tr>
+      <td>显示报警 (Show Alarm)</td>
+      <td>0 / 1</td>
+      <td>1 (显示)</td>
+      <td>主屏是否显示报警指示。关闭后主屏不再显示报警图标，但仍正常触发继电器。</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ======================== -->
+<h2 id="set-advanced"><span class="anchor">#</span>高级设置</h2>
+
+<p>出厂校准与系统维护操作。普通用户无需修改。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>最大量程 (Range Max)</td>
+      <td>0 ~ 20000 mm</td>
+      <td>5000</td>
+      <td>
+        传感器量程上限 (mm)。<br>
+        <strong>修改时同步把"高度"也设为相同值。</strong>
+      </td>
+    </tr>
+    <tr>
+      <td>天线类型 (Antenna Type)</td>
+      <td>0 ~ 10</td>
+      <td>1</td>
+      <td>根据实际传感器类型设置 (具体值参考传感器手册)。</td>
+    </tr>
+    <tr>
+      <td>4mA 校准 (4mA Cal)</td>
+      <td>0 ~ 7999</td>
+      <td>1006</td>
+      <td>
+        4mA 对应的校准输出值。<br>
+        <strong>进入编辑会立即输出对应电流 (实时校准)</strong>，校准完成后按 OK 保存。
+      </td>
+    </tr>
+    <tr>
+      <td>20mA 校准 (20mA Cal)</td>
+      <td>0 ~ 7999</td>
+      <td>3811</td>
+      <td>20mA 对应的校准输出值。</td>
+    </tr>
+    <tr>
+      <td>距离偏移 (Dist Offset)</td>
+      <td>0 ~ 99999 mm</td>
+      <td>10</td>
+      <td>距离补偿值，用于修正传感器安装偏差。</td>
+    </tr>
+    <tr>
+      <td>密码锁 (Password Lock)</td>
+      <td>0 / 1</td>
+      <td>0 (关闭)</td>
+      <td>启用后进入设置菜单需先输入密码 (固定 1234)。</td>
+    </tr>
+    <tr>
+      <td>恢复出厂 (Factory Reset)</td>
+      <td>0 / 1</td>
+      <td>0</td>
+      <td>设为 1 并按 OK 恢复所有参数为出厂默认值 (校准值会保留)。</td>
+    </tr>
+    <tr>
+      <td>清除存储数据 (Clear SD Data)</td>
+      <td>0 / 1</td>
+      <td>0</td>
+      <td>设为 1 并按 OK 清除 SD 卡上所有日志和历史记录。屏幕显示进度条 (0~100%)，完成后自动返回。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="card warn">
+  <h4>校准警告</h4>
+  修改 4mA/20mA 校准值会<strong>立即</strong>改变电流输出。校准过程中请用万用表监测 4-20mA 回路电流，
+  防止电流过载损坏外部设备。校准完成后必须按 OK 保存，否则退出编辑页会恢复原值。
+</details>
+
+<!-- ======================== -->
+<h2 id="set-time"><span class="anchor">#</span>时间设置</h2>
+
+<p>设备时钟。断电后由备用电池维持。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>范围</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>年 (Year)</td><td>2000 ~ 2099</td><td>4 位年份。</td></tr>
+    <tr><td>月 (Month)</td><td>1 ~ 12</td><td>—</td></tr>
+    <tr><td>日 (Day)</td><td>1 ~ 31</td><td>—</td></tr>
+    <tr><td>时 (Hour)</td><td>0 ~ 23</td><td>24 小时制。</td></tr>
+    <tr><td>分 (Minute)</td><td>0 ~ 59</td><td>—</td></tr>
+    <tr><td>秒 (Second)</td><td>0 ~ 59</td><td>—</td></tr>
+    <tr><td>星期 (Weekday)</td><td>1 ~ 7</td><td>1=周一 / 7=周日。</td></tr>
+  </tbody>
+</table>
+
+<!-- ======================== 流量参考 ======================== -->
+<h2 id="flow-common"><span class="anchor">#</span>计算逻辑</h2>
+
+<p>设备通过传感器测量水位，再根据所选堰槽公式计算瞬时流量：</p>
+
+<table>
+  <thead><tr><th>水位范围</th><th>计算结果</th></tr></thead>
+  <tbody>
+    <tr><td>低于水位下限</td><td>瞬时流量 = 0</td></tr>
+    <tr><td>在水位上下限之间</td><td>按堰槽公式正常计算</td></tr>
+    <tr><td>高于水位上限</td><td>按上限值计算（提示溢出）</td></tr>
+  </tbody>
+</table>
+
+<p><strong>水位上下限来源：</strong> 首次切换渠道类型/水槽编号时，设备自动填入当前槽型的默认水位范围。用户可在设置菜单中独立修改。再次切换槽型会<strong>覆盖</strong>用户修改。</p>
+
+<h2 id="flow-parshall"><span class="anchor">#</span>巴歇尔槽 (Parshall Flume)</h2>
+<p><strong>标准：</strong> ISO 4359</p>
+<p><strong>公式：</strong> Q = K × H<sup>n</sup>，不使用 Kh 水头修正。</p>
+
+<table>
+  <thead><tr><th>#</th><th>喉道宽度 (m)</th><th>K</th><th>n</th><th>H_min (m)</th><th>H_max (m)</th><th>Q_min (L/s)</th><th>Q_max (L/s)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>0.025</td><td>60.4</td><td>1.550</td><td>0.015</td><td>0.21</td><td>0.09</td><td>5.4</td></tr>
+    <tr><td>2</td><td>0.051</td><td>120.7</td><td>1.550</td><td>0.015</td><td>0.24</td><td>0.18</td><td>13.2</td></tr>
+    <tr><td>3</td><td>0.076</td><td>177.1</td><td>1.550</td><td>0.030</td><td>0.33</td><td>0.77</td><td>32.1</td></tr>
+    <tr><td>4</td><td>0.152</td><td>381.2</td><td>1.540</td><td>0.030</td><td>0.45</td><td>1.50</td><td>111.0</td></tr>
+    <tr><td>5</td><td>0.228</td><td>535.4</td><td>1.530</td><td>0.030</td><td>0.60</td><td>2.50</td><td>251.0</td></tr>
+    <tr><td>6</td><td>0.250</td><td>561.0</td><td>1.513</td><td>0.030</td><td>0.60</td><td>3.00</td><td>250.0</td></tr>
+    <tr><td>7</td><td>0.300</td><td>679.0</td><td>1.521</td><td>0.030</td><td>0.75</td><td>3.50</td><td>400.0</td></tr>
+    <tr><td>8</td><td>0.450</td><td>1038.0</td><td>1.537</td><td>0.030</td><td>0.75</td><td>4.50</td><td>630.0</td></tr>
+    <tr><td>9</td><td>0.600</td><td>1403.0</td><td>1.548</td><td>0.050</td><td>0.75</td><td>12.50</td><td>850.0</td></tr>
+    <tr><td>10</td><td>0.750</td><td>1772.0</td><td>1.557</td><td>0.060</td><td>0.75</td><td>25.00</td><td>1100.0</td></tr>
+    <tr><td>11</td><td>0.900</td><td>2147.0</td><td>1.565</td><td>0.060</td><td>0.75</td><td>30.00</td><td>1250.0</td></tr>
+    <tr><td>12</td><td>1.000</td><td>2397.0</td><td>1.569</td><td>0.060</td><td>0.80</td><td>30.00</td><td>1500.0</td></tr>
+    <tr><td>13</td><td>1.200</td><td>2904.0</td><td>1.577</td><td>0.060</td><td>0.80</td><td>35.00</td><td>2000.0</td></tr>
+    <tr><td>14</td><td>1.500</td><td>3668.0</td><td>1.586</td><td>0.060</td><td>0.80</td><td>45.00</td><td>2500.0</td></tr>
+    <tr><td>15</td><td>1.800</td><td>4440.0</td><td>1.593</td><td>0.080</td><td>0.80</td><td>80.00</td><td>3000.0</td></tr>
+    <tr><td>16</td><td>2.100</td><td>5222.0</td><td>1.599</td><td>0.080</td><td>0.80</td><td>95.00</td><td>3600.0</td></tr>
+  </tbody>
+</table>
+
+<h2 id="flow-v"><span class="anchor">#</span>三角堰 (V-Notch Weir)</h2>
+<p><strong>标准：</strong> ISO 1438, Kindsvater-Shen 方法</p>
+<p><strong>公式：</strong> Q = K × (H + K<sub>h</sub>)<sup>2.5</sup></p>
+<p><strong>有效范围：</strong> θ = 20° ~ 100° (USBR 推荐 25° ~ 100°)</p>
+
+<table>
+  <thead><tr><th>#</th><th>角度 θ</th><th>Ce</th><th>K (L/s)</th><th>Kh (m)</th><th>H_min (m)</th><th>H_max (m)</th><th>Q_min (L/s)</th><th>Q_max (L/s)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>90°</td><td>0.5779</td><td>1365.0</td><td>0.00301</td><td>0.05</td><td>0.40</td><td>0.88</td><td>140.7</td></tr>
+    <tr><td>2</td><td>60°</td><td>0.5767</td><td>786.4</td><td>0.00176</td><td>0.05</td><td>0.35</td><td>0.48</td><td>57.7</td></tr>
+    <tr><td>3</td><td>45°</td><td>0.5802</td><td>567.8</td><td>0.00177</td><td>0.05</td><td>0.30</td><td>0.35</td><td>28.4</td></tr>
+    <tr><td>4</td><td>30°</td><td>0.5864</td><td>371.1</td><td>0.00221</td><td>0.05</td><td>0.25</td><td>0.23</td><td>11.9</td></tr>
+    <tr><td>5</td><td>22.5°</td><td>0.5906</td><td>277.5</td><td>0.00259</td><td>0.05</td><td>0.25</td><td>0.18</td><td>8.90</td></tr>
+  </tbody>
+</table>
+
+<details>
+  <summary>系数拟合公式</summary>
+  <pre>Ce   = 0.607165052 - 0.000874467×θ + 6.103933×10⁻⁶×θ²
+Kh(ft) = 0.01449 - 0.0003396×θ + 3.298×10⁻⁶×θ² - 1.062×10⁻⁸×θ³
+Kh(m)  = Kh(ft) × 0.3048</pre>
+</details>
+
+<h2 id="flow-rect"><span class="anchor">#</span>矩形堰 (Rectangular Weir)</h2>
+<p><strong>标准：</strong> ISO 1438, Francis 公式 + Kh 修正</p>
+<p><strong>公式：</strong> Q = K × b<sub>e</sub> × (H + K<sub>h</sub>)<sup>1.5</sup>，其中 K = 1838 (Francis Cd=0.622)，Kh = 0.001 m</p>
+
+<table>
+  <thead><tr><th>#</th><th>堰宽 b (m)</th><th>K</th><th>Kh (m)</th><th>H_min (m)</th><th>H_max (m)</th><th>Q_min (L/s)</th><th>Q_max (L/s)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>0.5</td><td>1838.0</td><td>0.001</td><td>0.05</td><td>0.50</td><td>10.6</td><td>326.0</td></tr>
+    <tr><td>2</td><td>1.0</td><td>1838.0</td><td>0.001</td><td>0.05</td><td>0.60</td><td>21.2</td><td>856.0</td></tr>
+    <tr><td>3</td><td>1.5</td><td>1838.0</td><td>0.001</td><td>0.05</td><td>0.70</td><td>31.8</td><td>1618.0</td></tr>
+    <tr><td>4</td><td>2.0</td><td>1838.0</td><td>0.001</td><td>0.05</td><td>0.80</td><td>42.3</td><td>2635.0</td></tr>
+  </tbody>
+</table>
+
+<h3>侧收缩修正</h3>
+<p>当 <code>渠宽 B &gt; 0</code>  且 <code>B &gt; b</code> 时按收缩堰处理：</p>
+<pre>b_e = b - 0.2 × H
+若 b_e &lt; 0 → b_e = 0</pre>
+
+<ul>
+  <li><code>B = 0</code> → 全宽堰，b_e = b</li>
+  <li><code>B &gt; 0</code> 且 <code>B ≤ b</code> → 不收缩，b_e = b</li>
+  <li><code>B &gt; b</code> → 按上式修正 b_e</li>
+</ul>
+
+<details>
+  <summary>示例：全宽堰 vs 收缩堰 (1.0m 堰宽, H=0.3m)</summary>
+  <pre>全宽堰 (B = 0):
+  b_e = 1.0
+  Q = 1838.0 × 1.0 × 0.301^1.5 = 303.5 L/s
+
+收缩堰 (B = 2.0m):
+  b_e = 1.0 - 0.2 × 0.30 = 0.94
+  Q = 1838.0 × 0.94 × 0.301^1.5 = 285.3 L/s</pre>
+</details>
+
+<h2 id="flow-unit"><span class="anchor">#</span>单位换算</h2>
+<p>计算结果根据流量单位设置自动转换：</p>
+<table>
+  <thead><tr><th>单位</th><th>转换公式</th><th>设置值</th></tr></thead>
+  <tbody>
+    <tr><td>L/s</td><td>Q × 1</td><td>1</td></tr>
+    <tr><td>L/min</td><td>Q × 60</td><td>2</td></tr>
+    <tr><td>L/h</td><td>Q × 3600</td><td>3</td></tr>
+    <tr><td>m³/h</td><td>Q × 3.6</td><td>4</td></tr>
+    <tr><td>m³/s</td><td>Q / 1000</td><td>5</td></tr>
+    <tr><td>m³/min</td><td>Q / 1000 × 60</td><td>6</td></tr>
+    <tr><td>T/h</td><td>Q × 3.6 (同 m³/h)</td><td>7</td></tr>
+    <tr><td>G/h (美制加仑/时)</td><td>Q × 3600 / 3.785411784</td><td>8</td></tr>
+  </tbody>
+</table>
+
+<!-- ======================== 故障排查 ======================== -->
+<h2 id="trouble"><span class="anchor">#</span>常见问题</h2>
+
+<h3>Q: 主屏一直显示 "L:error" ？</h3>
+<p>传感器离线。检查：</p>
+<ol>
+  <li>传感器电源/线缆是否松动</li>
+  <li>传感器地址是否与本机配置一致</li>
+  <li>传感器波特率/停止位是否与本机一致</li>
+  <li>查看设备日志中是否有传感器离线记录</li>
+</ol>
+
+<h3>Q: 修改了 4-20mA 量程后电流没变化？</h3>
+<p>检查当前瞬时流量是否在 4mA 和 20mA 量程范围内。若瞬时流量 &lt; 4mA 量程则电流钳位到 4mA；若 &gt; 20mA 量程则钳位到 20mA。</p>
+
+<h3>Q: 累计流量断电后丢了一部分？</h3>
+<p>设备每 2 秒自动保存累计数据，断电后最大丢失 2 秒数据。如果备用电池耗尽，可能丢失更多数据，建议定期更换电池。</p>
+
+<h3>Q: 修改渠道类型后水量上下限变了？</h3>
+<p>这是正常行为。<strong>渠道类型 / 水槽编号变更时会自动覆盖水位上下限为新槽型默认值</strong>，如需自定义请在切换后重新调整。</p>
+
+<h3>Q: 20mA 量程无法设置到很大？</h3>
+<p>20mA 量程上限被限制为"当前槽型理论最大流量 × 1.2 倍裕量"。这是为了保证输出电流有合理的分辨率。如需更大的量程，请更换支持更大流量的水槽规格。</p>
+
+<h3>Q: 继电器不动作？</h3>
+<ol>
+  <li>检查传感器是否离线 (离线时所有报警清除)</li>
+  <li>检查报警阈值设置 (AAH ≥ AH, AAL ≤ AL)</li>
+  <li>检查主屏 <em>显示报警</em> 选项是否关闭 (仅影响 UI 指示，不影响继电器)</li>
+</ol>
+
+<!-- ======================== 附录: Modbus ======================== -->
+<h2 id="modbus-reg"><span class="anchor">#</span>附录：Modbus 寄存器表</h2>
+
+<div class="card info">
+  <h4>通信参数</h4>
+  RS485 | Modbus RTU | <strong>从机地址默认 1</strong> | <strong>波特率默认 9600</strong> | <strong>8N1</strong><br>
+  <strong>功能码：</strong> 03 读保持寄存器 / 06 写单寄存器 / 16 写多寄存器
+</div>
+
+<h3>1. 实时数据区 (只读)</h3>
+<table>
+  <thead><tr><th>地址</th><th>名称</th><th>类型</th><th>单位</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x0001</code></td><td>水位 (物位)</td><td><span class="badge ronly">R</span> uint16</td><td>mm</td><td>水位 = 安装高度 - 距离</td></tr>
+    <tr><td><code>0x0002</code></td><td>距离</td><td><span class="badge ronly">R</span> uint16</td><td>mm</td><td>传感器到水面距离</td></tr>
+    <tr><td><code>0x0003</code></td><td>温度</td><td><span class="badge ronly">R</span> uint16</td><td>0.1°C</td><td>值 256 = 25.6°C</td></tr>
+    <tr><td><code>0x0004~05</code></td><td>瞬时流量</td><td><span class="badge ronly">R</span> float</td><td>由 0x0103 决定</td><td>当前瞬时流量</td></tr>
+    <tr><td><code>0x0006~09</code></td><td>累计流量</td><td><span class="badge ronly">R</span> double</td><td>m³</td><td>累计总量</td></tr>
+    <tr><td><code>0x000A</code></td><td>继电器1状态</td><td><span class="badge ronly">R</span> uint16</td><td>—</td><td>0=断开 (AH)</td></tr>
+    <tr><td><code>0x000B</code></td><td>继电器2状态</td><td><span class="badge ronly">R</span> uint16</td><td>—</td><td>0=断开 (AL)</td></tr>
+    <tr><td><code>0x000C</code></td><td>继电器3状态</td><td><span class="badge ronly">R</span> uint16</td><td>—</td><td>0=断开 (AAH)</td></tr>
+    <tr><td><code>0x000D</code></td><td>继电器4状态</td><td><span class="badge ronly">R</span> uint16</td><td>—</td><td>0=断开 (AAL)</td></tr>
+  </tbody>
+</table>
+
+<blockquote class="warn">
+  <strong>0x000A~0x000D 继电器状态只读</strong>，不允许写入。继电器由报警逻辑自动控制。
+</blockquote>
+
+<h3>2. 报警参数区 (读写)</h3>
+<table>
+  <thead><tr><th>地址</th><th>名称</th><th>类型</th><th>单位</th><th>默认</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x000E~0F</code></td><td>上限报警值 (AH)</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>19.44</td><td>流量 ≥ AH 触发</td></tr>
+    <tr><td><code>0x0010~11</code></td><td>上限回差 (DH)</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>2.0</td><td>流量 &lt; AH - DH 恢复</td></tr>
+    <tr><td><code>0x0012~13</code></td><td>下限报警值 (AL)</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>0.0</td><td>流量 ≤ AL 触发</td></tr>
+    <tr><td><code>0x0014~15</code></td><td>下限回差 (DL)</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>2.0</td><td>流量 &gt; AL + DL 恢复</td></tr>
+    <tr><td><code>0x0016~17</code></td><td>上上限报警值 (AAH)</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>100.0</td><td>流量 ≥ AAH 触发；恢复: 流量 &lt; AAH - DH</td></tr>
+    <tr><td><code>0x0018~19</code></td><td>下下限报警值 (AAL)</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>0.0</td><td>流量 ≤ AAL 触发；恢复: 流量 &gt; AAL + DL</td></tr>
+  </tbody>
+</table>
+
+<h3>3. 传感器参数区 (读写)</h3>
+<p>写入后自动同步到传感器（在线时）；传感器首次上线也会自动同步所有参数。</p>
+<table>
+  <thead><tr><th>地址</th><th>名称</th><th>类型</th><th>单位</th><th>默认</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x0065</code></td><td>最大量程</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>5000</td><td>传感器量程上限</td></tr>
+    <tr><td><code>0x0066</code></td><td>安装高度</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>5000</td><td>水位 = 高度 - 距离</td></tr>
+    <tr><td><code>0x0067</code></td><td>窗口宽度 (L1)</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>100</td><td>滑动平均窗口</td></tr>
+    <tr><td><code>0x0068</code></td><td>滤波次数 (L2)</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>2</td><td>—</td></tr>
+    <tr><td><code>0x0069</code></td><td>采样延迟 (L3)</td><td><span class="badge rw">RW</span> uint16</td><td>ms</td><td>50</td><td>—</td></tr>
+    <tr><td><code>0x006A</code></td><td>盲区 (L4)</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>50</td><td>—</td></tr>
+    <tr><td><code>0x006B</code></td><td>W 系数 (L5)</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>8</td><td>—</td></tr>
+    <tr><td><code>0x006C</code></td><td>M 系数 (L6)</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>3</td><td>—</td></tr>
+    <tr><td><code>0x006D</code></td><td>从机地址</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1</td><td>本机地址 1~247</td></tr>
+    <tr><td><code>0x006E</code></td><td>波特率</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>2 (9600)</td><td>1=4800 / 2=9600 / 3=14400 / 4=19200 / 5=38400 / 6=56000 / 7=57600 / 8=115200</td></tr>
+    <tr><td><code>0x006F</code></td><td>停止位</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1 (8N1)</td><td>1=8N1 / 2=8O1 / 3=8N2 / 4=8E1</td></tr>
+  </tbody>
+</table>
+
+<h3>4. 从机参数区 (读写)</h3>
+<table>
+  <thead><tr><th>地址</th><th>名称</th><th>类型</th><th>单位</th><th>默认</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x0101</code></td><td>渠道类型</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1</td><td>1=巴歇尔槽 / 2=三角堰 / 3=矩形堰</td></tr>
+    <tr><td><code>0x0102</code></td><td>水槽编号</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1</td><td>切换时自动填入默认水位上下限</td></tr>
+    <tr><td><code>0x0103</code></td><td>瞬时流量单位</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>4</td><td>1=L/s / 2=L/min / 3=L/h / 4=m³/h / 5=m³/s / 6=m³/min / 7=T/h / 8=G/h</td></tr>
+    <tr><td><code>0x0104</code></td><td>累计小数位</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1</td><td>—</td></tr>
+    <tr><td><code>0x0105~06</code></td><td>4mA 量程</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>0.0</td><td>—</td></tr>
+    <tr><td><code>0x0107~08</code></td><td>20mA 量程</td><td><span class="badge rw">RW</span> float</td><td>m³/h</td><td>19.354</td><td>不超过槽型最大流量 × 1.2</td></tr>
+    <tr><td><code>0x0109</code></td><td>渠宽</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>0</td><td>0=全宽堰</td></tr>
+    <tr><td><code>0x010A</code></td><td>堰高</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>0</td><td>预留</td></tr>
+    <tr><td><code>0x010B~0C</code></td><td>水位上限</td><td><span class="badge rw">RW</span> float</td><td>m</td><td>按槽型</td><td>切换渠道/水槽时自动覆盖</td></tr>
+    <tr><td><code>0x010D~0E</code></td><td>水位下限</td><td><span class="badge rw">RW</span> float</td><td>m</td><td>按槽型</td><td>切换渠道/水槽时自动覆盖</td></tr>
+  </tbody>
+</table>
+
+<h3>5. 出厂校准区 (读写)</h3>
+<table>
+  <thead><tr><th>地址</th><th>名称</th><th>类型</th><th>单位</th><th>默认</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x1001</code></td><td>天线类型</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1</td><td>—</td></tr>
+    <tr><td><code>0x1002</code></td><td>距离偏移</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>10</td><td>—</td></tr>
+    <tr><td><code>0x1003</code></td><td>4mA 校准</td><td><span class="badge rw">RW</span> uint16</td><td>校准值</td><td>1006</td><td>写入后立即生效</td></tr>
+    <tr><td><code>0x1004</code></td><td>20mA 校准</td><td><span class="badge rw">RW</span> uint16</td><td>校准值</td><td>3811</td><td>写入后立即生效</td></tr>
+    <tr><td><code>0x1005</code></td><td>恢复出厂设置</td><td><span class="badge act">W</span> uint16</td><td>—</td><td>0</td><td>写 1 触发，完成后自动复位为 0</td></tr>
+    <tr><td><code>0x1006</code></td><td>清除累计</td><td><span class="badge act">W</span> uint16</td><td>—</td><td>0</td><td>写 1 清除累计流量和累计时间</td></tr>
+  </tbody>
+</table>
+
+<blockquote class="warn">
+  <strong>一次性动作寄存器：</strong> 0x1005 / 0x1006 写入 1 触发操作后会自动复位为 0，请使用 FC06 写入。
+</blockquote>
+
+<h3>6. RTC 时间区 (读写)</h3>
+<p>写入任一寄存器立即读取全部 7 个并更新 RTC。建议用 FC16 一次性写入。</p>
+<table>
+  <thead><tr><th>地址</th><th>名称</th><th>范围</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x0200</code></td><td>年</td><td>2000~2099</td><td>—</td></tr>
+    <tr><td><code>0x0201</code></td><td>月</td><td>1~12</td><td>—</td></tr>
+    <tr><td><code>0x0202</code></td><td>日</td><td>1~31</td><td>自动校验闰年</td></tr>
+    <tr><td><code>0x0203</code></td><td>时</td><td>0~23</td><td>—</td></tr>
+    <tr><td><code>0x0204</code></td><td>分</td><td>0~59</td><td>—</td></tr>
+    <tr><td><code>0x0205</code></td><td>秒</td><td>0~59</td><td>—</td></tr>
+    <tr><td><code>0x0206</code></td><td>星期</td><td>1~7</td><td>1=周一 / 7=周日</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  <p>OCFM_V2 明渠流量计</p>
+  <p>标准: ISO 4359 (Parshall Flume), ISO 1438 (Weirs)</p>
+</footer>
+
+  </main>
+</div>
+
+</body>
+</html>

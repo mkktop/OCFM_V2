@@ -185,8 +185,10 @@ static float parshall_flow_Ls(float water_level_m, const Water_Channel *channel,
     if (water_level_m >= wl_down && water_level_m <= wl_up) {
         Q = channel->factor * powf(water_level_m, channel->n);
     }
-    /* 水位低于下限 */
-    else if (water_level_m < wl_down) {
+    /* 水位低于下限 (扣除 0.1mm 容差，防止浮点精度边界误判)
+     * 例: 高度736mm - 距离721mm 经 float 运算后为 0.01499998m，
+     * 略小于下限 0.015f，数学上应相等却被判为"低于下限"，故加容差 */
+    else if (water_level_m < wl_down - 0.0001f) {
         Q = 0.0f;
     }
     /* 水位高于上限 */
@@ -251,7 +253,8 @@ static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t
         he = water_level_m + weir->kh;
         Q = weir->factor * powf(he, weir->n);
     }
-    else if (water_level_m < wl_down) {
+    /* 水位低于下限 (扣除 0.1mm 容差，防止浮点精度边界误判) */
+    else if (water_level_m < wl_down - 0.0001f) {
         Q = 0.0f;
     }
     else {
@@ -295,7 +298,8 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
         }
         Q = weir->factor * effective_width * powf(he, weir->n);
     }
-    else if (water_level_m < wl_down) {
+    /* 水位低于下限 (扣除 0.1mm 容差，防止浮点精度边界误判) */
+    else if (water_level_m < wl_down - 0.0001f) {
         Q = 0.0f;
     }
     else {
