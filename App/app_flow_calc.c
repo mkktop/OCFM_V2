@@ -181,19 +181,18 @@ static float parshall_flow_Ls(float water_level_m, const Water_Channel *channel,
         return 0.0f;
     }
 
-    /* 水位在有效范围内 */
-    if (water_level_m >= wl_down && water_level_m <= wl_up) {
-        Q = channel->factor * powf(water_level_m, channel->n);
+    /* 水位高于上限: 钳位到上限计算 */
+    if (water_level_m > wl_up) {
+        Q = channel->factor * powf(wl_up, channel->n);
     }
     /* 水位低于下限 (扣除 0.1mm 容差，防止浮点精度边界误判)
-     * 例: 高度736mm - 距离721mm 经 float 运算后为 0.01499998m，
-     * 略小于下限 0.015f，数学上应相等却被判为"低于下限"，故加容差 */
+     * 例: 高度800mm - 距离720mm 经 float 运算后为 0.07999998m，
+     * 略小于下限 0.08f，数学上应相等却被判为"低于下限"，故加容差 */
     else if (water_level_m < wl_down - 0.0001f) {
         Q = 0.0f;
     }
-    /* 水位高于上限 */
+    /* 水位在有效范围内 (含浮点容差区间 [wl_down-tol, wl_up]) */
     else {
-        water_level_m = wl_up;
         Q = channel->factor * powf(water_level_m, channel->n);
     }
 
@@ -249,16 +248,18 @@ static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t
         return 0.0f;
     }
 
-    if (water_level_m >= wl_down && water_level_m <= wl_up) {
-        he = water_level_m + weir->kh;
+    /* 水位高于上限: 钳位到上限计算 */
+    if (water_level_m > wl_up) {
+        he = wl_up + weir->kh;
         Q = weir->factor * powf(he, weir->n);
     }
     /* 水位低于下限 (扣除 0.1mm 容差，防止浮点精度边界误判) */
     else if (water_level_m < wl_down - 0.0001f) {
         Q = 0.0f;
     }
+    /* 水位在有效范围内 (含浮点容差区间) */
     else {
-        he = wl_up + weir->kh;
+        he = water_level_m + weir->kh;
         Q = weir->factor * powf(he, weir->n);
     }
 
@@ -288,10 +289,11 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
     float B = app_config_get_channel_width() / 1000.0f;
     float b = weir->width;
 
-    if (water_level_m >= wl_down && water_level_m <= wl_up) {
-        he = water_level_m + weir->kh;
+    /* 水位高于上限: 钳位到上限计算 */
+    if (water_level_m > wl_up) {
+        he = wl_up + weir->kh;
         if (B > 0.0f && b < B) {
-            effective_width = b - 0.2f * water_level_m;
+            effective_width = b - 0.2f * wl_up;
             if (effective_width < 0.0f) effective_width = 0.0f;
         } else {
             effective_width = b;
@@ -302,10 +304,11 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
     else if (water_level_m < wl_down - 0.0001f) {
         Q = 0.0f;
     }
+    /* 水位在有效范围内 (含浮点容差区间) */
     else {
-        he = wl_up + weir->kh;
+        he = water_level_m + weir->kh;
         if (B > 0.0f && b < B) {
-            effective_width = b - 0.2f * wl_up;
+            effective_width = b - 0.2f * water_level_m;
             if (effective_width < 0.0f) effective_width = 0.0f;
         } else {
             effective_width = b;
