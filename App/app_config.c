@@ -107,9 +107,13 @@ void app_config_eeprom_unlock(void)
  */
 void app_config_set_default(void)
 {
-    /* 保留工厂校准值 */
-    uint32_t saved_cal_4ma  = g_config.calibration_4ma;
-    uint32_t saved_cal_20ma = g_config.calibration_20ma;
+    /* 保留工厂校准值（仅在已有有效配置时） */
+    uint32_t saved_cal_4ma  = DEFAULT_CALIBRATION_4MA;
+    uint32_t saved_cal_20ma = DEFAULT_CALIBRATION_20MA;
+    if (g_config.magic_number == CONFIG_MAGIC_NUMBER) {
+        saved_cal_4ma  = g_config.calibration_4ma;
+        saved_cal_20ma = g_config.calibration_20ma;
+    }
 
     memset(&g_config, 0, sizeof(SystemConfig_t));
 

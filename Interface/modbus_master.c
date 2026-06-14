@@ -452,6 +452,7 @@ void modbus_master_poll(modbus_master_t *master)
                 {
                     modbus_sensor_t *sensor = &master->sensors[master->current_slave_index];
                     sensor->retry_count++;
+                    sensor->last_poll_time = HAL_GetTick();
 
                     if (sensor->retry_count >= MODBUS_MAX_RETRY)
                     {
