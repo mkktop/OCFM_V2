@@ -39,7 +39,7 @@ static struct {
 static const DataRecorderConfig g_default_config = {
     .enable = 1,
     .interval_sec = DATA_DEFAULT_INTERVAL,    /**< 默认5分钟记录一次 */
-    .retention_days = 30,                      /**< 默认保留30天 */
+    .retention_days = 365,                      /**< 默认保留365天 */
     .csv_header = 1,                           /**< 写入CSV头 */
     .max_file_size = 10 * 1024 * 1024          /**< 默认10MB (单日文件大小) */
 };

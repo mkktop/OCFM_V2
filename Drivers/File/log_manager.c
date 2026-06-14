@@ -38,7 +38,7 @@ static struct {
  */
 static const LogManagerConfig g_default_config = {
     .enable = 1,                   /**< 默认启用日志记录 */
-    .retention_days = 30           /**< 默认保留30天 */
+    .retention_days = 365           /**< 默认保留365天 (HJ 15-2019 4.3.3) */
 };
 
 /**

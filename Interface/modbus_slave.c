@@ -55,6 +55,9 @@ static const reg_map_t reg_map[] = {
     {0x0017,               22},  /* AAH低字 */
     {REG_AAL,              23},  /* float 占2个: 23,24 */
     {0x0019,               24},  /* AAL低字 */
+    /* 累计计量时间区 (0x001A-0x001B, uint32 只读输出) */
+    {REG_TOTAL_TIME,       63},  /* 累计计量时间(秒) 占2个: 63,64 */
+    {0x001B,               64},  /* 累计计量时间低字 */
     /* 传感器参数区 (0x0065-0x006F) */
     {REG_RANGE_MAX,        25},
     {REG_HEIGHT,           26},
@@ -100,7 +103,7 @@ static const reg_map_t reg_map[] = {
 };
 
 #define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))
-#define REG_ARRAY_SIZE  64  /* 映射后的紧凑数组大小 */
+#define REG_ARRAY_SIZE  66  /* 映射后的紧凑数组大小 (含累计计量时间 63,64) */
 
 /**
  * @brief 保持寄存器紧凑数组

@@ -189,10 +189,10 @@ TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。TIM3配置：PSC=29, ARR=6999 �
 流量单位由 `instant_unit` 配置决定：L/s, L/min, L/h, m³/h, m³/s, m³/min, T/h, G/h
 
 ### Modbus寄存器映射 (`Core/Inc/global.h`)
-寄存器地址和类型全部定义在 global.h 中。主要分组：实时数据(0x0001-0x000D)、报警值(0x000E-0x0018)、传感器参数(0x0065-0x006F)、从机参数(0x0101-0x010A)、工厂校准(0x1001-0x1006)、RTC时间(0x0200-0x0206)。写回调在 `App/app_modbus_slave.c` 的 `app_modbus_slave_on_write()` 中处理。
+寄存器地址和类型全部定义在 global.h 中。主要分组：实时数据(0x0001-0x000D)、报警值(0x000E-0x0019)、累计计量时间(0x001A-0x001B)、传感器参数(0x0065-0x006F)、从机参数(0x0101-0x010A)、工厂校准(0x1001-0x1006)、RTC时间(0x0200-0x0206)。写回调在 `App/app_modbus_slave.c` 的 `app_modbus_slave_on_write()` 中处理。
 
 ### 异步日志与数据记录
-- **日志系统** (`App/app_log.c/h` + `Drivers/File/log_manager.c/h`)：`app_log_send()` 线程安全，可从任意上下文调用。日志按类型分三类（System/User/Alarm），存储路径 `/LOGS/{SYS|USER|ALARM}/YYYY/MM/DD.log`，默认90天保留。所有文件I/O在 `log_task` 中统一执行。
+- **日志系统** (`App/app_log.c/h` + `Drivers/File/log_manager.c/h`)：`app_log_send()` 线程安全，可从任意上下文调用。日志按类型分三类（System/User/Alarm），存储路径 `/LOGS/{SYS|USER|ALARM}/YYYY/MM/DD.log`，默认365天保留（满足 HJ 15-2019 第4.3.3条：运行日志至少保存1年）。所有文件I/O在 `log_task` 中统一执行。
 - **数据记录** (`Drivers/File/data_recorder.c/h`)：按 `DATA_RECORD_INTERVAL_MS`（60秒）间隔记录CSV数据。支持时间范围查询、聚合统计（均值/最大/最小/流量增量/报警计数）、CSV/JSON导出，默认365天保留。
 
 ### SD卡数据清除 (`App/app_log`)

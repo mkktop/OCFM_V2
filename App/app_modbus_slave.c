@@ -290,6 +290,9 @@ void app_modbus_slave_update(void)
         modbus_slave_set_double(REG_SUM_FLOW, total_flow);
     }
 
+    /* 累计计量时间 (uint32, 秒) - 0x001A 占2个寄存器 (只读输出, 对应 REG_TOTAL_TIME) */
+    modbus_slave_set_uint32(REG_TOTAL_TIME, flow_calc_get_total_time());
+
     /* 继电器状态 - 0x000A-0x000D (从GPIO读取) */
     for (uint8_t i = 0; i < 4; i++)
     {

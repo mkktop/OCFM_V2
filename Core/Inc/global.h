@@ -82,6 +82,9 @@
 #define REG_AAH                 0x0016       /* 上上限报警值寄存器 占2个寄存器 */
 #define REG_AAL                 0x0018       /* 下下限报警值寄存器 占2个寄存器 */
 
+//累计计量时间寄存器 (uint32, 只读输出, 与累计流量 REG_SUM_FLOW 配对)
+#define REG_TOTAL_TIME          0x001A       /* 累计计量时间寄存器 (秒) 占2个寄存器 */
+
 //传感器参数设置寄存器
 #define REG_RANGE_MAX           0x0065       /* 最大量程寄存器 占1个寄存器 */
 #define REG_HEIGHT              0x0066       /* 高度寄存器 占1个寄存器 */

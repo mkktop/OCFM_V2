@@ -108,9 +108,9 @@ extern "C" {
 
 /**
  * @brief 日志最大保留天数
- * @note 清理过期日志时，最大支持保留90天
+ * @note 清理过期日志时，最大支持保留365天
  */
-#define LOG_MAX_RETENTION_DAYS  90
+#define LOG_MAX_RETENTION_DAYS  365
 
 /**
  * @brief 日志类型枚举
