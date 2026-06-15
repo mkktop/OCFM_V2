@@ -306,7 +306,7 @@ static const config_range_t config_range_table[CONFIG_ID_COUNT] = {
     /* [22] CONFIG_ID_ALARM_AAL       */ {1, 1, 0, 0, 0.0f, 99999.0f},
     /* [23] CONFIG_ID_DIS_OFFSET      */ {0, 1, 0, 99999, 0, 0},
     /* [24] CONFIG_ID_CANALS_TYPE     */ {0, 1, 1, 3,     0, 0},
-    /* [25] CONFIG_ID_CHANNEL_ID      */ {0, 1, 1, 16,    0, 0},
+    /* [25] CONFIG_ID_CHANNEL_ID      */ {0, 1, 1, 25,    0, 0},
     /* [26] CONFIG_ID_CHANNEL_WIDTH   */ {0, 1, 0, 10000, 0, 0},
     /* [27] CONFIG_ID_WEIR_HEIGHT     */ {0, 1, 0, 10000, 0, 0},
     /* [28] CONFIG_ID_WATER_LEVEL_UP  */ {1, 1, 0, 0, 0.0f, 10.0f},

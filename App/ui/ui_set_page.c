@@ -333,7 +333,7 @@ static uint32_t get_channel_id_max(void)
     switch (app_config_get_canals_type()) {
         case 2:  return 5;    /* 三角堰 */
         case 3:  return 4;    /* 矩形堰 */
-        default: return 16;   /* 巴歇尔槽 */
+        default: return 25;   /* 巴歇尔槽 (1-17标准型, 18-25大型) */
     }
 }
 
@@ -362,7 +362,7 @@ static const char *format_channel_id(uint32_t val)
 /* ---------- 系统设置 ---------- */
 static const set_item_t system_items[] = {
     {LANG_P_CANAL_TYPE,      "",     app_config_get_canals_type,         app_config_set_canals_type,       1, 3,     1,  0,  format_canals_type},
-    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 16,   1},
+    {LANG_P_CHANNEL_ID,      "",     app_config_get_channel_id,          app_config_set_channel_id,        1, 25,   1},
     {LANG_P_CHANNEL_WIDTH,   "mm",   app_config_get_channel_width,       app_config_set_channel_width,     0, 10000, 1},
     {LANG_P_WEIR_HEIGHT,     "mm",   app_config_get_weir_height,         app_config_set_weir_height,       0, 10000, 1},
     {LANG_P_WATER_LEVEL_UP,  "m",    NULL, NULL, 0, 0, 0, 0, NULL,

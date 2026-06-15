@@ -30,7 +30,7 @@
  * @note   巴歇尔槽不使用Kh水头修正
  */
 typedef struct {
-    uint32_t number_ID;        /**< 水槽规格编号 (1-8) */
+    uint32_t number_ID;        /**< 水槽规格编号 (1-25: 1-17标准型, 18-25大型) */
     float width;               /**< 喉道宽度 (m) */
     float factor;              /**< 流量系数 K */
     float n;                   /**< 指数 n */
@@ -107,11 +107,12 @@ static volatile uint8_t s_eeprom_save_pending = 0; /**< EEPROM待保存标志 */
 
 /**
  * @brief 巴歇尔水槽参数表 (CJ/T 3008.3-1993)
- * @note  索引0-15对应规格1-16
+ * @note  索引0-24对应规格1-25 (1-5小型, 6-17标准型, 18-25大型)
  *        公式: Q = K * H^n (L/s, m)
- *        K/n 值取自 CJ/T 3008.3-1993《巴歇尔量水槽》标准规格表
+ *        1-17号标准型: K/n 取自 CJ/T 3008.3-1993 表3
+ *        18-25号大型型: K 取自 CJ/T 3008.3-1993 表4 / ISO 9826 (n=1.6)
  */
-static const Water_Channel s_channel_tbl[16] = {
+static const Water_Channel s_channel_tbl[25] = {
     {  1, 0.025,   60.4, 1.550, 0.015, 0.21,   0.09,     5.4 },   /* 0.025m  */
     {  2, 0.051,  120.7, 1.550, 0.015, 0.24,   0.18,    13.2 },   /* 0.051m  */
     {  3, 0.076,  177.1, 1.550, 0.030, 0.33,   0.77,    32.1 },   /* 0.076m  */
@@ -128,6 +129,15 @@ static const Water_Channel s_channel_tbl[16] = {
     { 14, 1.500, 3668.0, 1.586, 0.060, 0.80,  45.00,  2500.0 },   /* 1.50m   */
     { 15, 1.800, 4440.0, 1.593, 0.080, 0.80,  80.00,  3000.0 },   /* 1.80m   */
     { 16, 2.100, 5222.0, 1.599, 0.080, 0.80,  95.00,  3600.0 },   /* 2.10m   */
+    { 17, 2.400, 6004.0, 1.605, 0.080, 0.80,   100.00,  4000.0 },   /* 2.40m   标准型最大喉宽(K外推) */
+    { 18, 3.050,  7463.0, 1.600, 0.090, 1.07,  160.00,  8280.0 },   /* 3.05m   大型(10ft) */
+    { 19, 3.660,  8859.0, 1.600, 0.090, 1.37,  190.00, 14680.0 },   /* 3.66m   大型(12ft) */
+    { 20, 4.570, 10960.0, 1.600, 0.090, 1.67,  230.00, 25040.0 },   /* 4.57m   大型(15ft) */
+    { 21, 6.100, 14450.0, 1.600, 0.090, 1.83,  310.00, 37970.0 },   /* 6.10m   大型(20ft) */
+    { 22, 7.620, 17940.0, 1.600, 0.090, 1.83,  380.00, 47160.0 },   /* 7.62m   大型(25ft,K公式推导) */
+    { 23, 9.140, 21440.0, 1.600, 0.090, 1.83,  460.00, 56330.0 },   /* 9.14m   大型(30ft) */
+    { 24, 12.19, 28430.0, 1.600, 0.090, 1.83,  600.00, 74700.0 },   /* 10.67m  大型(35ft,K公式推导) */
+    { 25, 15.24, 35410.0, 1.600, 0.090, 1.83,  750.00, 93040.0 },   /* 12.19m  大型(40ft) */
 };
 
 /**
@@ -338,7 +348,7 @@ static float flow_calc_instant(float water_level_m)
     if (cid < 1) return 0.0f;
 
     /* 按渠类型校验 channel_id 范围 */
-    if (canals_type == PARSHALL_FLUME && cid > 16) return 0.0f;
+    if (canals_type == PARSHALL_FLUME && cid > 25) return 0.0f;
     if (canals_type == TRIANGULAR_WEIR && cid > 5) return 0.0f;
     if (canals_type == RECTANGULAR_WEIR && cid > 4) return 0.0f;
 
@@ -666,7 +676,7 @@ static float get_channel_max_m3h(void)
 
     switch (canals_type) {
         case PARSHALL_FLUME:
-            if (cid > 16) return 0.0f;
+            if (cid > 25) return 0.0f;
             max_lps = parshall_flow_Ls(wl_up, &s_channel_tbl[cid - 1],
                                        0.0f, wl_up);
             break;
@@ -721,7 +731,7 @@ uint8_t flow_calc_get_default_water_level(float *up, float *down)
 
     switch (canals_type) {
         case PARSHALL_FLUME:
-            if (cid > 16) return 0;
+            if (cid > 25) return 0;
             *up = s_channel_tbl[cid - 1].water_level_up;
             *down = s_channel_tbl[cid - 1].water_level_down;
             break;
