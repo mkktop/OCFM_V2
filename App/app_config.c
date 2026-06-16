@@ -411,7 +411,7 @@ uint8_t app_config_set(config_id_t id, uint32_t value)
         case CONFIG_ID_CHANNEL_ID:  {
                 float def_up, def_down;
                 /* 通道编号上限取决于当前水渠类型 */
-                uint32_t ch_max = 16;
+                uint32_t ch_max = 25;   /* 巴歇尔槽 1-25 (1-17标准型+18-25大型) */
                 if (g_config.canals_type == 2) ch_max = 5;       /* 三角堰 */
                 else if (g_config.canals_type == 3) ch_max = 4;   /* 矩形堰 */
                 if (value > ch_max) return CONFIG_ERR_RANGE;

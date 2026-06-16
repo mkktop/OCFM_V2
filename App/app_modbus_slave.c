@@ -495,6 +495,7 @@ void app_modbus_slave_init(void)
     /* 应用EEPROM中的从机地址 */
     modbus_slave_set_id(&sensor_slave, (uint8_t)app_config_get_modbus_addr());
 
+ 
     /* 首次同步所有配置参数到寄存器 */
     app_modbus_slave_update();
 }
