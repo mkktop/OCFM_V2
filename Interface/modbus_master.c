@@ -512,19 +512,29 @@ void modbus_master_send_frame(modbus_master_t *master, uint8_t *data, uint16_t l
     HAL_UART_Transmit_DMA(master->huart, data, length);
 
     /*
-     * 步骤3：等待发送完成
+     * 步骤3：等待发送完成, 加超时兜底防异常卡死
      * 先等DMA传输完成，再等UART移位寄存器发完最后一个字节
      */
+    uint32_t tickstart = HAL_GetTick();
     while (HAL_UART_GetState(master->huart) == HAL_UART_STATE_BUSY_TX)
     {
         /* 等待DMA将所有数据写入UART TDR */
+        if ((HAL_GetTick() - tickstart) > 10U)
+        {
+            break;  /* 超时退出: UART/DMA异常时避免任务无限阻塞拖垮看门狗 */
+        }
     }
 
     /* 等待UART移位寄存器发送完成 (TC=Transmission Complete)
      * DMA完成 ≠ 发送完成，DMA完成时最后几个字节可能还在移位寄存器中
      * 必须等TC标志才能切换RS485方向，否则尾部字节会被截断 */
+    tickstart = HAL_GetTick();
     while (__HAL_UART_GET_FLAG(master->huart, UART_FLAG_TC) == RESET)
     {
+        if ((HAL_GetTick() - tickstart) > 10U)
+        {
+            break;
+        }
     }
 
     /*

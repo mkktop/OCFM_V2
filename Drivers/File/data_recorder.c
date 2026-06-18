@@ -288,7 +288,7 @@ static uint32_t query_day_file(uint16_t year, uint8_t month, uint8_t day,
 {
     char filepath[64];
     char line_buf[RECORD_LINE_MAX_LEN];
-    char chunk[64];
+    char chunk[128];   /* 必须 >= strlen(g_csv_header)(82字节): 跳过CSV头时整段读入, 避免越界写入 */
     DataRecord record;
     uint32_t count = 0;
     uint32_t bytes_read;

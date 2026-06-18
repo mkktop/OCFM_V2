@@ -6,11 +6,11 @@
 
 ## 功能特性
 
-- **多堰槽类型支持** - 巴歇尔槽（16种标准喉部宽度）、三角堰（5种标准角度）、矩形堰（4种标准宽度）
+- **多堰槽类型支持** - 巴歇尔槽（25种：17种标准型 b=0.025~2.4m + 8种大型 b=3.05~12.19m，标准 CJ/T 3008.3）、三角堰（5种标准角度，ISO 1438）、矩形堰（4种标准宽度，ISO 1438）
 - **传感器接口** - 支持雷达/超声波水位传感器，Modbus RTU 通信
 - **实时数据采集** - 水位、瞬时流量、累计流量、温度实时监测
 - **趋势图显示** - 双采样率折线图（10s / 5min），各30个数据点，Y轴自动缩放
-- **历史数据记录** - 按日期分目录 CSV 存储，支持时间范围查询与聚合统计
+- **历史数据记录** - 按日期分目录 CSV 存储，支持时间范围查询与聚合统计，默认保留 365 天（满足 HJ 15-2019 运行数据保存要求）
 - **4-20mA 电流输出** - 可配置量程，PWM 驱动 V/I 转换，支持工厂校准
 - **Modbus RTU 从机** - 标准保持寄存器映射，支持远程读写配置与数据采集
 - **多级报警** - 上限/下限/上上限/下下限四组报警，带回差设置
@@ -43,14 +43,16 @@ OCFM_V2/
 │   ├── Inc/rtc_time.h       # 统一 RTC 时间 API
 │   └── Src/                 # 外设初始化 (main.c, freertos.c)
 ├── App/                     # 应用层
-│   ├── ui/                  # LVGL UI (Tileview主屏、三级设置菜单、趋势图)
+│   ├── ui/                  # LVGL UI (Tileview主屏、三级设置菜单、趋势图、历史查询、多语言)
 │   ├── app_model.c/h        # 数据模型 (MVVM, Observer模式)
-│   ├── app_config.c/h       # 系统配置 (EEPROM, getter/setter)
-│   ├── app_flow_calc.c/h    # 流量计算 (堰槽公式, 累计流量)
-│   ├── app_sensor.c/h       # 传感器应用层 (Modbus主机封装)
+│   ├── app_config.c/h       # 系统配置 (EEPROM, getter/setter, 3秒延迟保存)
+│   ├── app_flow_calc.c/h    # 流量计算 (堰槽公式, 累计流量双层持久化)
+│   ├── app_sensor.c/h       # 传感器应用层 (Modbus主机封装, 首次上线自动同步)
 │   ├── app_modbus_slave.c/h # Modbus从机 (寄存器映射, 写回调)
-│   ├── app_button.c/h       # 按键处理
-│   └── app_log.c/h          # 日志初始化
+│   ├── app_alarm.c/h        # 报警滞回逻辑 (4级报警驱动4路继电器)
+│   ├── app_current.c/h      # 4-20mA电流输出 (PWM → V/I转换, 工厂校准)
+│   ├── app_button.c/h       # 按键处理 (按活动屏分发)
+│   └── app_log.c/h          # 日志初始化与SD卡清除
 ├── Drivers/
 │   ├── AT24C02/             # EEPROM 驱动
 │   ├── Button/              # 按键驱动 (消抖/长按)
@@ -91,9 +93,11 @@ OCFM_V2/
 
 ## 流量计算公式
 
-- **巴歇尔槽 (Parshall Flume)** — Q = K x H^n（16种标准喉部宽度）
-- **三角堰 (Triangular Weir)** — Q = K x H^2.5（90°/60°/45°/30°/22.5°）
-- **矩形堰 (Rectangular Weir)** — Q = K x b x H^1.5（0.5/1.0/1.5/2.0m）
+- **巴歇尔槽 (Parshall Flume)** — Q = K × H^n（25种标准规格，标准 CJ/T 3008.3）
+- **三角堰 (Triangular Weir)** — Q = K × (H+Kh)^2.5（90°/60°/45°/30°/22.5°，Kindsvater-Shen 方法，ISO 1438）
+- **矩形堰 (Rectangular Weir)** — Q = K × b_eff × (H+Kh)^1.5（0.5/1.0/1.5/2.0m，Francis 公式 + 侧收缩修正，ISO 1438）
+
+> 公式系数表、推导、标准出处与 HJ 15-2019 合规验证详见 [Doc/流量计算公式与标准说明.md](Doc/流量计算公式与标准说明.md)。
 
 支持流量单位：L/s、L/min、L/h、m³/h、m³/s、m³/min、T/h、G/h
 
@@ -107,9 +111,11 @@ OCFM_V2/
 | 0x0004-0x0005 | REG_INSTANT_FLOW | float | 瞬时流量 |
 | 0x0006-0x0009 | REG_SUM_FLOW | double | 累计流量 |
 | 0x000A-0x000D | 继电器状态 | uint16 x4 | 继电器 1-4 |
-| 0x000E-0x0018 | 报警值 | float x6 | 上限/下限/上上限/下下限及回差 |
-| 0x0065-0x006F | 传感器参数 | uint16 | 量程、高度、滤波等 |
-| 0x0101-0x010C | 从机参数 | uint16/float | 渠道类型、流量单位、4-20mA量程、渠宽、堰高、水位上下限 |
+| 0x000E-0x0019 | 报警值 | float | 上限/下限/上上限/下下限及回差 (DH/DL) |
+| 0x001A-0x001B | REG_TOTAL_TIME | uint32 | 累计计量时间 (秒)，与累计流量配对 |
+| 0x0065-0x006F | 传感器参数 | uint16 | 量程、高度、滤波、地址、波特率等 |
+| 0x0101-0x010D | 从机参数 | uint16/float | 渠道类型、流量单位、4-20mA量程、渠宽、堰高、水位上下限 |
+| 0x1001-0x1006 | 工厂校准 | uint16 | 天线类型、距离偏移、4/20mA校准、恢复出厂、清除累计 |
 | 0x0200-0x0206 | RTC 时间 | uint16 | 年月日时分秒星期 |
 
 ## 构建与烧录
@@ -117,6 +123,18 @@ OCFM_V2/
 1. 打开 Keil 工程文件 `MDK-ARM/OCFM_V2.uvprojx`
 2. 编译: `Project -> Build Target` (F7)
 3. 下载: `Flash -> Download` (F8)
+
+> 硬件外设、引脚、时钟树配置通过 CubeMX 打开 `OCFM_V2.ioc` 修改后重新生成，请勿手动改动 HAL 初始化代码。
+
+## 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| [CLAUDE.md](CLAUDE.md) | 项目开发指南（架构、规范、模块设计决策） |
+| [Doc/流量计算公式与标准说明.md](Doc/流量计算公式与标准说明.md) | 堰槽公式系数表、推导、标准出处、HJ 15-2019 合规 |
+| [Doc/数据记录CSV与报警标志说明.md](Doc/数据记录CSV与报警标志说明.md) | CSV 记录字段格式与报警标志位定义 |
+| [Docs/Modbus寄存器表.md](Docs/Modbus寄存器表.md) | Modbus 寄存器完整映射表 |
+| [Doc/](Doc/) | 硬件原理图 (.SchDoc)、PCB 文件、行业标准与技术规范 |
 
 ## UI 交互
 

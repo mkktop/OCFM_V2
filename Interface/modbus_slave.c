@@ -379,6 +379,25 @@ uint16_t modbus_slave_process(modbus_slave_t *slave, uint8_t *data, uint16_t len
             /* 写多个寄存器 (0x10) */
             uint16_t start_addr = (data[2] << 8) | data[3];
             uint16_t quantity = (data[4] << 8) | data[5];
+
+            /*
+             * 帧完整性校验 (防越界读 rx_buffer):
+             * 0x10请求帧 = 地址(1)+功能码(1)+起始地址(2)+数量(2)+字节数(1)
+             *              +数据(quantity*2)+CRC(2), 最小9字节
+             * 必须校验 byte_count(data[6]) == quantity*2 且帧长足以容纳数据+CRC,
+             * 否则恶意/畸形帧(quantity大但实际数据短)会让 write_multiple_registers
+             * 内部循环从 &data[7] 起越界读取 rx_buffer 之外的内存。
+             * 用32位比较防止 quantity*2 截断成uint8_t后误判。
+             */
+            if (length < 9 ||
+                (uint32_t)quantity * 2u != (uint32_t)data[6] ||
+                length < (uint16_t)(7u + (uint32_t)data[6] + 2u))
+            {
+                return modbus_slave_build_exception(slave, function_code,
+                                                     MODBUS_EX_ILLEGAL_DATA_VALUE,
+                                                     slave->tx_buffer);
+            }
+
             return modbus_slave_write_multiple_registers(slave, start_addr, quantity, &data[7], slave->tx_buffer);
         }
         
