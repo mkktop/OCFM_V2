@@ -136,8 +136,8 @@ static const Water_Channel s_channel_tbl[25] = {
     { 21, 6.100, 14450.0, 1.600, 0.090, 1.83,  310.00, 37970.0 },   /* 6.10m   大型(20ft) */
     { 22, 7.620, 17940.0, 1.600, 0.090, 1.83,  380.00, 47160.0 },   /* 7.62m   大型(25ft,K公式推导) */
     { 23, 9.140, 21440.0, 1.600, 0.090, 1.83,  460.00, 56330.0 },   /* 9.14m   大型(30ft) */
-    { 24, 12.19, 28430.0, 1.600, 0.090, 1.83,  600.00, 74700.0 },   /* 10.67m  大型(35ft,K公式推导) */
-    { 25, 15.24, 35410.0, 1.600, 0.090, 1.83,  750.00, 93040.0 },   /* 12.19m  大型(40ft) */
+    { 24, 12.19, 28430.0, 1.600, 0.090, 1.83,  600.00, 74700.0 },   /* 12.19m  大型(40ft,K公式推导) */
+    { 25, 15.24, 35410.0, 1.600, 0.090, 1.83,  750.00, 93040.0 },   /* 15.24m  大型(50ft) */
 };
 
 /**
@@ -279,20 +279,109 @@ static float triangular_weir_flow_Ls(float water_level_m, const TriangularWeir_t
 }
 
 /**
- * @brief  计算矩形堰瞬时流量 (Francis公式 + Kh修正)
+ * @brief  矩形堰 Kindsvater-Carter 收缩流量系数 Ce (ISO 1438-1 Figure 5)
+ * @param  bB: 堰宽/渠宽比 b/B (0.2~1.0)
+ * @param  hP: 水头/堰高比 h/P
+ * @retval 流量系数 Ce (无量纲)
+ * @note   按 b/B 分段(0.2~1.0 共9档) + h/P 线性插值查表
+ *         表值取自 ISO 1438-1:2008 Figure 5 (Kindsvater-Carter 方法)
+ *         不确定度: h/P<1.0 时 <=1.5%
+ */
+static float rect_weir_Ce(float bB, float hP)
+{
+    /* b/B = 1.0, 0.9, 0.8, ..., 0.2 共9档, 每档 h/P = 0.1,0.2,...,1.0 共8点 */
+    static const float ce_tbl[9][8] = {
+        /* h/P:  0.1    0.2    0.3    0.4    0.5    0.6    0.8    1.0  */
+        /*1.0*/{0.610f,0.619f,0.627f,0.636f,0.644f,0.652f,0.669f,0.685f},
+        /*0.9*/{0.609f,0.617f,0.626f,0.634f,0.642f,0.651f,0.668f,0.684f},
+        /*0.8*/{0.608f,0.616f,0.624f,0.633f,0.641f,0.649f,0.666f,0.682f},
+        /*0.7*/{0.606f,0.614f,0.623f,0.631f,0.639f,0.648f,0.664f,0.680f},
+        /*0.6*/{0.603f,0.612f,0.620f,0.629f,0.637f,0.646f,0.662f,0.678f},
+        /*0.5*/{0.600f,0.609f,0.617f,0.626f,0.634f,0.643f,0.659f,0.675f},
+        /*0.4*/{0.596f,0.605f,0.613f,0.622f,0.630f,0.639f,0.655f,0.671f},
+        /*0.3*/{0.590f,0.599f,0.608f,0.616f,0.625f,0.633f,0.650f,0.666f},
+        /*0.2*/{0.583f,0.592f,0.601f,0.609f,0.618f,0.626f,0.643f,0.659f},
+    };
+    int i_bB, i_hP;
+    float Ce_lo, Ce_hi, w;
+
+    if (bB > 1.0f) bB = 1.0f;            /* b/B 上限 1.0 (全宽堰) */
+    if (bB < 0.2f) bB = 0.2f;            /* b/B 下限 0.2 (强收缩) */
+    if (hP < 0.0f) hP = 0.0f;
+    if (hP > 1.0f) hP = 1.0f;            /* KC 表适用 h/P<=1.0, 超出按1.0 */
+
+    /* b/B 插值索引: 1.0->0, 0.9->1, ..., 0.2->8 (步长0.1) */
+    {
+        float fidx = (1.0f - bB) * 10.0f;
+        i_bB = (int)fidx;
+        if (i_bB > 7) i_bB = 7;          /* 保证 i_bB+1 不越界 */
+        w = fidx - i_bB;
+    }
+    /* h/P 插值索引: 0.1->0, 0.2->1, ..., 0.8->6, 1.0->7 (非均匀: 0.6->0.8 跨0.2) */
+    /* 简化: h/P<=0.6 用步长0.1, 0.6~0.8 跨0.2, 0.8~1.0 跨0.2 */
+    {
+        static const float hP_axis[8] = {0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.8f,1.0f};
+        i_hP = 0;
+        while (i_hP < 7 && hP > hP_axis[i_hP + 1]) i_hP++;
+    }
+
+    /* 双线性插值 (b/B, h/P) */
+    {
+        float Ce00 = ce_tbl[i_bB][i_hP];
+        float Ce10 = ce_tbl[i_bB + 1][i_hP];
+        float Ce01 = ce_tbl[i_bB][i_hP + 1];
+        float Ce11 = ce_tbl[i_bB + 1][i_hP + 1];
+        float hP_lo = (i_hP < 6) ? (0.1f * (i_hP + 1)) : 0.8f;
+        float hP_hi = hP_axis[i_hP + 1];
+        float wh = (hP - hP_lo) / (hP_hi - hP_lo);
+        if (wh < 0.0f) wh = 0.0f;
+        if (wh > 1.0f) wh = 1.0f;
+        float Ce_b_lo = Ce00 + w * (Ce10 - Ce00);
+        float Ce_b_hi = Ce01 + w * (Ce11 - Ce01);
+        return Ce_b_lo + wh * (Ce_b_hi - Ce_b_lo);
+    }
+}
+
+/**
+ * @brief  矩形堰 Kindsvater-Carter 宽度修正 Kb (ISO 1438-1 Figure 6)
+ * @param  bB: 堰宽/渠宽比 b/B (0.2~1.0)
+ * @retval 宽度修正 Kb (m), 全宽堰(b/B=1)返回0
+ */
+static float rect_weir_Kb(float bB)
+{
+    static const float kb_tbl[9] = {
+        /* b/B: 1.0  0.9   0.8   0.7   0.6   0.5   0.4   0.3   0.2  */
+              0.0f,0.0018f,0.0022f,0.0024f,0.0026f,0.0028f,0.0030f,0.0032f,0.0034f
+    };
+    int idx;
+    if (bB > 1.0f) bB = 1.0f;
+    if (bB < 0.2f) bB = 0.2f;
+    idx = (int)((1.0f - bB) * 10.0f + 0.5f);   /* 四舍五入到最近档 */
+    if (idx > 8) idx = 8;
+    return kb_tbl[idx];
+}
+
+/**
+ * @brief  计算矩形堰瞬时流量 (Kindsvater-Carter 方法, ISO 1438-1)
  * @param  water_level_m: 水位 (米)
  * @param  weir: 矩形堰参数指针
  * @param  wl_down: 用户配置的水位下限 (m)
  * @param  wl_up: 用户配置的水位上限 (m)
  * @retval 瞬时流量 (L/s)，水位无效时返回0
- * @note   公式: Q = K * b * (H + Kh)^n (无侧收缩/全宽堰)
- *         超量程时限制在最大值
+ * @note   公式: Q = Ce * (2/3) * sqrt(2g) * be * he^1.5
+ *         he = H + Kh (Kh=0.001m 有效水头)
+ *         全宽堰(B=0或B<=b): be=b, Ce=0.602+0.083*(H/P)
+ *         收缩堰(B>b):       be=b+Kb, Ce 按 b/B,h/P 查 ISO Figure 5
+ *         需堰高 P(weir_height) 配置; P=0 或 h/P>1.0 时回退到 Francis 固定系数
+ *         (ISO KC 法适用范围: h/P<=1.0, P>=0.1m, h>=0.03m)
+ *         超量程时钳位到上限计算
  */
 static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir_t *weir,
                                       float wl_down, float wl_up)
 {
     float Q = 0.0f;
     float he, effective_width;
+    float use_kc;   /* 1=Kindsvater-Carter, 0=Francis回退 */
 
     if (weir == NULL) {
         return 0.0f;
@@ -300,31 +389,58 @@ static float rectangular_weir_flow_Ls(float water_level_m, const RectangularWeir
 
     float B = app_config_get_channel_width() / 1000.0f;
     float b = weir->width;
+    float P = app_config_get_weir_height() / 1000.0f;   /* 堰高(m), 0=未配置 */
+    int   contracted = (B > 0.0f && b < B);             /* 是否收缩堰 */
 
-    /* 水位高于上限: 钳位到上限计算 */
+    /* 选定计算用水位 h: 超上限钳位, 低于下限返回0 */
     if (water_level_m > wl_up) {
-        he = wl_up + weir->kh;
-        if (B > 0.0f && b < B) {
-            effective_width = b - 0.2f * wl_up;
-            if (effective_width < 0.0f) effective_width = 0.0f;
+        water_level_m = wl_up;
+    } else if (water_level_m < wl_down - 0.0001f) {
+        return 0.0f;
+    }
+    /* 浮点容差区间内正常计算 */
+
+    /* KC 法启用条件: 配置了堰高 P 且 h/P<=1.0 (ISO 适用范围)
+     * P=0(未配置) 或 h/P>1.0(超范围) 时回退 Francis 固定系数,
+     * 避免 KC 外推失真 */
+    use_kc = (P > 0.0f && (water_level_m / P) <= 1.0f) ? 1.0f : 0.0f;
+
+    he = water_level_m + weir->kh;
+
+    /* ---- 有效宽度 be ---- */
+    if (use_kc) {
+        if (contracted) {
+            float bB = b / B;
+            effective_width = b + rect_weir_Kb(bB);
         } else {
-            effective_width = b;
+            effective_width = b;      /* 全宽堰 be=b, Kb=0 */
         }
-        Q = weir->factor * effective_width * powf(he, weir->n);
-    }
-    /* 水位低于下限 (扣除 0.1mm 容差，防止浮点精度边界误判) */
-    else if (water_level_m < wl_down - 0.0001f) {
-        Q = 0.0f;
-    }
-    /* 水位在有效范围内 (含浮点容差区间) */
-    else {
-        he = water_level_m + weir->kh;
-        if (B > 0.0f && b < B) {
+    } else {
+        /* Francis 回退: 收缩堰 b-0.2H */
+        if (contracted) {
             effective_width = b - 0.2f * water_level_m;
             if (effective_width < 0.0f) effective_width = 0.0f;
         } else {
             effective_width = b;
         }
+    }
+
+    /* ---- 流量 ---- */
+    if (use_kc) {
+        /* Q = Ce * (2/3)*sqrt(2g)*1000 * be * he^1.5, base≈2952.46 */
+        const float kc_base = 2952.46f;
+        float Ce;
+        float hP = water_level_m / P;
+        if (contracted) {
+            float bB = b / B;
+            Ce = rect_weir_Ce(bB, hP);   /* 此处 hP<=1.0 由启用条件保证 */
+        } else {
+            /* 全宽堰 Ce = 0.602 + 0.083*(h/P) (ISO 1438-1) */
+            Ce = 0.602f + 0.083f * hP;
+        }
+        Q = Ce * kc_base * effective_width * powf(he, 1.5f);
+    } else {
+        /* Francis 回退: K=1838 */
         Q = weir->factor * effective_width * powf(he, weir->n);
     }
 
