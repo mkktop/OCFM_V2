@@ -20,6 +20,7 @@
 typedef struct {
     uint16_t reg_addr;   /**< Modbus寄存器地址 */
     uint8_t  index;      /**< 紧凑数组索引 */
+    uint8_t  writable;   /**< 1=可写(0x06/0x10允许), 0=只读 */
 } reg_map_t;
 
 /**
@@ -28,78 +29,80 @@ typedef struct {
  *       表项按reg_addr升序排列，用于二分查找
  */
 static const reg_map_t reg_map[] = {
-    /* 传感器数据区 (0x0001-0x000D) */
-    {REG_WUWEI,            0},
-    {REG_DISTANCE,         1},
-    {REG_TEMPERATURE,      2},
-    {REG_INSTANT_FLOW,     3},   /* float 占2个索引: 3,4 */
-    {0x0005,               4},   /* 瞬时流量低字 */
-    {REG_SUM_FLOW,         5},   /* double 占4个索引: 5,6,7,8 */
-    {0x0007,               6},   /* 累计流量字2 */
-    {0x0008,               7},   /* 累计流量字3 */
-    {0x0009,               8},   /* 累计流量字4 */
-    {REG_RELAY1_STATUS,    9},
-    {REG_RELAY2_STATUS,    10},
-    {REG_RELAY3_STATUS,    11},
-    {REG_RELAY4_STATUS,    12},
-    /* 报警值区 (0x000E-0x0019) */
-    {REG_AH,               13},  /* float 占2个: 13,14 */
-    {0x000F,               14},  /* AH低字 */
-    {REG_DH,               15},  /* float 占2个: 15,16 */
-    {0x0011,               16},  /* DH低字 */
-    {REG_AL,               17},  /* float 占2个: 17,18 */
-    {0x0013,               18},  /* AL低字 */
-    {REG_DL,               19},  /* float 占2个: 19,20 */
-    {0x0015,               20},  /* DL低字 */
-    {REG_AAH,              21},  /* float 占2个: 21,22 */
-    {0x0017,               22},  /* AAH低字 */
-    {REG_AAL,              23},  /* float 占2个: 23,24 */
-    {0x0019,               24},  /* AAL低字 */
-    /* 累计计量时间区 (0x001A-0x001B, uint32 只读输出) */
-    {REG_TOTAL_TIME,       63},  /* 累计计量时间(秒) 占2个: 63,64 */
-    {0x001B,               64},  /* 累计计量时间低字 */
-    /* 传感器参数区 (0x0065-0x006F) */
-    {REG_RANGE_MAX,        25},
-    {REG_HEIGHT,           26},
-    {REG_L1,               27},
-    {REG_L2,               28},
-    {REG_L3,               29},
-    {REG_L4,               30},
-    {REG_L5,               31},
-    {REG_L6,               32},
-    {REG_ADDRESS,          33},
-    {REG_BAUDE_RATE,       34},
-    {REG_STOP_BITS,        35},
-    /* 从机参数区 (0x0101-0x0108) */
-    {REG_CANALS__TYPE,     36},
-    {REG_CHANNEL_ID,       37},
-    {REG_INSTANT_UNIT,     38},
-    {REG_SUM_POINT,        39},
-    {REG_RANGE_4MA,        40},  /* float 占2个: 40,41 */
-    {0x0106,               41},  /* 4mA量程低字 */
-    {REG_RANGE_20MA,       42},  /* float 占2个: 42,43 */
-    {0x0108,               43},  /* 20mA量程低字 */
-    {REG_CHANNEL_WIDTH,    57},
-    {REG_WEIR_HEIGHT,      58},
-    {REG_WATER_LEVEL_UP,   59},  /* float 占2个: 59,60 */
-    {0x010C,               60},  /* 水位上限低字 */
-    {REG_WATER_LEVEL_DOWN, 61},  /* float 占2个: 61,62 */
-    {0x010E,               62},  /* 水位下限低字 */
-    /* RTC时间设置区 (0x0200-0x0206) */
-    {REG_RTC_YEAR,         50},
-    {REG_RTC_MONTH,        51},
-    {REG_RTC_DAY,          52},
-    {REG_RTC_HOUR,         53},
-    {REG_RTC_MINUTE,       54},
-    {REG_RTC_SECOND,       55},
-    {REG_RTC_WEEKDAY,      56},
-    /* 出厂校准区 (0x1001-0x1006) */
-    {REG_ANTENNA_TYPE,     44},
-    {REG_DIS_OFFSET,       45},
-    {REG_CALIBRATION_4MA,  46},
-    {REG_CALIBRATION_20MA, 47},
-    {REG_FACTORY_SETTING,  48},
-    {REG_CLEAR_TOTAL,      49},
+    /* 传感器实时数据区 (0x0001-0x0005): 只读 */
+    {REG_WUWEI,            0, 0},
+    {REG_DISTANCE,         1, 0},
+    {REG_TEMPERATURE,      2, 0},
+    {REG_INSTANT_FLOW,     3, 0},   /* float 占2个索引: 3,4 (只读实时) */
+    {0x0005,               4, 0},   /* 瞬时流量低字 (只读) */
+    /* 累计流量区 (0x0006-0x0009): 可写 (主站可设基准值) */
+    {REG_SUM_FLOW,         5, 1},   /* double 占4个索引: 5,6,7,8 */
+    {0x0007,               6, 1},   /* 累计流量字2 */
+    {0x0008,               7, 1},   /* 累计流量字3 */
+    {0x0009,               8, 1},   /* 累计流量字4 */
+    /* 继电器状态区 (0x000A-0x000D): 只读 (GPIO读回) */
+    {REG_RELAY1_STATUS,    9,  0},
+    {REG_RELAY2_STATUS,    10, 0},
+    {REG_RELAY3_STATUS,    11, 0},
+    {REG_RELAY4_STATUS,    12, 0},
+    /* 报警值区 (0x000E-0x0019): 可写 */
+    {REG_AH,               13, 1},  /* float 占2个: 13,14 */
+    {0x000F,               14, 1},  /* AH低字 */
+    {REG_DH,               15, 1},  /* float 占2个: 15,16 */
+    {0x0011,               16, 1},  /* DH低字 */
+    {REG_AL,               17, 1},  /* float 占2个: 17,18 */
+    {0x0013,               18, 1},  /* AL低字 */
+    {REG_DL,               19, 1},  /* float 占2个: 19,20 */
+    {0x0015,               20, 1},  /* DL低字 */
+    {REG_AAH,              21, 1},  /* float 占2个: 21,22 */
+    {0x0017,               22, 1},  /* AAH低字 */
+    {REG_AAL,              23, 1},  /* float 占2个: 23,24 */
+    {0x0019,               24, 1},  /* AAL低字 */
+    /* 累计计量时间区 (0x001A-0x001B, uint32): 只读输出 */
+    {REG_TOTAL_TIME,       63, 0},  /* 累计计量时间(秒) 占2个: 63,64 */
+    {0x001B,               64, 0},  /* 累计计量时间低字 */
+    /* 传感器参数区 (0x0065-0x006F): 可写 */
+    {REG_RANGE_MAX,        25, 1},
+    {REG_HEIGHT,           26, 1},
+    {REG_L1,               27, 1},
+    {REG_L2,               28, 1},
+    {REG_L3,               29, 1},
+    {REG_L4,               30, 1},
+    {REG_L5,               31, 1},
+    {REG_L6,               32, 1},
+    {REG_ADDRESS,          33, 1},
+    {REG_BAUDE_RATE,       34, 1},
+    {REG_STOP_BITS,        35, 1},
+    /* 从机参数区 (0x0101-0x010E): 可写 */
+    {REG_CANALS__TYPE,     36, 1},
+    {REG_CHANNEL_ID,       37, 1},
+    {REG_INSTANT_UNIT,     38, 1},
+    {REG_SUM_POINT,        39, 1},
+    {REG_RANGE_4MA,        40, 1},  /* float 占2个: 40,41 */
+    {0x0106,               41, 1},  /* 4mA量程低字 */
+    {REG_RANGE_20MA,       42, 1},  /* float 占2个: 42,43 */
+    {0x0108,               43, 1},  /* 20mA量程低字 */
+    {REG_CHANNEL_WIDTH,    57, 1},
+    {REG_WEIR_HEIGHT,      58, 1},
+    {REG_WATER_LEVEL_UP,   59, 1},  /* float 占2个: 59,60 */
+    {0x010C,               60, 1},  /* 水位上限低字 */
+    {REG_WATER_LEVEL_DOWN, 61, 1},  /* float 占2个: 61,62 */
+    {0x010E,               62, 1},  /* 水位下限低字 */
+    /* RTC时间设置区 (0x0200-0x0206): 可写 */
+    {REG_RTC_YEAR,         50, 1},
+    {REG_RTC_MONTH,        51, 1},
+    {REG_RTC_DAY,          52, 1},
+    {REG_RTC_HOUR,         53, 1},
+    {REG_RTC_MINUTE,       54, 1},
+    {REG_RTC_SECOND,       55, 1},
+    {REG_RTC_WEEKDAY,      56, 1},
+    /* 出厂校准区 (0x1001-0x1006): 可写 */
+    {REG_ANTENNA_TYPE,     44, 1},
+    {REG_DIS_OFFSET,       45, 1},
+    {REG_CALIBRATION_4MA,  46, 1},
+    {REG_CALIBRATION_20MA, 47, 1},
+    {REG_FACTORY_SETTING,  48, 1},
+    {REG_CLEAR_TOTAL,      49, 1},
 };
 
 #define REG_MAP_SIZE    (sizeof(reg_map) / sizeof(reg_map[0]))
@@ -112,12 +115,11 @@ static const reg_map_t reg_map[] = {
 static uint16_t holding_registers[REG_ARRAY_SIZE];
 
 /**
- * @brief Modbus地址转数组索引 (二分查找)
+ * @brief Modbus地址转映射表项 (二分查找)
  * @param addr Modbus寄存器地址
- * @return 数组索引，-1表示未找到
- * @note 只返回起始地址的索引，后续寄存器索引为+1/+2/+3
+ * @return 表项指针, NULL表示未找到
  */
-static int16_t reg_addr_to_index(uint16_t addr)
+static const reg_map_t *reg_addr_to_entry(uint16_t addr)
 {
     int16_t left = 0;
     int16_t right = REG_MAP_SIZE - 1;
@@ -127,7 +129,7 @@ static int16_t reg_addr_to_index(uint16_t addr)
         int16_t mid = (left + right) / 2;
         if (reg_map[mid].reg_addr == addr)
         {
-            return reg_map[mid].index;
+            return &reg_map[mid];
         }
         else if (reg_map[mid].reg_addr < addr)
         {
@@ -138,7 +140,31 @@ static int16_t reg_addr_to_index(uint16_t addr)
             right = mid - 1;
         }
     }
-    return -1;
+    return NULL;
+}
+
+/**
+ * @brief Modbus地址转数组索引 (二分查找)
+ * @param addr Modbus寄存器地址
+ * @return 数组索引，-1表示未找到
+ * @note 只返回起始地址的索引，后续寄存器索引为+1/+2/+3
+ */
+static int16_t reg_addr_to_index(uint16_t addr)
+{
+    const reg_map_t *e = reg_addr_to_entry(addr);
+    return (e != NULL) ? e->index : -1;
+}
+
+/**
+ * @brief 查询寄存器地址是否可写
+ * @param addr Modbus寄存器地址
+ * @retval 1 可写 (0x06/0x10 允许写入)
+ * @retval 0 只读或未映射 (写入应返回 ILLEGAL_DATA_ADDR)
+ */
+uint8_t modbus_slave_addr_writable(uint16_t addr)
+{
+    const reg_map_t *e = reg_addr_to_entry(addr);
+    return (e != NULL) ? e->writable : 0;
 }
 
 /**
@@ -477,6 +503,13 @@ uint16_t modbus_slave_write_single_register(modbus_slave_t *slave,
                                              MODBUS_EX_ILLEGAL_DATA_ADDR, response);
     }
 
+    /* 只读寄存器拒绝写入 (Modbus标准: 返回非法数据地址) */
+    if (!modbus_slave_addr_writable(register_addr))
+    {
+        return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_SINGLE_REG,
+                                             MODBUS_EX_ILLEGAL_DATA_ADDR, response);
+    }
+
     /* 写入寄存器 */
     holding_registers[idx] = value;
 
@@ -530,6 +563,16 @@ uint16_t modbus_slave_write_multiple_registers(modbus_slave_t *slave,
     {
         return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG,
                                              MODBUS_EX_ILLEGAL_DATA_ADDR, response);
+    }
+
+    /* 预扫描整个写入范围: 任一只读/未映射地址则整体拒绝 (原子语义, 不部分写入) */
+    for (uint16_t i = 0; i < quantity; i++)
+    {
+        if (!modbus_slave_addr_writable((uint16_t)(start_addr + i)))
+        {
+            return modbus_slave_build_exception(slave, MODBUS_FUNC_WRITE_MULTIPLE_REG,
+                                                 MODBUS_EX_ILLEGAL_DATA_ADDR, response);
+        }
     }
 
     /* 写入寄存器 (逐个映射) */

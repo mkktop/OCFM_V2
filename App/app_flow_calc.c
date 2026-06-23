@@ -302,8 +302,9 @@ static float rect_weir_Ce(float bB, float hP)
         /*0.3*/{0.590f,0.599f,0.608f,0.616f,0.625f,0.633f,0.650f,0.666f},
         /*0.2*/{0.583f,0.592f,0.601f,0.609f,0.618f,0.626f,0.643f,0.659f},
     };
+    static const float hP_axis[8] = {0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.8f,1.0f};
     int i_bB, i_hP;
-    float Ce_lo, Ce_hi, w;
+    float w;
 
     if (bB > 1.0f) bB = 1.0f;            /* b/B 上限 1.0 (全宽堰) */
     if (bB < 0.2f) bB = 0.2f;            /* b/B 下限 0.2 (强收缩) */
@@ -320,7 +321,6 @@ static float rect_weir_Ce(float bB, float hP)
     /* h/P 插值索引: 0.1->0, 0.2->1, ..., 0.8->6, 1.0->7 (非均匀: 0.6->0.8 跨0.2) */
     /* 简化: h/P<=0.6 用步长0.1, 0.6~0.8 跨0.2, 0.8~1.0 跨0.2 */
     {
-        static const float hP_axis[8] = {0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.8f,1.0f};
         i_hP = 0;
         while (i_hP < 7 && hP > hP_axis[i_hP + 1]) i_hP++;
     }
@@ -331,7 +331,7 @@ static float rect_weir_Ce(float bB, float hP)
         float Ce10 = ce_tbl[i_bB + 1][i_hP];
         float Ce01 = ce_tbl[i_bB][i_hP + 1];
         float Ce11 = ce_tbl[i_bB + 1][i_hP + 1];
-        float hP_lo = (i_hP < 6) ? (0.1f * (i_hP + 1)) : 0.8f;
+        float hP_lo = hP_axis[i_hP];
         float hP_hi = hP_axis[i_hP + 1];
         float wh = (hP - hP_lo) / (hP_hi - hP_lo);
         if (wh < 0.0f) wh = 0.0f;

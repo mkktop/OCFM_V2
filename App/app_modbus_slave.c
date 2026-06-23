@@ -47,7 +47,6 @@ static uint8_t is_float_register(uint16_t addr)
 {
     switch (addr)
     {
-        case REG_INSTANT_FLOW:
         case REG_AH:
         case REG_DH:
         case REG_AL:
@@ -139,100 +138,102 @@ static void apply_uint16_config_register(uint16_t reg_addr)
 }
 
 /**
- * @brief 写入回调：处理主站对寄存器的写入
+ * @brief 应用RTC时间设置 (整组校验后写入RTC)
+ * @note 读取 0x0200-0x0206 全部7个寄存器, 校验合法后更新RTC, 失败则丢弃
+ */
+static void apply_rtc_group(void)
+{
+    uint16_t year    = modbus_slave_get_holding_register(REG_RTC_YEAR);
+    uint16_t month   = modbus_slave_get_holding_register(REG_RTC_MONTH);
+    uint16_t day     = modbus_slave_get_holding_register(REG_RTC_DAY);
+    uint16_t hour    = modbus_slave_get_holding_register(REG_RTC_HOUR);
+    uint16_t minute  = modbus_slave_get_holding_register(REG_RTC_MINUTE);
+    uint16_t second  = modbus_slave_get_holding_register(REG_RTC_SECOND);
+    uint16_t weekday = modbus_slave_get_holding_register(REG_RTC_WEEKDAY);
+
+    /* 校验范围 (含月天数合法性; month>12 时防 days_in_month[] 越界读) */
+    static const uint8_t days_in_month[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
+    uint8_t max_day = (month < 13u) ? days_in_month[month] : 0;
+    if (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)))
+        max_day = 29;
+    if (!(year >= 2000 && year <= 2099 &&
+          month >= 1 && month <= 12 &&
+          day >= 1 && day <= max_day &&
+          hour <= 23 && minute <= 59 && second <= 59 &&
+          weekday >= 1 && weekday <= 7))
+        return;
+
+    RTC_Time_SetValues(year, (uint8_t)month, (uint8_t)day,
+                       (uint8_t)hour, (uint8_t)minute, (uint8_t)second,
+                       (uint8_t)(weekday % 7 + 1));
+    char rtc_buf[48];
+    snprintf(rtc_buf, sizeof(rtc_buf), "SET RTC %04u-%02u-%02u %02u:%02u:%02u",
+             year, month, day, hour, minute, second);
+    app_log_send(LOG_TYPE_USER, rtc_buf);
+}
+
+/**
+ * @brief 写入回调：处理主站对寄存器的写入 (支持 0x06 单写 / 0x10 连写)
  * @param start_addr 起始寄存器地址
  * @param quantity 写入的寄存器数量
- * @note 每次写入操作(0x06/0x10)只触发一次
+ * @note 每次写入操作(0x06/0x10)只触发一次回调。遍历 [start_addr, end_addr]
+ *       逐个应用, 连写多个参数都会生效。
+ *       只读寄存器已由协议层 (modbus_slave_addr_writable) 拦截, 不会进入此处。
+ *       持久化为3秒去抖, 遍历内多次 set/setf 合并为1次EEPROM写。
  */
 void app_modbus_slave_on_write(uint16_t start_addr, uint16_t quantity)
 {
+    uint16_t addr = start_addr;
     uint16_t end_addr;
 
-    if (quantity == 0) {
+    if (quantity == 0 || quantity > 123) {
         return;
     }
+    end_addr = (uint16_t)(start_addr + quantity - 1);
 
-    end_addr = start_addr + quantity - 1;
-    /* 继电器状态寄存器 (0x000A-0x000D) 为只读，不允许写入 */
-
-    /* RTC时间设置寄存器 (0x0200-0x0206): 任意一个写入后立即更新RTC */
-    if (start_addr >= REG_RTC_YEAR && start_addr <= REG_RTC_WEEKDAY)
+    while (addr <= end_addr)
     {
-        uint16_t year    = modbus_slave_get_holding_register(REG_RTC_YEAR);
-        uint16_t month   = modbus_slave_get_holding_register(REG_RTC_MONTH);
-        uint16_t day     = modbus_slave_get_holding_register(REG_RTC_DAY);
-        uint16_t hour    = modbus_slave_get_holding_register(REG_RTC_HOUR);
-        uint16_t minute  = modbus_slave_get_holding_register(REG_RTC_MINUTE);
-        uint16_t second  = modbus_slave_get_holding_register(REG_RTC_SECOND);
-        uint16_t weekday = modbus_slave_get_holding_register(REG_RTC_WEEKDAY);
-
-        /* 校验范围 (含月天数合法性) */
+        /* RTC时间设置区 (0x0200-0x0206): 整组读取校验后更新RTC, 跳出该区 */
+        if (addr >= REG_RTC_YEAR && addr <= REG_RTC_WEEKDAY)
         {
-            static const uint8_t days_in_month[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
-            uint8_t max_day = days_in_month[month];
-            if (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)))
-                max_day = 29;
-            if (!(year >= 2000 && year <= 2099 &&
-                  month >= 1 && month <= 12 &&
-                  day >= 1 && day <= max_day &&
-                  hour <= 23 && minute <= 59 && second <= 59 &&
-                  weekday >= 1 && weekday <= 7))
-                return;
+            apply_rtc_group();
+            addr = REG_RTC_WEEKDAY + 1;
+            continue;
         }
+
+        /* 累计流量 (double, 占4个寄存器): 需完整4字才更新, 否则跳过整个槽位 */
+        if (addr == REG_SUM_FLOW)
         {
-            RTC_Time_SetValues(year, (uint8_t)month, (uint8_t)day,
-                               (uint8_t)hour, (uint8_t)minute, (uint8_t)second,
-                               (uint8_t)(weekday % 7 + 1));
-            char rtc_buf[48];
-            snprintf(rtc_buf, sizeof(rtc_buf), "SET RTC %04u-%02u-%02u %02u:%02u:%02u",
-                     year, month, day, hour, minute, second);
-            app_log_send(LOG_TYPE_USER, rtc_buf);
+            if (end_addr >= REG_SUM_FLOW + 3)
+            {
+                flow_calc_set_total(modbus_slave_get_double(addr));
+            }
+            addr = REG_SUM_FLOW + 4;
+            continue;
         }
-        return;
-    }
 
-    /* 累计流量 (double, 占4个寄存器) */
-    if (start_addr == REG_SUM_FLOW && quantity >= 4)
-    {
-        double dval = modbus_slave_get_double(start_addr);
-        flow_calc_set_total(dval);
-        return;
-    }
-
-    /* 映射到 config_id */
-    config_id_t cid = reg_to_config_id(start_addr);
-    if (cid >= CONFIG_ID_COUNT)
-    {
-        if (start_addr > REG_STOP_BITS || end_addr < REG_ADDRESS) {
-            return;
+        /* float 寄存器 (IEEE754, 占2个寄存器): 需完整2字才更新 */
+        if (is_float_register(addr))
+        {
+            if (end_addr >= (uint16_t)(addr + 1))
+            {
+                config_id_t fcid = reg_to_config_id(addr);
+                if (fcid < CONFIG_ID_COUNT)
+                {
+                    app_config_setf(fcid, modbus_slave_get_float(addr));
+                }
+            }
+            addr = (uint16_t)(addr + 2);
+            continue;
         }
-    }
 
-    /* float 寄存器 (IEEE 754, 占2个寄存器) */
-    if (is_float_register(start_addr) && quantity >= 2)
-    {
-        float fval = modbus_slave_get_float(start_addr);
-        app_config_setf(cid, fval);
-        return;
+        /* uint16 配置寄存器 (含通信参数/校准/一次性动作, 统一走 apply) */
+        if (reg_to_config_id(addr) < CONFIG_ID_COUNT)
+        {
+            apply_uint16_config_register(addr);
+        }
+        addr = (uint16_t)(addr + 1);
     }
-
-    if (start_addr <= REG_ADDRESS && end_addr >= REG_ADDRESS) {
-        apply_uint16_config_register(REG_ADDRESS);
-    }
-    if (start_addr <= REG_BAUDE_RATE && end_addr >= REG_BAUDE_RATE) {
-        apply_uint16_config_register(REG_BAUDE_RATE);
-    }
-    if (start_addr <= REG_STOP_BITS && end_addr >= REG_STOP_BITS) {
-        apply_uint16_config_register(REG_STOP_BITS);
-    }
-
-    /* 写入范围覆盖了从机参数寄存器，已在上方逐个处理 */
-    if (end_addr >= REG_ADDRESS && start_addr <= REG_STOP_BITS) {
-        return;
-    }
-
-    /* 单寄存器值 (uint16) */
-    apply_uint16_config_register(start_addr);
 }
 
 /*============================================================================*/

@@ -182,6 +182,14 @@ uint16_t modbus_slave_get_holding_register(uint16_t addr);
 void modbus_slave_set_holding_register(uint16_t addr, uint16_t value);
 
 /**
+ * @brief 查询寄存器地址是否可写
+ * @param addr 寄存器地址
+ * @retval 1 可写 (0x06/0x10 允许写入)
+ * @retval 0 只读或未映射 (写入应返回 ILLEGAL_DATA_ADDR)
+ */
+uint8_t modbus_slave_addr_writable(uint16_t addr);
+
+/**
  * @brief 设置32位无符号整数 (占用2个寄存器)
  * @param addr 起始寄存器地址
  * @param value 32位值
