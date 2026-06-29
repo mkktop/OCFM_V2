@@ -1,0 +1,11 @@
+Output: Generates pick and place files
+Type  : Pick Place
+From  : Variant [[No Variations]] of Project [Free Documents]
+   Generated File[Pick Place for ZC-ST4X-A003B(分体式雷达物位计-2).txt]
+   Generated File[Pick Place for ZC-ST4X-A003B(分体式雷达物位计-2).csv]
+
+
+Files Generated   : 2
+Documents Printed : 0
+
+Finished Output Generation At 15:13:40 On 2025/9/26

@@ -1927,7 +1927,10 @@ static void async_enter_parameter_cb(void *context)
     ui_manager->settings_screen = screen;
     update_parameter_selection();
 
-    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_FADE_IN, ANIM_TIME);
+    /* 用 MOVE_RIGHT 平移代替 FADE_IN 淡入: 淡入需每帧对新旧两屏做 alpha 混合,
+     * 且动画首帧前必须完整渲染新建的参数屏幕, 在 STM32F407 上开销大易掉帧。
+     * 改为平移后与"分类列表->主屏"动画一致, 消除 alpha 混合开销, 体感更跟手。 */
+    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
     g_set_busy = 0;
 
     lv_free(ctx);
