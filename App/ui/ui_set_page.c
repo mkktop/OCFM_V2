@@ -1914,6 +1914,15 @@ static void async_enter_parameter_cb(void *context)
 {
     set_nav_context_t *ctx = (set_nav_context_t *)context;
 
+    /* 在下面覆写 level 之前先捕获来源层级, 用于选择过渡动画:
+     *   SET_LEVEL_EDITING  (编辑页 OK / 长按SHIFT / SD清除完成返回) -> NONE 瞬切
+     *   SET_LEVEL_CATEGORY (分类列表 OK 进入)                        -> MOVE_RIGHT 平移
+     * 区别原因: 从编辑页返回时, 新建的参数屏对象最多 (列表行 + CJK 字形), 首渲染开销大;
+     * 若仍用 MOVE_RIGHT 横向平移, 由于 LCD 无 TE 帧同步 (见 lv_port_disp.c 的 disp_flush,
+     * CPU 同步阻塞写、无 DMA/无 VSYNC), 横向运动会把逐 chunk 推送时的相位错位放大成肉眼
+     * 可见的撕裂带。改 NONE 瞬切后无横向运动, 静态画面的逐块刷新即使相位不同步也不可察觉。 */
+    set_level_t from_level = g_set_nav.level;
+
     lv_obj_t *screen = create_parameter_screen(ctx->category_idx);
     if (screen == NULL) {
         g_set_busy = 0;
@@ -1927,10 +1936,12 @@ static void async_enter_parameter_cb(void *context)
     ui_manager->settings_screen = screen;
     update_parameter_selection();
 
-    /* 用 MOVE_RIGHT 平移代替 FADE_IN 淡入: 淡入需每帧对新旧两屏做 alpha 混合,
-     * 且动画首帧前必须完整渲染新建的参数屏幕, 在 STM32F407 上开销大易掉帧。
-     * 改为平移后与"分类列表->主屏"动画一致, 消除 alpha 混合开销, 体感更跟手。 */
-    set_screen_load(screen, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, ANIM_TIME);
+    /* 进入方向 (分类->参数) 用 MOVE_RIGHT 平移, 与"分类列表->主屏"动画一致:
+     * 比 FADE_IN 省 alpha 混合开销, 在 STM32F407 上不易掉帧。 */
+    lv_screen_load_anim_t anim = (from_level == SET_LEVEL_EDITING)
+                                     ? LV_SCREEN_LOAD_ANIM_NONE
+                                     : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT;
+    set_screen_load(screen, anim, ANIM_TIME);
     g_set_busy = 0;
 
     lv_free(ctx);
