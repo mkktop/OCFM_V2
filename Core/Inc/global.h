@@ -299,8 +299,8 @@ typedef enum
 // 基本参数默认值
 #define DEFAULT_RANGE_MAX        5000       /* 最大量程 5000mm */
 #define DEFAULT_HEIGHT           5000        /* 高度 5000mm */
-#define DEFAULT_CALIBRATION_4MA  1006        /* 4mA校准值 */
-#define DEFAULT_CALIBRATION_20MA 3811       /* 20mA校准值 */
+#define DEFAULT_CALIBRATION_4MA  1063        /* 4mA校准值 */
+#define DEFAULT_CALIBRATION_20MA 5556        /* 20mA校准值 */
 #define DEFAULT_RANGE_4MA        0.0f        /* 4mA量程 (m³/h) */
 #define DEFAULT_RANGE_20MA       19.354f    /* 20mA量程 (m³/h) */
 #define DEFAULT_POINT_NUM        3           /* 小数点数量 */
@@ -337,7 +337,7 @@ typedef enum
 #define DEFAULT_WATER_LEVEL_UP   0.21f       /* 水位上限 (m), 初始化时被覆盖 */
 #define DEFAULT_WATER_LEVEL_DOWN 0.015f      /* 水位下限 (m), 初始化时被覆盖 */
 #define DEFAULT_INSTANT_UNIT     4           /* 瞬时流量单位 (m³/h) */
-#define DEFAULT_SUM_POINT        1           /* 累计流量小数点数 */
+#define DEFAULT_SUM_POINT        3           /* 累计流量小数点数 */
 #define DEFAULT_LANGUAGE         1           /* 语言 (中文) */
 #define DEFAULT_SHOW_ALARM       1           /* 显示报警 (默认显示) */
 #define DEFAULT_PASSWORD_ENABLE  0           /* 密码锁 (默认关闭) */
