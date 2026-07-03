@@ -388,7 +388,7 @@
   <ul>
     <li>渠道类型/水槽编号改变后，<strong>水位上下限会被自动覆盖</strong>为新槽型默认值</li>
     <li>4-20mA 校准值范围 0~7999，超出有效范围的值可能导致电流输出不准确</li>
-    <li>出厂默认 4mA 校准值 1006，20mA 校准值 3811，一般无需重新校准</li>
+    <li>出厂默认 4mA 校准值 1063，20mA 校准值 5556，一般无需重新校准</li>
   </ul>
 </details>
 
@@ -786,7 +786,7 @@
     <tr>
       <td>4mA 校准 (4mA Cal)</td>
       <td>0 ~ 7999</td>
-      <td>1006</td>
+      <td>1063</td>
       <td>
         4mA 对应的校准输出值。<br>
         <strong>进入编辑会立即输出对应电流 (实时校准)</strong>，校准完成后按 OK 保存。
@@ -795,7 +795,7 @@
     <tr>
       <td>20mA 校准 (20mA Cal)</td>
       <td>0 ~ 7999</td>
-      <td>3811</td>
+      <td>5556</td>
       <td>20mA 对应的校准输出值。</td>
     </tr>
     <tr>
@@ -1083,8 +1083,8 @@ Kh(m)  = Kh(ft) × 0.3048</pre>
   <tbody>
     <tr><td><code>0x1001</code></td><td>天线类型</td><td><span class="badge rw">RW</span> uint16</td><td>—</td><td>1</td><td>—</td></tr>
     <tr><td><code>0x1002</code></td><td>距离偏移</td><td><span class="badge rw">RW</span> uint16</td><td>mm</td><td>10</td><td>—</td></tr>
-    <tr><td><code>0x1003</code></td><td>4mA 校准</td><td><span class="badge rw">RW</span> uint16</td><td>校准值</td><td>1006</td><td>写入后立即生效</td></tr>
-    <tr><td><code>0x1004</code></td><td>20mA 校准</td><td><span class="badge rw">RW</span> uint16</td><td>校准值</td><td>3811</td><td>写入后立即生效</td></tr>
+    <tr><td><code>0x1003</code></td><td>4mA 校准</td><td><span class="badge rw">RW</span> uint16</td><td>校准值</td><td>1063</td><td>写入后立即生效</td></tr>
+    <tr><td><code>0x1004</code></td><td>20mA 校准</td><td><span class="badge rw">RW</span> uint16</td><td>校准值</td><td>5556</td><td>写入后立即生效</td></tr>
     <tr><td><code>0x1005</code></td><td>恢复出厂设置</td><td><span class="badge act">W</span> uint16</td><td>—</td><td>0</td><td>写 1 触发，完成后自动复位为 0</td></tr>
     <tr><td><code>0x1006</code></td><td>清除累计</td><td><span class="badge act">W</span> uint16</td><td>—</td><td>0</td><td>写 1 清除累计流量和累计时间</td></tr>
   </tbody>

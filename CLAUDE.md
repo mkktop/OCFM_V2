@@ -170,7 +170,7 @@ EEPROM (AT24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改�
 **关键：** AAH/AAL 没有独立的回差值，分别与 AH/AL 共用 DH/DL。
 
 ### 4-20mA电流输出 (`App/app_current`)
-TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。TIM3配置：PSC=29, ARR=6999 → 84MHz/30/7000 = 400Hz PWM，~7000级分辨率（约12.8 bit）。默认4mA CCR=1006，20mA CCR=3811，有效步数2805级。
+TIM3 CH4 (PB1) PWM → RC低通 → V/I转换。TIM3配置：PSC=29, ARR=6999 → 84MHz/30/7000 = 400Hz PWM，~7000级分辨率（约12.8 bit）。默认4mA CCR=1063，20mA CCR=5556，有效步数4493级。
 
 线性插值：`ratio = (flow - range_4ma) / (range_20ma - range_4ma)`，映射到 `ccr_4ma ~ ccr_20ma`。`calibration_4ma/20ma` 是工厂校准的CCR值，`range_4ma/20ma` 是用户可调的流量量程端点(m³/h)。20mA量程上限 = `flow_calc_get_max_flow_m3h()`（理论最大流量 × 1.2 裕量）。校准模式有两种路径：UI路径和Modbus路径（10秒超时）。
 

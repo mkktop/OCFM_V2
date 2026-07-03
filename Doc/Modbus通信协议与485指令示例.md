@@ -389,11 +389,11 @@
 请求: 01 10 10 01 00 06 0C
       00 01  (ANTENNA_TYPE     = 1)
       00 00  (DIS_OFFSET       = 0)
-      03 EE  (CALIBRATION_4MA  = 1006)
-      0E E3  (CALIBRATION_20MA = 3811)
+      04 27  (CALIBRATION_4MA  = 1063)
+      15 B4  (CALIBRATION_20MA = 5556)
       00 00  (FACTORY_SETTING  = 0, 不触发)
       00 00  (CLEAR_TOTAL      = 0, 不触发)
-      48 9D  (CRC)
+      26 50  (CRC)
 响应: 01 10 10 01 00 06 15 0B
 ```
 > 一次性动作寄存器（FACTORY_SETTING/CLEAR_TOTAL）写 0 不触发；要触发单写 0x06 写 1。
