@@ -8,6 +8,8 @@
 #include "at24c02.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "cmsis_os2.h"
+#include "iwdg.h"
 #include <string.h>
 
 /* 全局配置实例 */
@@ -21,6 +23,9 @@ static volatile uint8_t config_dirty = 0;
 static volatile uint8_t s_eeprom_busy = 0;  /* EEPROM操作互锁 (config/flow_calc共用) */
 static uint32_t last_write_tick = 0;
 #define CONFIG_SAVE_DELAY_MS   3000
+#define CONFIG_LOAD_RETRY      5     /* 开机加载配置失败重试次数 */
+#define CONFIG_SAVE_RETRY      3     /* 配置保存失败重试次数 */
+#define CONFIG_LOAD_RETRY_MS   10    /* 读写重试间隔 */
 
 /* 参数变更回调 (支持多个监听者) */
 #define CONFIG_MAX_CHANGE_CB  4
@@ -183,7 +188,19 @@ uint8_t app_config_save(void)
     /* 拷贝到本地缓冲区后写入, 避免写入期间g_config被其他任务修改 */
     uint8_t buf[sizeof(SystemConfig_t)];
     memcpy(buf, &g_config, sizeof(SystemConfig_t));
-    uint8_t ret = at24c02_write_buffer(CONFIG_EEPROM_ADDR, sizeof(SystemConfig_t), buf);
+
+    uint8_t ret = 0;
+    for (uint8_t i = 0; i < CONFIG_SAVE_RETRY; i++)
+    {
+        /* 每次写前喂狗，防止多次重试累积耗时触发看门狗 */
+        HAL_IWDG_Refresh(&hiwdg);
+        ret = at24c02_write_buffer(CONFIG_EEPROM_ADDR, sizeof(SystemConfig_t), buf);
+        if (ret == 1) {
+            break;  /* 写入成功 */
+        }
+        /* 写入失败，等待后重试 */
+        osDelay(CONFIG_LOAD_RETRY_MS);
+    }
 
     app_config_eeprom_unlock();
     return ret;
@@ -191,12 +208,30 @@ uint8_t app_config_save(void)
 
 /**
  * @brief 加载系统配置从EEPROM
- * @retval 1: 成功 0: 失败
+ * @retval 1: 成功(读成功且magic有效) 0: 失败
+ * @note 开机时I2C总线可能尚未稳定，读取失败或magic无效时最多重试CONFIG_LOAD_RETRY次
+ *       magic无效也可能是I2C瞬态读到脏数据，故一并重试
  */
 uint8_t app_config_load(void)
 {
-    return at24c02_read_buffer(CONFIG_EEPROM_ADDR, sizeof(SystemConfig_t),
-                               (uint8_t*)&g_config);
+    for (uint8_t i = 0; i < CONFIG_LOAD_RETRY; i++)
+    {
+        /* 每次读前喂狗，防止I2C超时(最坏1s)累积触发看门狗 */
+        HAL_IWDG_Refresh(&hiwdg);
+        if (at24c02_read_buffer(CONFIG_EEPROM_ADDR, sizeof(SystemConfig_t),
+                                (uint8_t*)&g_config) == 1)
+        {
+            /* 读成功且magic有效才算加载成功 */
+            if (g_config.magic_number == CONFIG_MAGIC_NUMBER)
+            {
+                return 1;
+            }
+            /* magic无效可能是I2C瞬态读到脏数据，继续重试 */
+        }
+        /* 读失败或magic无效，等待后重试 */
+        osDelay(CONFIG_LOAD_RETRY_MS);
+    }
+    return 0;
 }
 
 /**
@@ -222,13 +257,10 @@ void app_config_init(void)
     return;
 #endif
 
-    /* 从EEPROM加载配置 */
+    /* 从EEPROM加载配置 (app_config_load内部已重试并校验magic) */
     if (app_config_load() == 1) {
-        /* 检查配置是否有效 */
-        if (app_config_is_valid() == 1) {
-            /* 配置有效，直接使用 */
-            return;
-        }
+        /* 配置有效，直接使用 */
+        return;
     }
 
     /* EEPROM无数据或配置无效，使用默认值 */

@@ -88,8 +88,8 @@ void app_config_init(void);
 uint8_t app_config_save(void);
 
 /**
- * @brief 加载系统配置从EEPROM
- * @retval 1: 成功 0: 失败
+ * @brief 加载系统配置从EEPROM (含重试与magic校验)
+ * @retval 1: 成功(读成功且magic有效) 0: 失败
  */
 uint8_t app_config_load(void);
 
