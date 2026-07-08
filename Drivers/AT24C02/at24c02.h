@@ -1,7 +1,7 @@
 /**
  * @file at24c02.h
- * @brief AT24C02 EEPROM驱动头文件
- * @details AT24C02是2K位的串行EEPROM，支持I2C接口
+ * @brief M24C02 EEPROM驱动头文件
+ * @details M24C02是2K位的串行EEPROM，支持I2C接口
  */
 
 #ifndef __AT24C02_H
@@ -15,27 +15,27 @@ extern "C" {
 #include "i2c.h"
 
 /**
- * @brief AT24C02设备地址
+ * @brief M24C02设备地址
  * @note A2/A1/A0引脚接地，地址为1010_000 = 0x50
  *       实际地址: 0x50 << 1 = 0xA0 (写) / 0xA1 (读)
  */
 #define AT24C02_ADDR         0x50
 
 /**
- * @brief AT24C02存储容量
+ * @brief M24C02存储容量
  * @note 2Kbit = 256字节 = 16页 * 16字节
  */
 #define AT24C02_SIZE         256
 
 /**
  * @brief 页大小
- * @note AT24C02页大小为16字节
+ * @note M24C02页大小为16字节
  */
 #define AT24C02_PAGE_SIZE    16
 
 /**
  * @brief 页数量
- * @note AT24C02有16页，每页16字节
+ * @note M24C02有16页，每页16字节
  */
 #define AT24C02_PAGE_COUNT   16
 
@@ -45,7 +45,7 @@ extern "C" {
 #define AT24C02_TIMEOUT      1000
 
 /**
- * @brief 初始化AT24C02
+ * @brief 初始化M24C02
  * @return 1:成功 0:失败
  * @note 检查EEPROM是否在线
  */

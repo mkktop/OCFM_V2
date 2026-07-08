@@ -1,9 +1,9 @@
 /**
  * @file at24c02.c
- * @brief AT24C02 EEPROM驱动实现
+ * @brief M24C02 EEPROM驱动实现
  * @author mkk
  * @date 2026-03-10
- * @details AT24C02是2K位的串行EEPROM，支持I2C接口
+ * @details M24C02是2K位的串行EEPROM，支持I2C接口
  */
 
 #include "at24c02.h"
@@ -11,7 +11,7 @@
 #include <string.h>
 
 /**
- * @brief 初始化AT24C02
+ * @brief 初始化M24C02
  * @return 1:成功 0:失败
  * @note 检测EEPROM是否准备好
  */

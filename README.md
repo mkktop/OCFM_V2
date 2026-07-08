@@ -28,7 +28,7 @@
 | 传感器接口 | UART1 RS485 (Modbus RTU 主机) |
 | 通信接口 | UART2 RS485 (Modbus RTU 从机) + UART4 (4G模块 ML307, 未实现) |
 | 无线 | LoRa (SX1278, SPI2, 未实现) |
-| 存储 | EEPROM AT24C02 (I2C2) + SD卡 (SDIO) |
+| 存储 | EEPROM M24C02 (I2C2) + SD卡 (SDIO) |
 | 温度 | CT1820 (1-Wire, PB0) |
 | 按键 | 4路 (确认/上/下/位移) |
 | 继电器 | 4路 |

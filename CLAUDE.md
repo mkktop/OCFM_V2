@@ -9,7 +9,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 **核心技术栈：** STM32F407VGTx (Cortex-M4, 168MHz) | FreeRTOS V10.3.1 | LVGL 9.5.0 | FatFs | Keil MDK-ARM (AC5)
 
 **关键约束：**
-- EEPROM AT24C02 仅 256 字节，`SystemConfig_t` 约 148 字节（27×uint32 + 10×float，定义在 `Core/Inc/global.h`）。累计流量存储在地址 232（24字节）。添加新配置字段前务必确认剩余空间（配置区 0~147，累计流量区 232~255，中间 148~231 字节空闲）。
+- EEPROM M24C02 仅 256 字节，`SystemConfig_t` 约 148 字节（27×uint32 + 10×float，定义在 `Core/Inc/global.h`）。累计流量存储在地址 232（24字节）。添加新配置字段前务必确认剩余空间（配置区 0~147，累计流量区 232~255，中间 148~231 字节空闲）。
 - `Core/Inc/global.h` 是项目的**总头文件**——include 了几乎所有模块头文件（at24c02、fatfs、file_driver、data_recorder、log_manager、rtc_time、ui 等），并集中定义 Modbus 寄存器地址、系统常量、`SystemConfig_t` 结构体。绝大多数 `.c` 文件只需 `#include "global.h"` 即可获得所有依赖。
 - 无自动化测试和lint工具，验证依赖实机调试和串口日志输出。
 
@@ -28,7 +28,7 @@ OCFM_V2 是一个明渠流量计固件项目，基于 STM32F407VGTx 单片机。
 |------|------|
 | FSMC | LCD驱动 (ST7789, 8080并口) |
 | SPI2 | LoRa模块 (SX1278) |
-| I2C2 | EEPROM (AT24C02, 256字节) |
+| I2C2 | EEPROM (M24C02, 256字节) |
 | SDIO | SD卡 |
 | UART1 | 水位传感器 (RS485, Modbus主机) |
 | UART2 | 用户通信接口 (Modbus从机) |
@@ -147,7 +147,7 @@ button_scan_tas (10ms) → button_driver_scan() (消抖/长按状态机)
 ## 关键设计决策
 
 ### 系统配置持久化 (`App/app_config`)
-EEPROM (AT24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改后需 `app_config_save()` 持久化。Modbus从机写回参数使用脏标记 + **3秒延迟保存**（`CONFIG_SAVE_DELAY_MS`），由 `app_config_process()` 在 log_task 中执行。EEPROM 使用互斥锁，config 和 flow_calc 共享。
+EEPROM (M24C02) 存储 `SystemConfig_t`，getter/setter 模式访问。修改后需 `app_config_save()` 持久化。Modbus从机写回参数使用脏标记 + **3秒延迟保存**（`CONFIG_SAVE_DELAY_MS`），由 `app_config_process()` 在 log_task 中执行。EEPROM 使用互斥锁，config 和 flow_calc 共享。
 
 **配置变更回调：** `app_config_set_change_callback()` 注册 `config_change_callback_t`（最多4个监听者），UI通过此机制响应配置变更（如清除历史缓存）。
 

@@ -359,7 +359,7 @@ Q  = 1838.0 × 1.0 × 0.301^1.5 = 303.5 L/s
 | 层 | 周期 | 介质 | 内容 |
 |------|------|------|------|
 | **RTC 备份寄存器** | 每 **2 秒** | DR1/DR2/DR3/DR4 | total_flow(double 8B) + magic(0x5A5A5A5A) + total_time(uint32) |
-| **EEPROM (AT24C02)** | 每 **5 分钟** | 地址 232，24 字节 | `TotalFlowStorage_t {magic, total_flow, total_time, reserved}` |
+| **EEPROM (M24C02)** | 每 **5 分钟** | 地址 232，24 字节 | `TotalFlowStorage_t {magic, total_flow, total_time, reserved}` |
 
 - 备份寄存器：快速、非阻塞，依赖 VBAT 供电
 - EEPROM：实际写入延迟到 `flow_calc_process()`（log_task 上下文），避免在定时器中阻塞 I²C
